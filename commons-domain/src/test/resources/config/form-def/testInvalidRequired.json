@@ -1,0 +1,10 @@
+{
+ key: 'testInvalidRequired',
+ fields: [
+  	{
+ 	 key: 'num',
+ 	 type: 'integer',
+ 	 required: true
+ 	}
+ ]
+}

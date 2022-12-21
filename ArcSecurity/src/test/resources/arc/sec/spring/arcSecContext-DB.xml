@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns="http://www.springframework.org/schema/context"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context.xsd
+	    http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+        http://www.springframework.org/schema/data/jpa 
+        http://www.springframework.org/schema/data/jpa/spring-jpa-1.0.xsd
+        http://www.springframework.org/schema/jdbc 
+        http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+
+	<beans:bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" id="secConnPrope">
+	 	<beans:property name="locations">
+	 		<beans:list>
+		 		<beans:value>classpath:db/secConn.properties</beans:value>
+	 		</beans:list>
+	 	</beans:property>
+	</beans:bean>
+
+	<tx:annotation-driven/>
+	
+    <beans:bean class="org.springframework.orm.jpa.JpaTransactionManager" id="transactionManager">
+        <beans:property name="entityManagerFactory" ref="entityManagerFactory"/>
+        <beans:property name="jpaDialect">
+            <beans:bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect" />
+        </beans:property>
+    </beans:bean>
+    
+	<jdbc:embedded-database id="dataSource" type="H2">
+    </jdbc:embedded-database>
+	
+	<beans:bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <beans:property name="persistenceUnitName" value="myPersistenceUnit" />
+        <beans:property name="packagesToScan" value="${jpa.entityPack}"/>
+        <beans:property name="dataSource" ref="dataSource"/>
+        <beans:property name="jpaVendorAdapter">
+            <beans:bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+        </beans:property>
+        <beans:property name="persistenceProvider">
+            <beans:bean class="org.hibernate.jpa.HibernatePersistenceProvider"/>
+        </beans:property>
+        <beans:property name="jpaProperties">
+            <beans:props>
+                <beans:prop key="hibernate.current_session_context_class">
+                    ar.com.avaco.arc.core.jpa.configuration.EntityManagerSessionUnwrapper
+                </beans:prop>
+                <beans:prop key="javax.persistence.schema-generation.database.action"> 
+                    drop-and-create 
+                </beans:prop>
+                <beans:prop key="javax.persistence.schema-generation.scripts.create-target">
+                   ${db.create.location}
+                </beans:prop>
+                <beans:prop key="javax.persistence.schema-generation.scripts.drop-target">
+                   ${db.drop.location}
+                </beans:prop>
+                <beans:prop key="javax.persistence.jdbc.driver"> 
+                    org.h2.Driver
+                </beans:prop>
+                <beans:prop key="hibernate.dialect">${db.dialect}</beans:prop>
+                <beans:prop key="hibernate.show_sql">true</beans:prop>
+            </beans:props>
+        </beans:property>
+    </beans:bean>
+	
+	<beans:bean id="secSF" class="org.springframework.orm.jpa.vendor.HibernateJpaSessionFactoryBean">
+		<beans:property name="entityManagerFactory" ref="entityManagerFactory" />
+	</beans:bean>
+
+	<jpa:repositories base-package="ar.com.avaco.arc.sec.repository"
+		entity-manager-factory-ref="entityManagerFactory" transaction-manager-ref="transactionManager"/>
+
+</beans:beans>	

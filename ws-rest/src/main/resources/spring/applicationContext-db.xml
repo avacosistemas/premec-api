@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans 	xmlns:beans="http://www.springframework.org/schema/beans"
+				xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+				xmlns="http://www.springframework.org/schema/context"
+				xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+				xmlns:util="http://www.springframework.org/schema/util"
+				xmlns:tx="http://www.springframework.org/schema/tx"
+				xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+				xsi:schemaLocation="http://www.springframework.org/schema/beans 
+									http://www.springframework.org/schema/beans/spring-beans.xsd
+									http://www.springframework.org/schema/context 
+									http://www.springframework.org/schema/context/spring-context.xsd
+								    http://www.springframework.org/schema/tx
+							        http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+							        http://www.springframework.org/schema/data/jpa 
+							        http://www.springframework.org/schema/data/jpa/spring-jpa-1.0.xsd
+							        http://www.springframework.org/schema/jdbc 
+							        http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+							        http://www.springframework.org/schema/util
+							        http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<tx:annotation-driven/>
+	
+	<beans:bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	 	<beans:property name="locations">
+	 		<beans:list>
+		 		<beans:value>file:${catalina.home}/conf/connection-admin.properties</beans:value>
+	 		</beans:list>
+	 	</beans:property>
+	</beans:bean>
+	
+	<util:map id="dataSourceMap">
+		<beans:entry key="DB_DRIVERCLASSNAME" value="${DB_DRIVERCLASSNAME}" />
+        <beans:entry key="DB_DIALECT" value="${DB_DIALECT}" />
+        <beans:entry key="DB_USERNAME" value="${DB_USERNAME}" />
+        <beans:entry key="DB_PASSWORD" value="${DB_PASSWORD}" />
+        <beans:entry key="DB_URL" value="${DB_URL}" />
+	</util:map>
+	
+<!-- 	<util:map id="dataSourceMap"> -->
+<!-- 		<beans:entry key="DB_DRIVERCLASSNAME" value="#{systemProperties['DB_DRIVERCLASSNAME']}" /> -->
+<!--         <beans:entry key="DB_DIALECT" value="#{systemProperties['DB_DIALECT']}" /> -->
+<!--         <beans:entry key="DB_USERNAME" value="#{systemProperties['DB_USERNAME']}" /> -->
+<!--         <beans:entry key="DB_PASSWORD" value="#{systemProperties['DB_PASSWORD']}" /> -->
+<!--         <beans:entry key="DB_URL" value="#{systemProperties['DB_URL']}" /> -->
+<!-- 	</util:map> -->
+	
+	
+    <beans:bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <beans:property name="entityManagerFactory" ref="entityManagerFactory" />
+        <beans:property name="jpaDialect">
+            <beans:bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect" />
+        </beans:property>
+    </beans:bean>
+    
+	<beans:bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <beans:property name="persistenceUnitName" value="myPersistenceUnit" />
+        <beans:property name="packagesToScan">
+	        <beans:array>
+				<beans:value>ar.com.avaco.arc.sec.domain</beans:value>
+				<beans:value>ar.com.avaco.commons.domain</beans:value>
+				<beans:value>ar.com.avaco</beans:value>
+			</beans:array>
+   	    </beans:property>
+        <beans:property name="dataSource" ref="dataSource"/>
+        <beans:property name="jpaVendorAdapter">
+            <beans:bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+        </beans:property>
+        <beans:property name="persistenceProvider">
+            <beans:bean class="org.hibernate.jpa.HibernatePersistenceProvider"/>
+        </beans:property>
+        <beans:property name="jpaProperties">
+            <beans:props>
+                <beans:prop key="hibernate.current_session_context_class">
+                    ar.com.avaco.arc.core.jpa.configuration.EntityManagerSessionUnwrapper
+                </beans:prop>
+                <beans:prop key="javax.persistence.jdbc.driver">#{dataSourceMap['DB_DRIVERCLASSNAME']}</beans:prop>
+                <beans:prop key="hibernate.dialect">#{dataSourceMap['DB_DIALECT']}</beans:prop>
+                <beans:prop key="hibernate.show_sql">true</beans:prop>
+            </beans:props>
+        </beans:property>
+    </beans:bean>
+	
+	<beans:bean id="secSF" class="org.springframework.orm.jpa.vendor.HibernateJpaSessionFactoryBean">
+		<beans:property name="entityManagerFactory" ref="entityManagerFactory" />
+	</beans:bean>
+
+</beans:beans>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:ctx="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/data/jpa 
+        http://www.springframework.org/schema/data/jpa/spring-jpa-1.0.xsd">
+
+	<ctx:property-placeholder location="classpath:arc/core/conf/conf.properties,
+		classpath:arc/core/conf/conn.properties"/>
+
+	<ctx:component-scan base-package="ar.com.avaco.arc.utils.domain.repository" resource-pattern="**/*RepositoryImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.arc.utils.domain.service" resource-pattern="**/*ServiceImpl.class"/>
+	
+	<jpa:repositories base-package="ar.com.avaco.arc.utils.domain.repository"
+		entity-manager-factory-ref="entityManagerFactory"
+		factory-class="ar.com.avaco.arc.core.component.bean.repository.NJRepositoryFactoryBean"
+		transaction-manager-ref="transactionManager"/>
+	
+	<import resource="classpath*:arc/core/spring/arcCoreContext-Core.xml" />
+	<import resource="classpath*:arc/core/spring/test/arcCoreContext-DB.xml" />
+	<import resource="classpath*:arc/core/spring/arcCoreContext-Persistence.xml" />
+
+</beans>

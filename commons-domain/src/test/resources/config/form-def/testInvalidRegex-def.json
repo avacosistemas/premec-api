@@ -1,0 +1,16 @@
+{
+ key: 'testInvalidRegex',
+ fields: [
+  	{
+ 	 key: 'specialString',
+ 	 type: 'string',
+ 	 validations: [
+ 	 	{
+ 	 	 key:'regex',
+ 	 	 input: '[0-9]*',
+ 	 	 message: 'Solo se permiten numeros'
+ 	 	}
+ 	 ]
+ 	}
+ ]
+}

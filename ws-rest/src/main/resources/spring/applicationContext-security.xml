@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans
+	xmlns="http://www.springframework.org/schema/security"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:sec="http://www.springframework.org/schema/security"
+	xmlns:ctx="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/security	 
+      http://www.springframework.org/schema/security/spring-security-4.2.xsd
+      http://www.springframework.org/schema/beans 
+      http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+      http://www.springframework.org/schema/context
+	  http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<http entry-point-ref="restAuthenticationEntryPoint">
+		<intercept-url pattern="/auth/reset-password" access="isAuthenticated()" />
+<!-- 		<intercept-url pattern="/molde/**" access="hasAuthority('PERMISO_MOLDES')" /> -->
+		<intercept-url pattern="/**" access="permitAll" />
+		<csrf disabled="true" />
+		<custom-filter after="BASIC_AUTH_FILTER" ref="tokenFilter" />
+		<logout />
+	</http>
+
+	<beans:bean id="tokenFilter"
+		class="ar.com.avaco.ws.rest.security.filter.JwtAuthorizationTokenFilter" />
+
+	<authentication-manager
+		alias="authenticationManager">
+		<authentication-provider
+			user-service-ref="jwtUserDetailsService">
+			<sec:password-encoder ref="passwordEncoder" />
+		</authentication-provider>
+	</authentication-manager>
+
+	<ctx:component-scan
+		base-package="ar.com.avaco.ws.rest.security.controller" />
+	<ctx:component-scan
+		base-package="ar.com.avaco.ws.rest.controller" />
+	<ctx:component-scan
+		base-package="ar.com.avaco.ws.rest.security.handler" />
+	<ctx:component-scan
+		base-package="ar.com.avaco.arc.sec.repository.impl" />
+	<ctx:component-scan
+		base-package="ar.com.avaco.arc.sec.service.impl" />
+	<ctx:component-scan
+		base-package="ar.com.avaco.ws.rest.security.service.impl" />
+
+	<global-method-security
+		pre-post-annotations="enabled" />
+
+</beans:beans>

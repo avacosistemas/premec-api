@@ -1,0 +1,63 @@
+{
+ key: 'testDto',
+ fields: [
+  	{
+ 	 key: 'num',
+ 	 type: 'integer',
+ 	 required: true,
+ 	 minLength:1,
+ 	 maxLength:1,
+ 	 minValue:0,
+ 	 maxValue:5
+ 	},
+ 	{
+ 	 key: 'lang',
+ 	 type: 'string',
+ 	 minLength:2,
+ 	 maxLength:2
+ 	},
+ 	{
+ 	 key: 'stringNumber',
+ 	 type: 'string',
+ 	 minLength:0,
+ 	 maxLength:50,
+ 	 validations: [
+ 	 	{
+ 	 	 key:'regex',
+ 	 	 input: '[0-9]*',
+ 	 	 messageKey: '', // Clave del diccionario por si se quiere ir a buscar a la base en un futuro el servicio podria deberia enviar esto y no el mensaje
+ 	 	 message: 'El campo {0} debe ser contener solo numeros del 0 al 9'
+ 	 	}
+ 	 ]
+ 	},
+ 	{
+ 	 key: 'date',
+ 	 type: 'date', 
+ 	 options: {
+ 	 	format: 'dd/MM/yyyy' // Se puede manejar un formato global en la aplicacion o un formato customizado para el campo.
+ 	 },
+ 	 validations:[
+ 	 	{
+	 	 key:'18years', // tipo de validacion customizada en la aplicacion 18years
+	 	 messageKey: 'clave_diccionario',
+	 	 message: 'Debe ser mayor de 18 anios' // Puede ponerse un mensaje customizado o el que viene de la validacion por defecto
+ 	 	}
+ 	 ]
+ 	},
+ 	{
+ 	 key: 'date2',
+ 	 type: 'date', 
+ 	 options: {
+ 	 	format: 'dd/MM/yyyy' // Se puede manejar un formato global en la aplicacion o un formato customizado para el campo.
+ 	 },
+ 	 validations:[
+ 	 	{
+	 	 key:'18years', // tipo de validacion customizada en la aplicacion 18years
+	 	 messageKey: 'clave_diccionario',
+	 	 message: 'Debe ser mayor de 18 anios' // Puede ponerse un mensaje customizado o el que viene de la validacion por defecto
+ 	 	}
+ 	 ]
+ 	}
+ 	
+ ]
+}

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" 
+	xmlns:ctx="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/security 
+		http://www.springframework.org/schema/security/spring-security-4.2.xsd
+		http://www.springframework.org/schema/context
+	  	http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/data/jpa 
+        http://www.springframework.org/schema/data/jpa/spring-jpa-1.0.xsd">
+
+	<authentication-manager alias="authenticationManager">
+		<authentication-provider ref="authProvider" />
+	</authentication-manager>
+
+    <jpa:repositories base-package="ar.com.avaco.arc.utils.domain.repository"
+        entity-manager-factory-ref="entityManagerFactory"
+        factory-class="ar.com.avaco.arc.core.component.bean.repository.NJRepositoryFactoryBean"
+        transaction-manager-ref="transactionManager"/>
+
+	<beans:bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
+	
+	<beans:bean id="authProvider" class="ar.com.avaco.arc.sec.service.CustomDaoAuthenticationProvider">
+	  <beans:property name="userDetailsService" ref="usuarioService" />
+	  <beans:property name="passwordEncoder" ref="passwordEncoder" />
+	</beans:bean>
+
+
+	<beans:bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+		<beans:property name="host" value="smtp.gmail.com" />
+		<beans:property name="port" value="587" />
+		<beans:property name="username" value="avacosistemas" />
+		<beans:property name="password" value="oqhrppgyrlwtetta" />
+			
+		<beans:property name="javaMailProperties">
+		   <beans:props>
+	       	      <beans:prop key="mail.smtp.auth">true</beans:prop>
+	       	      <beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
+	       	      <beans:prop key="mail.smtp.ssl.trust">smtp.gmail.com</beans:prop>
+	       	   </beans:props>
+		</beans:property>
+	</beans:bean>
+	
+	<beans:bean class="ar.com.avaco.arc.core.service.MailSenderSMTPServiceImpl" />
+
+	<ctx:component-scan base-package="ar.com.avaco.arc.sec.repository"
+		resource-pattern="**/*RepositoryImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.arc.sec.service"
+		resource-pattern="**/*ServiceImpl.class"/>
+		
+</beans:beans>

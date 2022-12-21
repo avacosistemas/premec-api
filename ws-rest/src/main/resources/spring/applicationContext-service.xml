@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+	xmlns:ctx="http://www.springframework.org/schema/context" 
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 	
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd"> 
+   	
+	<ctx:component-scan base-package="ar.com.avaco.repository" resource-pattern="**/*RepositoryImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.service" resource-pattern="**/*ServiceImpl.class"/>
+
+	<ctx:component-scan base-package="ar.com.avaco.repository" resource-pattern="**/*RepositoryImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.service" resource-pattern="**/*ServiceImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.ws.service" resource-pattern="**/*ServiceImpl.class"/>									  
+
+	<ctx:component-scan base-package="ar.com.avaco.commons.repository" resource-pattern="**/*RepositoryImpl.class"/>
+	<ctx:component-scan base-package="ar.com.avaco.commons.service" resource-pattern="**/*ServiceImpl.class"/>
+	
+	<ctx:component-scan base-package="ar.com.avaco.service.notificacion" resource-pattern="**/*ServiceImpl.class"/>
+	
+	<ctx:component-scan base-package="ar.com.avaco.commons.service.captcha" resource-pattern="**/*.class" />
+		
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate"> </bean>
+						
+</beans>
+
+
+
