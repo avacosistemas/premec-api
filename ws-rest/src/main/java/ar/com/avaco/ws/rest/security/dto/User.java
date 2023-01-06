@@ -26,6 +26,7 @@ public class User extends Entity<Long> implements Serializable{
 	private Set<Profile> profiles;
 	private String email;
 	private boolean enabled;
+	private String usuariosap;
 	
 	public User() {
 		
@@ -33,7 +34,7 @@ public class User extends Entity<Long> implements Serializable{
 	
 
 	public User(Long id, String username, String name, String lastname, Set<Profile> profiles, String email,
-			boolean enabled) {
+			String usuariosap, boolean enabled) {
 		super();
 		this.id = id;
 		this.username = username;
@@ -41,6 +42,7 @@ public class User extends Entity<Long> implements Serializable{
 		this.lastname = lastname;
 		this.profiles = profiles;
 		this.email = email;
+		this.usuariosap =usuariosap;
 		this.enabled = enabled;
 	}
 
@@ -109,6 +111,16 @@ public class User extends Entity<Long> implements Serializable{
 
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
+	}
+
+
+	public String getUsuariosap() {
+		return usuariosap;
+	}
+
+
+	public void setUsuariosap(String usuariosap) {
+		this.usuariosap = usuariosap;
 	}
 	
 }

@@ -45,7 +45,7 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 				profiles.add(profileService.convertToDto(e.getPerfil()));
 			});
 		}
-		return new User(usuario.getId(),usuario.getUsername(), usuario.getNombre(), usuario.getApellido(), profiles, usuario.getEmail(), usuario.isEnabled());
+		return new User(usuario.getId(),usuario.getUsername(), usuario.getNombre(), usuario.getApellido(), profiles, usuario.getEmail(), usuario.getUsuariosap(), usuario.isEnabled());
 	}
 
 
@@ -61,6 +61,7 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 		entity.setNombre(dto.getName());
 		entity.setUsername(dto.getUsername());
 		entity.setBloqueado(!dto.isEnabled());
+		entity.setUsuariosap(dto.getUsuariosap());
 		if(dto.getProfiles() != null) {			
 			Set<Acceso> accesos = new HashSet<>();
 			dto.getProfiles().stream().forEach(e -> {

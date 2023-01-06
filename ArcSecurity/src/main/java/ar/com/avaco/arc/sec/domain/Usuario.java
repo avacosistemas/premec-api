@@ -89,6 +89,12 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 	private String email;
 
 	/**
+	 * Sap del usuario.
+	 */
+	@Column(length = 40, nullable = false)
+	private String usuariosap;
+	
+	/**
 	 * Listado de emails asociados al usuario para realizar la notificacion de
 	 * operaciones como nominaciones, autorizaciones, etc.
 	 */
@@ -463,5 +469,13 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 
 	public void setImpersonables(Set<Usuario> impersonables) {
 		this.impersonables = impersonables;
+	}
+
+	public String getUsuariosap() {
+		return usuariosap;
+	}
+
+	public void setUsuariosap(String usuariosap) {
+		this.usuariosap = usuariosap;
 	}
 }
