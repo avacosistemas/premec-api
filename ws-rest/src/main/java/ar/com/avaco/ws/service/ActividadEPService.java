@@ -6,5 +6,5 @@ import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 
 public interface ActividadEPService {
 	
-	List<ActividadTarjetaDTO> getActividades (String fecha,String usuarname);
+	List<ActividadTarjetaDTO> getActividades (String fecha,String usuarname) throws Exception;
 }

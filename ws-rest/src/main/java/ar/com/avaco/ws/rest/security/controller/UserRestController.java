@@ -27,10 +27,6 @@ import ar.com.avaco.ws.rest.security.util.JwtTokenUtil;
 @RestController
 public class UserRestController extends AbsctractRestController<User, Long, UserService>{
     
-	private JwtTokenUtil jwtTokenUtil;
-
-    private UserDetailsService userDetailsService;
-    
     @Value("${jwt.header}")
     private String tokenHeader;
 
@@ -56,9 +52,9 @@ public class UserRestController extends AbsctractRestController<User, Long, User
     }
     
     //------------------- Update a Page --------------------------------------------------------    
-    @RequestMapping(value = "/users/{id}", method = RequestMethod.PUT)
-    public ResponseEntity<JSONResponse> update(@PathVariable("id") Long id, @RequestBody User user) throws BusinessException {
-    	return super.update(id, user);
+    @RequestMapping(value = "/users/", method = RequestMethod.PUT)
+    public ResponseEntity<JSONResponse> update(@RequestBody User user) throws BusinessException {
+    	return super.update(user.getId(), user);
     }
     
     @RequestMapping(value = "/users/{id}", method = RequestMethod.DELETE)

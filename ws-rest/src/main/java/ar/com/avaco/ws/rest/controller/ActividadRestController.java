@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.rest.security.controller;
+package ar.com.avaco.ws.rest.controller;
 
 import java.util.List;
 
@@ -24,18 +24,24 @@ public class ActividadRestController {
 
 	@RequestMapping(value = "/actividades", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> getActividadesTarjeta(String fecha) {
-		Usuario u = (Usuario)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-		List<ActividadTarjetaDTO> actividades = this.actividadedService.getActividades(fecha,u.getUsername());
 		JSONResponse response = new JSONResponse();
-		response.setData(actividades);
-		response.setStatus(JSONResponse.OK);
+		Usuario u = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		List<ActividadTarjetaDTO> actividades;
+		try {
+			actividades = this.actividadedService.getActividades(fecha, u.getUsername());
+			response.setData(actividades);
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
+
 	@Resource(name = "actividadService")
-	public void setService(ActividadEPService service) {
-		this.actividadedService = service;
+	public void setActividadedService(ActividadEPService actividadedService) {
+		this.actividadedService = actividadedService;
 	}
+
 }
-
-

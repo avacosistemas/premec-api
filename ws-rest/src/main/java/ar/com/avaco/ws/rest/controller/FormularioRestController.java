@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.rest.security.controller;
+package ar.com.avaco.ws.rest.controller;
 
 import javax.annotation.Resource;
 

@@ -24,7 +24,7 @@
 	<beans:bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 	 	<beans:property name="locations">
 	 		<beans:list>
-		 		<beans:value>file:${catalina.home}/conf/connection-admin.properties</beans:value>
+		 		<beans:value>file:${catalina.home}/conf/connection-premec.properties</beans:value>
 	 		</beans:list>
 	 	</beans:property>
 	</beans:bean>

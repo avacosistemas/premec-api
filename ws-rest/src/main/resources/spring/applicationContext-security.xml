@@ -14,6 +14,8 @@
 
 	<http entry-point-ref="restAuthenticationEntryPoint">
 		<intercept-url pattern="/auth/reset-password" access="isAuthenticated()" />
+		<intercept-url pattern="/actividades" method="GET" access="isAuthenticated()" />
+		<intercept-url pattern="/formulario" method="POST" access="isAuthenticated()" />
 <!-- 		<intercept-url pattern="/molde/**" access="hasAuthority('PERMISO_MOLDES')" /> -->
 		<intercept-url pattern="/**" access="permitAll" />
 		<csrf disabled="true" />

@@ -5,5 +5,5 @@ import ar.com.avaco.ws.dto.FormularioDTO;
 
 public interface FormularioEPService {
 	
-	public void enviarFormulario (FormularioDTO formulario, String username);
+	public void enviarFormulario (FormularioDTO formulario, String username) throws Exception;
 }

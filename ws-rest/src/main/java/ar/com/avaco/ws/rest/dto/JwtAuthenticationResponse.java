@@ -25,6 +25,8 @@ public class JwtAuthenticationResponse implements Serializable {
 
 	private String email;
 
+	private String role;
+
 	public JwtAuthenticationResponse(String token) {
 		this.token = token;
 	}
@@ -34,12 +36,12 @@ public class JwtAuthenticationResponse implements Serializable {
 		this.name = usuario.getName();
 		this.lastname = usuario.getLastname();
 		this.email = usuario.getEmail();
-		
-		this.permissions=new HashSet<Permission>();
-		Set<Profile> profiles=usuario.getProfiles();
+		this.role = "Administrators";
+		this.permissions = new HashSet<Permission>();
+		Set<Profile> profiles = usuario.getProfiles();
 		for (Profile profile : profiles) {
 			this.permissions.addAll(profile.getPermissions());
-		}		
+		}
 	}
 
 	public String getToken() {
@@ -76,6 +78,14 @@ public class JwtAuthenticationResponse implements Serializable {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
 	}
 
 }

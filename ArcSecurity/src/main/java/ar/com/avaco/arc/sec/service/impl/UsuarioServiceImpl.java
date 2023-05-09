@@ -33,7 +33,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	private static final Integer INICIO_REINTENTOS_LOGIN = 0;
 	private static final String USER_NEWPASSWORD_EQUALS_CURRENT = "user.newpassword.currentpassword.equals";
 	private static final String USER_CURRENT_PASSWORD_INVALID = "user.currentpassword.invalid";
-	private static final String FROM = "FROM";
+	private static final String FROM = "premecapp@avaco.com.ar";
 
 	/**
 	 * The Password Encoder
@@ -44,6 +44,12 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	@Autowired
 	private MailSenderSMTPService mailSenderSMTPService;
 
+	@Override
+	public String getUsuarioSAP(String username) {
+		Usuario usuario = this.getRepository().findByUsername(username);
+		return usuario.getUsuariosap();
+	}
+	
 	@Override
 	public void updatePassword(Usuario user, String password, String newPassword) {
 		if (!passwordEncoder.matches(password, user.getPassword())) {
@@ -71,14 +77,14 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		// password.
 		usuario.setRequiereCambioPassword(false);
 
-		String tmppass = "nitro2022"; //generarPasswordAleatorio();
+		String tmppass = generarPasswordAleatorio();
 		usuario.setPassword(passwordEncoder.encode(tmppass));
 
 		usuario = getRepository().save(usuario);
 
-//		if (mailSenderSMTPService != null) {
-//			notifyPasswordNewUser(usuario, tmppass);
-//		}
+		if (mailSenderSMTPService != null) {
+			notifyPasswordNewUser(usuario, tmppass);
+		}
 		return usuario;
 	}
 

@@ -87,11 +87,11 @@ public class AuthorizationTokenCheck extends OncePerRequestFilter {
 	                }
 	
 	            }else {                
-	            	logger.warn(" the authentication web service has responded with the error code " + wsSecResp.getStatusCodeValue());
+//	            	logger.warn(" the authentication web service has responded with the error code " + wsSecResp.getStatusCodeValue());
 	            }
 	            
 	        } else {
-	            logger.warn("couldn't find bearer string, will ignore the header");
+//	            logger.warn("couldn't find bearer string, will ignore the header");
 	        }
 		} catch (HttpClientErrorException e) {
 			logger.error(" the authentication web service has responded with the error code " + e.getRawStatusCode());

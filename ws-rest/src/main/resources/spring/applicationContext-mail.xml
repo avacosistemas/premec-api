@@ -15,9 +15,9 @@
 
 	<beans:bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
 		<beans:property name="host" value="smtp.hostinger.com" />
-		<beans:property name="port" value="465" />
-		<beans:property name="username" value="none@avaco.com.ar" />
-		<beans:property name="password" value="none" />
+		<beans:property name="port" value="587" />
+		<beans:property name="username" value="premecapp@avaco.com.ar" />
+		<beans:property name="password" value="PremecApp2020$" />
 			
 		<beans:property name="javaMailProperties">
 		   <beans:props>
