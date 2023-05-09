@@ -18,8 +18,10 @@
 		<beans:property name="port" value="587" />
 		<beans:property name="username" value="premecapp@avaco.com.ar" />
 		<beans:property name="password" value="PremecApp2020$" />
-			
-		<beans:property name="javaMailProperties">
+
+		<!--beans:property name="port" value="587" />
+		<beans:property name="username" value="premec@avaco.com.ar" />
+		<beans:property name="password" value="Premec123$" /-->		<beans:property name="javaMailProperties">
 		   <beans:props>
 	       	      <beans:prop key="mail.smtp.auth">true</beans:prop>
 	       	      <beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
