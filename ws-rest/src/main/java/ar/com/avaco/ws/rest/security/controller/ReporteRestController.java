@@ -16,8 +16,8 @@ import ar.com.avaco.ws.service.ReporteEPService;
 public class ReporteRestController {
 
 	private ReporteEPService reporteEPService;
-	
-	@RequestMapping(value = "/reporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+
+	@RequestMapping(value = "/enviarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> enviarReporte() {
 		this.reporteEPService.enviarReporte();
 		JSONResponse response = new JSONResponse();

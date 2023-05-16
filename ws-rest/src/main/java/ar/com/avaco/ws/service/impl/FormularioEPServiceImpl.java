@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import com.google.gson.Gson;
 
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.model.ResponseLoginSAPDTO;
 import ar.com.avaco.ws.dto.ActividadPach;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.service.FormularioEPService;
@@ -35,7 +36,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ActividadPach ap = new ActividadPach();
 
 		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-		SimpleDateFormat sdfDate = new SimpleDateFormat("dd/MM/yyyy");
+		SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd");
 		SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm:ss");
 
 		Date inicioDate = sdf.parse(formulario.getFechaHoraInicio());
@@ -45,7 +46,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setStartTime(sdfHour.format(inicioDate));
 
 		ap.setEndDueDate(sdfDate.format(finDate));
-		ap.setEndDueDate(sdfHour.format(finDate));
+		ap.setEndTime(sdfHour.format(finDate));
 
 		ap.setU_Valoracion(formulario.getValoracion());
 		ap.setU_Tareasreal(new Gson().toJson(formulario.getCheckList()));
@@ -57,10 +58,16 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
-		ResponseEntity<String> responsePatchActividades = restTemplate.exchange(
+		try {
+		
+		ResponseEntity<Object> response = restTemplate.exchange(
 				actividadUrl.replace("{id}", formulario.getIdActividad().toString()), HttpMethod.PATCH, httpEntity,
-				new ParameterizedTypeReference<String>() {
-				});
+				Object.class);
+		
+			System.out.println(response.toString());
+		} catch (Exception e) {
+			throw e;
+		}
 
 	}
 

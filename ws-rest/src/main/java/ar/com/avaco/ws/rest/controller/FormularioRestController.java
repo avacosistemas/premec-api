@@ -22,7 +22,7 @@ public class FormularioRestController {
 	private FormularioEPService formularioEPService;
 	
 	@RequestMapping(value = "/formulario", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> envioFormulario(@RequestBody FormularioDTO formularioDTO ) throws Exception {
+	public ResponseEntity<JSONResponse> envioFormulario(@RequestBody FormularioDTO formularioDTO) throws Exception {
 		Usuario u = (Usuario)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 		this.formularioEPService.enviarFormulario(formularioDTO,u.getUsername());
 		JSONResponse response = new JSONResponse();

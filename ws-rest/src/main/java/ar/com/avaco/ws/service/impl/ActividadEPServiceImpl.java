@@ -64,8 +64,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			
 			ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
 			atdto.setPrioridad(fromJson.get("Priority").toString());
-			Long activityCode = Long.parseLong(fromJson.get("ActivityCode").toString());
-			atdto.setIdActividad(activityCode);
+			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
+			atdto.setIdActividad(activityCode.longValue());
 			atdto.setNumero(fromJson.get("ActivityCode").toString());
 			atdto.setFecha(fromJson.get("ActivityDate").toString());
 			atdto.setHora(fromJson.get("ActivityTime").toString());

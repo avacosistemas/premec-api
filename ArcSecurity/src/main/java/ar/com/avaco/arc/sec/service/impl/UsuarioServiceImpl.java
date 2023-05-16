@@ -170,11 +170,11 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	}
 
 	private void notifyPasswordNewUser(Usuario user, String tmpass) {
-		String subject = "Admin";
+		String subject = "PremecMobile";
 		StringBuilder msg = new StringBuilder("¡Bienvenido ");
 		msg.append(user.getNombreApellido());
-		msg.append(" a Admin! <br>");
-		msg.append("Se le ha asignado una contraseña temporal a su usuario ");
+		msg.append(" a PremecMobile! <br>");
+		msg.append("Se le ha asignado una contraseña a su usuario ");
 		msg.append(user.getUsername());
 		msg.append(".<br>");
 		msg.append("La contraseña asignada es: <strong>");
