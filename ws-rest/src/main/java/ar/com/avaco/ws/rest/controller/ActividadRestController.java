@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
+import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ActividadEPService;
@@ -29,6 +30,22 @@ public class ActividadRestController {
 		List<ActividadTarjetaDTO> actividades;
 		try {
 			actividades = this.actividadedService.getActividades(fecha, u.getUsername());
+			response.setData(actividades);
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = "/actividadesReporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> getActividadesReporte() {
+		JSONResponse response = new JSONResponse();
+		List<ActividadReporteDTO> actividades;
+		try {
+			actividades = this.actividadedService.getActividadesReporte();
 			response.setData(actividades);
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {

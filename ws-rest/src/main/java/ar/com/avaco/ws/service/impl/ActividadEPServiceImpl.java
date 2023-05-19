@@ -1,6 +1,8 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -21,6 +23,7 @@ import com.google.gson.internal.LinkedTreeMap;
 
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.service.ActividadEPService;
 
@@ -33,17 +36,80 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	private String urlSAP;
 
 	@Override
+	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
+		
+		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+		
+		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Autorizado'";
+		ResponseEntity<String> responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		Gson gson = new Gson();
+		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
+
+		List<ActividadReporteDTO> actividades = new ArrayList<>();
+		
+		String employeeUrl = urlSAP + "/EmployeesInfo({id})";
+		String locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
+		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
+		
+		JsonArray asJsonArray = array.getAsJsonArray("value");
+		for (JsonElement element : asJsonArray) {
+			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
+
+			Long parentId = Double.valueOf(fromJson.get("ParentObjectId").toString()).longValue();
+			ResponseEntity<String> responseServiceCall = restTemplate.exchange(serviceCallUrl.replace("{id}", parentId.toString()), HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+			});
+			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);	
+			
+			ActividadReporteDTO ardto = new ActividadReporteDTO();
+			ardto.setFechaInicio("quitar");
+			ardto.setPrioridad(fromJson.get("Priority").toString());
+			ardto.setNumero(fromJson.get("ActivityCode").toString());
+			ardto.setAsignadoPor(servicejson.get("ResponseAssignee").toString());
+			ardto.setLlamadaID(servicejson.get("ServiceCallID").toString());
+			if (fromJson.get("HandledByEmployee") != null) {
+				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
+				ResponseEntity<String> responseEmployee = restTemplate.exchange(employeeUrl.replace("{id}", handledByEmployeeId.toString()), HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
+				ardto.setEmpleado(employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
+			} else {
+				ardto.setEmpleado("--");
+			}
+			ardto.setFecha(fromJson.get("ActivityDate").toString());
+			ardto.setHora(fromJson.get("ActivityTime").toString());
+			String itemCode = servicejson.get("ItemCode") == JsonNull.INSTANCE ? "" : servicejson.get("ItemCode").toString();
+			String descripcionArticulo = servicejson.get("ItemDescription") == JsonNull.INSTANCE ? "" : servicejson.get("ItemDescription").toString();
+			ardto.setCodigoArticulo(itemCode + " " + descripcionArticulo);
+			ardto.setNroSerie(servicejson.get("InternalSerialNum").getAsString());
+			ardto.setCliente(servicejson.get("CustomerName").getAsString());
+			ardto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
+			ardto.setHorasMaquina(servicejson.get("U_HorasMaq") == JsonNull.INSTANCE ? 0 : Integer.parseInt(servicejson.get("U_HorasMaq").toString()));			
+			ardto.setConCargo(fromJson.get("U_ConCargo") == null ||  !fromJson.get("U_ConCargo").equals("Y") ? false : true);			
+			
+			actividades.add(ardto);
+		}
+		return actividades;
+	}
+	
+	@Override
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
 		RestTemplate restTemplate = null;
 		restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
 
-//		String usuarioSAP = usuarioService.getUsuarioSAP(username);
-		String usuarioSAP = "22";
-		String fechaActividad = "'2020-01-07'";
+		String usuarioSAP = usuarioService.getUsuarioSAP(username);
+		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
+		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
+		Date parse = sdfinput.parse(fecha);
+		String fechaActividad = "'" + sdfoutput.format(parse) + "'";
 
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP
-				+ " and ActivityDate eq " + fechaActividad;
+				+ " and ActivityDate eq " + fechaActividad + " and U_Estado eq 'Pendiente'";
 
 		ResponseEntity<String> responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
@@ -70,16 +136,19 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			atdto.setFecha(fromJson.get("ActivityDate").toString());
 			atdto.setHora(fromJson.get("ActivityTime").toString());
 			atdto.setTareasARealizar(fromJson.get("Details").toString());
-			atdto.setConCargo(fromJson.get("U_ConCargo") == null ? false : Boolean.parseBoolean(fromJson.get("U_ConCargo").toString()));
+			atdto.setConCargo(fromJson.get("U_ConCargo") == null ||  !fromJson.get("U_ConCargo").equals("Y") ? false : true);
 
-			Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
-			ResponseEntity<String> responseEmployee = restTemplate.exchange(employeeUrl.replace("{id}", handledByEmployeeId.toString()), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-			JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
+			if (fromJson.get("HandledByEmployee") != null) {
+				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
+				ResponseEntity<String> responseEmployee = restTemplate.exchange(employeeUrl.replace("{id}", handledByEmployeeId.toString()), HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
+				atdto.setEmpleado(employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
+			} else {
+				atdto.setEmpleado("--");
+			}
 			
-			atdto.setEmpleado(employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
-
 			Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
 			ResponseEntity<String> responseLocation = restTemplate.exchange(locationsUrl.replace("{id}", locationId.toString()), HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {

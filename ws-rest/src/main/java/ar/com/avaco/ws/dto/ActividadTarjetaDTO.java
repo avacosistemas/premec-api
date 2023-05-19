@@ -1,7 +1,5 @@
 package ar.com.avaco.ws.dto;
 
-import ar.com.avaco.model.ResponseActividadesDTO;
-
 public class ActividadTarjetaDTO {
 
 	private Long idActividad;

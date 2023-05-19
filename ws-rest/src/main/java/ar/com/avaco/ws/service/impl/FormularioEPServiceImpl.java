@@ -1,23 +1,19 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 
 import ar.com.avaco.factory.RestTemplateFactory;
-import ar.com.avaco.model.ResponseLoginSAPDTO;
-import ar.com.avaco.ws.dto.ActividadPach;
+import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.service.FormularioEPService;
 
@@ -28,12 +24,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private String urlSAP;
 
 	public void enviarFormulario(FormularioDTO formulario, String username) throws Exception {
-		RestTemplate restTemplate = null;
-		restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
 
-		String actividadUrl = urlSAP + "/Activities({id})";
-
-		ActividadPach ap = new ActividadPach();
+		ActividadPatch ap = new ActividadPatch();
 
 		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd");
@@ -55,16 +47,19 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
 		ap.setDetails(formulario.getComentarios());
 		ap.setNotes(formulario.getObservacionesGenerales());
+		ap.setU_Estado("Finalizada");
+		ap.setDocEntry(formulario.getIdActividad().toString());
 
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
 		try {
-		
-		ResponseEntity<Object> response = restTemplate.exchange(
-				actividadUrl.replace("{id}", formulario.getIdActividad().toString()), HttpMethod.PATCH, httpEntity,
-				Object.class);
-		
-			System.out.println(response.toString());
+			RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+
+			String actividadUrl = urlSAP + "/Activities({id})";
+
+			restTemplate.exchange(actividadUrl.replace("{id}", formulario.getIdActividad().toString()),
+					HttpMethod.PATCH, httpEntity, Object.class);
+
 		} catch (Exception e) {
 			throw e;
 		}

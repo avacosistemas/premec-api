@@ -3,7 +3,7 @@ package ar.com.avaco.ws.dto;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ActividadPach {
+public class ActividadPatch {
 
 	private String Notes; // observacionesGenerales
 	private String StartDate; // fechaHoraInicio fecha
@@ -16,6 +16,8 @@ public class ActividadPach {
 	private String U_DniSupervisor; // dniSupervisor
 	private String U_Repuestos; // serializar listado en json
 	private String U_Tareasreal; // listado de checks
+	private String U_Estado;
+	private String DocEntry;
 
 	public Map<String, Object> getAsMap() {
 		Map<String, Object> map = new HashMap<String, Object>();
@@ -30,9 +32,27 @@ public class ActividadPach {
 		map.put("U_DniSupervisor", this.U_DniSupervisor);
 		map.put("U_Repuestos", this.U_Repuestos);
 		map.put("U_Tareasreal", this.U_Tareasreal);
+		map.put("U_Estado", U_Estado);
+		map.put("DocEntry", DocEntry);
 		return map;
 	}
-	
+
+	public String getDocEntry() {
+		return DocEntry;
+	}
+
+	public void setDocEntry(String docEntry) {
+		DocEntry = docEntry;
+	}
+
+	public String getU_Estado() {
+		return U_Estado;
+	}
+
+	public void setU_Estado(String u_Estado) {
+		U_Estado = u_Estado;
+	}
+
 	public String getNotes() {
 		return Notes;
 	}

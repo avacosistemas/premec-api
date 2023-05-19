@@ -3,13 +3,12 @@ package ar.com.avaco.ws.rest.controller;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.BaseColor;
@@ -24,10 +23,11 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import ar.com.avaco.ws.dto.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
-@RestController
-public class InformeRestController {
+public class InformeService {
 
 	private final static Font fontHeaderSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.WHITE);
 	private final static Font fontHeaderTable = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BaseColor.BLACK);
@@ -35,7 +35,12 @@ public class InformeRestController {
 			BaseColor.WHITE);
 	private final static Font fontText = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.BLACK);
 
-	@RequestMapping(value = "/reporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	private ActividadReporteDTO dto;
+
+	public InformeService(ActividadReporteDTO eldto) {
+		this.dto = eldto;
+	}
+
 	public ResponseEntity<JSONResponse> getReporte() throws DocumentException, MalformedURLException, IOException {
 
 		Document document = new Document();
@@ -88,11 +93,11 @@ public class InformeRestController {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("DNI Superior", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Muy Bueno", fontText));
+		cell.setPhrase(new Phrase(dto.getValoracionResultado(), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Martin Espinoza", fontText));
+		cell.setPhrase(new Phrase(dto.getValoracionNombreSuperior(), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("15101901", fontText));
+		cell.setPhrase(new Phrase(dto.getValoracionDNISuperior(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -114,29 +119,29 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Prioridad", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Alta", fontText));
+		cell.setPhrase(new Phrase(dto.getPrioridad(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Numero", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("123456", fontText));
+		cell.setPhrase(new Phrase(dto.getNumero(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Asignado por", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Servicios", fontText));
+		cell.setPhrase(new Phrase(dto.getAsignadoPor(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Lamada Id", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("10855", fontText));
+		cell.setPhrase(new Phrase(dto.getLlamadaID(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Empleado", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Kevin Rolon", fontText));
+		cell.setPhrase(new Phrase(dto.getEmpleado(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Fecha", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("10/10/2020", fontText));
+		cell.setPhrase(new Phrase(dto.getFecha(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase(""));
@@ -145,7 +150,7 @@ public class InformeRestController {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Hora", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("15:45", fontText));
+		cell.setPhrase(new Phrase(dto.getHora(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -174,21 +179,21 @@ public class InformeRestController {
 		cell.setPhrase(new Phrase("Numero de Serie", fontHeaderTable));
 		table.addCell(cell);
 
-		for (int i = 1; i <= 3; i++) {
-			cell.setPhrase(new Phrase("0001534" + i, fontText));
+		dto.getRepuestos().forEach(x -> {
+			cell.setPhrase(new Phrase(x.getNroArticulo(), fontText));
 			table.addCell(cell);
-			cell.setPhrase(new Phrase("Repuesto " + i, fontText));
+			cell.setPhrase(new Phrase(x.getDescripcion(), fontText));
 			table.addCell(cell);
-			cell.setPhrase(new Phrase(new Integer(i * 3).toString(), fontText));
+			cell.setPhrase(new Phrase(String.valueOf(new Phrase(x.getCantidad())), fontText));
 			table.addCell(cell);
-			cell.setPhrase(
-					new Phrase(new Integer(("nro" + i).toString().hashCode()).toString().substring(0, 5), fontText));
+			cell.setPhrase(new Phrase(x.getNroSerie(), fontText));
 			table.addCell(cell);
-		}
+		});
 
 		p.add(table);
 
 		document.add(p);
+
 	}
 
 	private void addOperarios(Document document) throws DocumentException {
@@ -212,13 +217,13 @@ public class InformeRestController {
 		cell.setPhrase(new Phrase("Hora Fin", fontHeaderTable));
 		table.addCell(cell);
 
-		cell.setPhrase(new Phrase("10/10/2020", fontText));
+		cell.setPhrase(new Phrase(dto.getFechaInicioOperario(), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("15:50 ", fontText));
+		cell.setPhrase(new Phrase(dto.getHoraInicioOperario(), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("10/10/2020", fontText));
+		cell.setPhrase(new Phrase(dto.getFechaFinoOperario(), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("16:30 ", fontText));
+		cell.setPhrase(new Phrase(dto.getHoraFinOperario(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -238,8 +243,7 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Detalle", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(
-				new Phrase("No sube bien el elevador. Se frena a los 3 metros y deberia subir hasta 5.", fontText));
+		cell.setPhrase(new Phrase(dto.getDetalle(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -259,7 +263,7 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Comentarios", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Muy buen servicio se pudo resolver todo.", fontText));
+		cell.setPhrase(new Phrase(dto.getValoracionComentarios(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -279,9 +283,7 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Tareas a Realizar", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase(
-				"Se debe reemplazar la pieza por otra que funcione bien porque la que tiene funciona mal por eso hay que cambiarla",
-				fontText));
+		cell.setPhrase(new Phrase(dto.getTareasARealizar(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -301,9 +303,7 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Observaciones Generales", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase(
-				"Observaciones Observaciones Observaciones Observaciones Observaciones Observaciones Observaciones Observaciones ",
-				fontText));
+		cell.setPhrase(new Phrase(dto.getObservacionesGenerales(), fontText));
 		table.addCell(cell);
 
 		p.add(table);
@@ -333,16 +333,25 @@ public class InformeRestController {
 		cell.setPhrase(new Phrase("Comentarios", fontHeaderTableChecks));
 		table.addCell(cell);
 
-		addHeaderCheckGrilla("1", "SISTEMA ELECTRICO", table);
-		agregarCheckGrilla("a", "Tambor de arranque", "ok", "", table);
-		agregarCheckGrilla("b", "Alternador", "no aplica", "", table);
-		agregarCheckGrilla("c", "Motor de arranque", "ok", "", table);
-		agregarCheckGrilla("d", "Luces gral", "no ok", "Se debe cambiar", table);
+		List<String> keySet = new ArrayList<String>(dto.getChecks().keySet());
+		Collections.sort(keySet);
 
-		addHeaderCheckGrilla("2", "FRENOS", table);
-		agregarCheckGrilla("a", "Comando de marcha", "ok", "", table);
-		agregarCheckGrilla("b", "Fluido caja/diferencial", "no aplica", "", table);
-		agregarCheckGrilla("c", "Electrovalvulas de marcha", "no ok", "Se apagan", table);
+		keySet.forEach(titulo -> {
+
+			Integer headerIndex = 1;
+
+			addHeaderCheckGrilla(headerIndex.toString(), titulo, table);
+
+			headerIndex++;
+
+			List<ItemCheckDTO> items = dto.getChecks().get(titulo);
+
+			items.forEach(y -> {
+				int index = 65;
+				String indexChar = String.valueOf((char) index);
+				agregarCheckGrilla(indexChar, y.getNombre(), y.getEstado(), y.getObservaciones(), table);
+			});
+		});
 
 		p.add(table);
 
@@ -392,38 +401,38 @@ public class InformeRestController {
 
 		cell.setPhrase(new Phrase("Codigo Articulo", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("BT RRE 9955", fontText));
+		cell.setPhrase(new Phrase(dto.getCodigoArticulo(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Fecha Inicio", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("02/08/2022", fontText));
+		cell.setPhrase(new Phrase(dto.getFecha(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Nro de Serie", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("A230", fontText));
+		cell.setPhrase(new Phrase(dto.getNroSerie(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Cliente", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("PILISR SA", fontText));
+		cell.setPhrase(new Phrase(dto.getCliente(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Nro Fabricante", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("356988A Llave", fontText));
+		cell.setPhrase(new Phrase(dto.getNroFabricante(), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Direccion", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Mexico 2929", fontText));
+		cell.setPhrase(new Phrase(dto.getDireccion(), fontText));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Horas Máquina", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("90", fontText));
+		cell.setPhrase(new Phrase(String.valueOf(dto.getHorasMaquina()), fontText));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Con Cargo", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Si", fontText));
+		cell.setPhrase(new Phrase(dto.getConCargo() ? "Si": "No", fontText));
 		table.addCell(cell);
 
 		p.add(table);
