@@ -13,6 +13,7 @@ public class FormularioDTO {
 	String comentarios;
 	String nombreSupervisor;
 	Long dniSupervisor;
+	private String conCargo;
 
 	String tipoMaquina;
 	List<ItemCheckDTO> checkList = new ArrayList<>();
@@ -113,6 +114,14 @@ public class FormularioDTO {
 
 	public void setTipoMaquina(String tipoMaquina) {
 		this.tipoMaquina = tipoMaquina;
+	}
+
+	public String getConCargo() {
+		return conCargo;
+	}
+
+	public void setConCargo(String conCargo) {
+		this.conCargo = conCargo;
 	}
 
 }

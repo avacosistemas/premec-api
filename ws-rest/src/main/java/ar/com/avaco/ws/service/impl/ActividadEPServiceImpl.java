@@ -53,6 +53,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		String employeeUrl = urlSAP + "/EmployeesInfo({id})";
 		String locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
+		String userUrl = urlSAP + "/Users({id})";
 		
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 		for (JsonElement element : asJsonArray) {
@@ -67,8 +68,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			ActividadReporteDTO ardto = new ActividadReporteDTO();
 			ardto.setFechaInicio("quitar");
 			ardto.setPrioridad(fromJson.get("Priority").toString());
-			ardto.setNumero(fromJson.get("ActivityCode").toString());
-			ardto.setAsignadoPor(servicejson.get("ResponseAssignee").toString());
+			Double ac = (Double) fromJson.get("ActivityCode");
+			atdto.setNumero(String.valueOf(ac.intValue()));
+			
+			Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
+			ResponseEntity<String> responseUser = restTemplate.exchange(userUrl.replace("{id}", asignadoPorId.toString()), HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+			});
+			JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
+			ardto.setAsignadoPor(userjson.get("UserName").toString());
+			
 			ardto.setLlamadaID(servicejson.get("ServiceCallID").toString());
 			if (fromJson.get("HandledByEmployee") != null) {
 				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
@@ -89,7 +98,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			ardto.setCliente(servicejson.get("CustomerName").getAsString());
 			ardto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
 			ardto.setHorasMaquina(servicejson.get("U_HorasMaq") == JsonNull.INSTANCE ? 0 : Integer.parseInt(servicejson.get("U_HorasMaq").toString()));			
-			ardto.setConCargo(fromJson.get("U_ConCargo") == null ||  !fromJson.get("U_ConCargo").equals("Y") ? false : true);			
+			ardto.setConCargo(fromJson.get("U_ConCargo") != null &&  fromJson.get("U_ConCargo").equals("Y") ? "Y" : "N");			
 			
 			actividades.add(ardto);
 		}
@@ -109,7 +118,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		String fechaActividad = "'" + sdfoutput.format(parse) + "'";
 
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP
-				+ " and ActivityDate eq " + fechaActividad + " and U_Estado eq 'Pendiente'";
+				+ " and StartDate eq " + fechaActividad + " and U_Estado eq 'Pendiente'";
 
 		ResponseEntity<String> responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
@@ -123,6 +132,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		String employeeUrl = urlSAP + "/EmployeesInfo({id})";
 		String locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
+		String userUrl = urlSAP + "/Users({id})";
 		
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 		for (JsonElement element : asJsonArray) {
@@ -132,10 +142,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			atdto.setPrioridad(fromJson.get("Priority").toString());
 			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
 			atdto.setIdActividad(activityCode.longValue());
-			atdto.setNumero(fromJson.get("ActivityCode").toString());
+			Double ac = (Double) fromJson.get("ActivityCode");
+			atdto.setNumero(String.valueOf(ac.intValue()));
 			atdto.setFecha(fromJson.get("ActivityDate").toString());
 			atdto.setHora(fromJson.get("ActivityTime").toString());
-			atdto.setTareasARealizar(fromJson.get("Details").toString());
+			Object object = fromJson.get("Details");
+			atdto.setTareasARealizar(object != null ? object.toString() : "");
 			atdto.setConCargo(fromJson.get("U_ConCargo") == null ||  !fromJson.get("U_ConCargo").equals("Y") ? false : true);
 
 			if (fromJson.get("HandledByEmployee") != null) {
@@ -161,7 +173,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					new ParameterizedTypeReference<String>() {
 			});
 			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
-			atdto.setAsignadoPor(servicejson.get("ResponseAssignee").toString());
+
+			if (fromJson.get("ResponseAssignee") != null) {
+			Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
+			ResponseEntity<String> responseUser = restTemplate.exchange(userUrl.replace("{id}", asignadoPorId.toString()), HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+			});
+			JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
+			atdto.setAsignadoPor(userjson.get("UserName").toString());
+			} else {
+				atdto.setAsignadoPor("--");
+			}
+			
 			atdto.setLlamadaID(servicejson.get("ServiceCallID").toString());
 			String itemCode = servicejson.get("ItemCode") == JsonNull.INSTANCE ? "" : servicejson.get("ItemCode").toString();
 			String descripcionArticulo = servicejson.get("ItemDescription") == JsonNull.INSTANCE ? "" : servicejson.get("ItemDescription").toString();

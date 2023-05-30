@@ -39,17 +39,19 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		ap.setEndDueDate(sdfDate.format(finDate));
 		ap.setEndTime(sdfHour.format(finDate));
-
+		
 		ap.setU_Valoracion(formulario.getValoracion());
+		ap.setU_ValoracionComent(formulario.getComentarios());
 		ap.setU_Tareasreal(new Gson().toJson(formulario.getCheckList()));
 		ap.setU_Repuestos(new Gson().toJson(formulario.getRepuestos()));
 		ap.setU_NomSupervisor(formulario.getNombreSupervisor());
 		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
-		ap.setDetails(formulario.getComentarios());
 		ap.setNotes(formulario.getObservacionesGenerales());
 		ap.setU_Estado("Finalizada");
 		ap.setDocEntry(formulario.getIdActividad().toString());
-
+		ap.setU_ConCargo(formulario.getConCargo());
+		
+		
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
 		try {

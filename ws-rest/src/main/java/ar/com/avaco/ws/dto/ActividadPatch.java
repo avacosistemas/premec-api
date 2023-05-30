@@ -18,6 +18,8 @@ public class ActividadPatch {
 	private String U_Tareasreal; // listado de checks
 	private String U_Estado;
 	private String DocEntry;
+	private String U_ConCargo;
+	private String U_ValoracionComent;
 
 	public Map<String, Object> getAsMap() {
 		Map<String, Object> map = new HashMap<String, Object>();
@@ -33,8 +35,18 @@ public class ActividadPatch {
 		map.put("U_Repuestos", this.U_Repuestos);
 		map.put("U_Tareasreal", this.U_Tareasreal);
 		map.put("U_Estado", U_Estado);
+		map.put("U_ConCargo", U_ConCargo);
+		map.put("U_ValoracionComent", U_ValoracionComent);
 		map.put("DocEntry", DocEntry);
 		return map;
+	}
+
+	public String getU_ConCargo() {
+		return U_ConCargo;
+	}
+
+	public void setU_ConCargo(String u_ConCargo) {
+		U_ConCargo = u_ConCargo;
 	}
 
 	public String getDocEntry() {
@@ -139,6 +151,14 @@ public class ActividadPatch {
 
 	public void setU_Tareasreal(String u_Tareasreal) {
 		U_Tareasreal = u_Tareasreal;
+	}
+
+	public String getU_ValoracionComent() {
+		return U_ValoracionComent;
+	}
+
+	public void setU_ValoracionComent(String u_ValoracionComent) {
+		U_ValoracionComent = u_ValoracionComent;
 	}
 
 }

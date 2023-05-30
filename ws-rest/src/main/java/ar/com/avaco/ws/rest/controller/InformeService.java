@@ -432,7 +432,7 @@ public class InformeService {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Con Cargo", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase(dto.getConCargo() ? "Si": "No", fontText));
+		cell.setPhrase(new Phrase(dto.getConCargo() != null && dto.getConCargo().equals("Y") ? "Si" : "No", fontText));
 		table.addCell(cell);
 
 		p.add(table);
