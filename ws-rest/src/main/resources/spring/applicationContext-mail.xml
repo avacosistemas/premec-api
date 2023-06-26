@@ -14,18 +14,24 @@
 		http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd">	    
 
 	<beans:bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
-		<beans:property name="host" value="smtp.hostinger.com" />
-		<beans:property name="port" value="587" />
-		<beans:property name="username" value="premecapp@avaco.com.ar" />
-		<beans:property name="password" value="PremecApp2020$" />
+		<beans:property name="host" value="${mailsender.host}" />
+		<beans:property name="port" value="${mailsender.port}" />
+		<beans:property name="username" value="${mailsender.username}" />
+		<beans:property name="password" value="${mailsender.password}" />
 
-		<!--beans:property name="port" value="587" />
-		<beans:property name="username" value="premec@avaco.com.ar" />
-		<beans:property name="password" value="Premec123$" /-->		<beans:property name="javaMailProperties">
+<!-- 		<beans:property name="host" value="smtp.hostinger.com" /> -->
+<!-- 		<beans:property name="port" value="587" /> -->
+<!-- 		<beans:property name="username" value="premecapp@avaco.com.ar" /> -->
+<!-- 		<beans:property name="password" value="PremecApp2020$" /> -->
+
+		<beans:property name="javaMailProperties">
 		   <beans:props>
 	       	      <beans:prop key="mail.smtp.auth">true</beans:prop>
 	       	      <beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
-	       	      <beans:prop key="mail.smtp.ssl.trust">smtp.hostinger.com</beans:prop>
+	       	      <beans:prop key="mail.smtp.ssl.trust">${mailsender.host}</beans:prop>
+<!-- 	       	      <beans:prop key="mail.smtp.connectiontimeout">5000</beans:prop> -->
+	       	      <beans:prop key="mail.smtp.timeout">5000</beans:prop>
+<!-- 	       	      <beans:prop key="mail.smtp.writetimeout">5000</beans:prop> -->
 	       	   </beans:props>
 		</beans:property>
 	</beans:bean>    

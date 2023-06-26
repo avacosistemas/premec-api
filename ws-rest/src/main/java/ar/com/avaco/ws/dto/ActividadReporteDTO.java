@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ar.com.avaco.ws.dto.ItemCheckDTO;
+import ar.com.avaco.ws.dto.RepuestoDTO;
+
 public class ActividadReporteDTO {
 
 	private Long idActividad;
@@ -17,7 +20,6 @@ public class ActividadReporteDTO {
 	private String hora;
 
 	private String codigoArticulo;
-	private String fechaInicio;
 	private String nroSerie;
 	private String cliente;
 	private String nroFabricante;
@@ -43,6 +45,16 @@ public class ActividadReporteDTO {
 	private String valoracionNombreSuperior;
 	private String valoracionDNISuperior;
 	private String valoracionComentarios;
+
+	private String email;
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
 
 	public Long getIdActividad() {
 		return idActividad;
@@ -114,14 +126,6 @@ public class ActividadReporteDTO {
 
 	public void setCodigoArticulo(String codigoArticulo) {
 		this.codigoArticulo = codigoArticulo;
-	}
-
-	public String getFechaInicio() {
-		return fechaInicio;
-	}
-
-	public void setFechaInicio(String fechaInicio) {
-		this.fechaInicio = fechaInicio;
 	}
 
 	public String getNroSerie() {

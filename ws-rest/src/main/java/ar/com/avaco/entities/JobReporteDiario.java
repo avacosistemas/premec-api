@@ -1,30 +1,27 @@
-package ar.com.avaco.ws.rest.security.controller;
+package ar.com.avaco.entities;
 
 import java.util.List;
 
 import javax.annotation.Resource;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.stereotype.Service;
 
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
-import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ActividadEPService;
 import ar.com.avaco.ws.service.ReporteEPService;
 
-@RestController
-public class ReporteRestController {
+@Service
+public class JobReporteDiario implements Job {
 
-	private ReporteEPService reporteEPService;
 	private ActividadEPService actividadedEPService;
+	private ReporteEPService reporteEPService;
 
-	@RequestMapping(value = "/enviarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> enviarReporte() {
-
+	@Override
+	public void execute(JobExecutionContext context) throws JobExecutionException {
+		System.out.println("ejecutando job");
 		try {
 			List<ActividadReporteDTO> actividadesReporte = this.actividadedEPService.getActividadesReporte();
 			actividadesReporte.forEach(x -> {
@@ -38,12 +35,8 @@ public class ReporteRestController {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-
+	
 	@Resource(name = "reporteEPService")
 	public void setReporteEPService(ReporteEPService reporteEPService) {
 		this.reporteEPService = reporteEPService;

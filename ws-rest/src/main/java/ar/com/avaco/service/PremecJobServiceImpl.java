@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import ar.com.avaco.entities.JobReporteDiario;
 
+
 @Service("premecJobService")
 public class PremecJobServiceImpl implements PremecJobService {
 
@@ -27,7 +28,7 @@ public class PremecJobServiceImpl implements PremecJobService {
 			JobDetail job1 = JobBuilder.newJob(JobReporteDiario.class).withIdentity("reporteDiarioJob", "premecGroup")
 					.build();
 			Trigger trigger1 = TriggerBuilder.newTrigger().withIdentity("cronTrigger", "premecGroup")
-					.withSchedule(CronScheduleBuilder.cronSchedule("0/5 * * * * ?")).build();
+					.withSchedule(CronScheduleBuilder.cronSchedule("0 0/1 * ? * * *")).build();
 			scheduler.scheduleJob(job1, trigger1);
 			scheduler.start();
 			scheduler.pauseAll();

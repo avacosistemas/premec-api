@@ -1,9 +1,17 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -11,6 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
@@ -22,6 +33,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	@Value("${urlSAP}")
 	private String urlSAP;
+
+	@Value("${informe.path}")
+	private String informePath;
 
 	public void enviarFormulario(FormularioDTO formulario, String username) throws Exception {
 
@@ -39,10 +53,11 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		ap.setEndDueDate(sdfDate.format(finDate));
 		ap.setEndTime(sdfHour.format(finDate));
-		
+
 		ap.setU_Valoracion(formulario.getValoracion());
 		ap.setU_ValoracionComent(formulario.getComentarios());
-		ap.setU_Tareasreal(new Gson().toJson(formulario.getCheckList()));
+		String tareas = new Gson().toJson(formulario.getCheckList());
+		ap.setU_Tareasreal(tareas);
 		ap.setU_Repuestos(new Gson().toJson(formulario.getRepuestos()));
 		ap.setU_NomSupervisor(formulario.getNombreSupervisor());
 		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
@@ -50,8 +65,51 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setU_Estado("Finalizada");
 		ap.setDocEntry(formulario.getIdActividad().toString());
 		ap.setU_ConCargo(formulario.getConCargo());
-		
-		
+
+		JsonParser jsonParser = new JsonParser();
+		JsonArray jsonArray = (JsonArray) jsonParser.parse(tareas);
+
+		Map<String, List<String>> map = new HashMap<>();
+
+		jsonArray.forEach(x -> {
+			JsonObject item = x.getAsJsonObject();
+			if (!item.get("estado").getAsString().equals("No aplica")) {
+				List<String> list = map.get(item.get("titulo").toString());
+				if (list == null) {
+					list = new ArrayList<String>();
+				}
+				list.add(item.get("nombre") + " - " + item.get("estado") + " - " + item.get("observaciones"));
+				map.put(item.get("titulo").toString(), list);
+			}
+		});
+
+		StringBuilder sb = new StringBuilder();
+		map.keySet().forEach(x -> {
+			sb.append(" --- " + x + " ---");
+			sb.append(System.lineSeparator());
+			List<String> list = map.get(x);
+			list.forEach(y -> {
+				sb.append(y);
+				sb.append(System.lineSeparator());
+			});
+		});
+
+		ap.setU_Tareas_Real(sb.toString());
+
+		String path = informePath + "fotosactividades\\" + formulario.getIdActividad() + "\\";
+		Files.createDirectories(Paths.get(path));
+
+		int i = 1;
+		formulario.getFotos().forEach(foto -> {
+			try {
+				String[] split = foto.getNombre().split("\\.");
+				FileUtils.writeByteArrayToFile(new File(path + "FOTO-" + i + "." + split[split.length - 1]),
+						foto.getArchivo());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
 		try {
@@ -70,6 +128,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	public void setUrlSAP(String urlSAP) {
 		this.urlSAP = urlSAP;
+	}
+
+	public void setInformePath(String informePath) {
+		this.informePath = informePath;
 	}
 
 }

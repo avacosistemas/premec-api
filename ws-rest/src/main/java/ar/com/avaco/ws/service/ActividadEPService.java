@@ -10,4 +10,6 @@ public interface ActividadEPService {
 	List<ActividadTarjetaDTO> getActividades(String fecha, String usuarname) throws Exception;
 
 	List<ActividadReporteDTO> getActividadesReporte() throws Exception;
+
+	void marcarEnviado(Long idActividad) throws Exception;
 }

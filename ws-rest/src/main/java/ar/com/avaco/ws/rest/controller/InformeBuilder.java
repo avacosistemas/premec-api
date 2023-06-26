@@ -1,5 +1,6 @@
 package ar.com.avaco.ws.rest.controller;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -14,6 +15,7 @@ import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Image;
@@ -27,7 +29,7 @@ import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
-public class InformeService {
+public class InformeBuilder {
 
 	private final static Font fontHeaderSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.WHITE);
 	private final static Font fontHeaderTable = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BaseColor.BLACK);
@@ -37,42 +39,75 @@ public class InformeService {
 
 	private ActividadReporteDTO dto;
 
-	public InformeService(ActividadReporteDTO eldto) {
+	public InformeBuilder(ActividadReporteDTO eldto) {
 		this.dto = eldto;
 	}
 
-	public ResponseEntity<JSONResponse> getReporte() throws DocumentException, MalformedURLException, IOException {
+	public ResponseEntity<JSONResponse> generarReporte(String informePath) throws DocumentException, IOException {
 
 		Document document = new Document();
-		PdfWriter.getInstance(document, new FileOutputStream("C:\\desarrollo\\iTextHelloWorld.pdf"));
-		document.open();
+		try {
+			PdfWriter.getInstance(document,
+					new FileOutputStream(informePath + dto.getIdActividad().toString() + ".pdf"));
+			document.open();
 
-		addLogo(document);
+			addLogo(document);
 
-		addActividad(document);
+			addActividad(document);
 
-		addInformacionDetallada(document);
+			addInformacionDetallada(document);
 
-		addDetalle(document);
+			addDetalle(document);
 
-		addTareasARealizar(document);
+			addTareasARealizar(document);
 
-		addGrillaChecks(document);
+			addGrillaChecks(document);
 
-		addObservacionesGenerales(document);
+			addObservacionesGenerales(document);
 
-		addRepuestos(document);
+			addRepuestos(document);
 
-		addOperarios(document);
+			addOperarios(document);
 
-		addValoracion(document);
+			addValoracion(document);
 
-		addComentariosValoracion(document);
+			addComentariosValoracion(document);
 
-		document.close();
+			addImages(document, informePath);
+
+		} catch (DocumentException e) {
+			e.printStackTrace();
+			throw e;
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw e;
+		} finally {
+			document.close();
+		}
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	private void addImages(Document document, String informePath) {
+		File[] fileList = new File(informePath + "fotosactividades\\" + dto.getIdActividad()).listFiles();
+		if (fileList != null) {
+			for (File file : fileList) {
+				Image img;
+				try {
+					Paragraph p = new Paragraph();
+					img = Image.getInstance(file.getAbsolutePath());
+					float fitWidth = img.getWidth() > 700 ? 700 : img.getWidth();
+					img.scaleToFit(fitWidth, fitWidth * img.getWidth() / img.getHeight());
+					img.setAlignment(Element.ALIGN_CENTER);
+					p.add(img);
+					document.add(p);
+				} catch (IOException | DocumentException e) {
+					document.close();
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	private void addValoracion(Document document) throws DocumentException {
