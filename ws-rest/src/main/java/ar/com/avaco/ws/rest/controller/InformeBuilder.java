@@ -219,7 +219,7 @@ public class InformeBuilder {
 			table.addCell(cell);
 			cell.setPhrase(new Phrase(x.getDescripcion(), fontText));
 			table.addCell(cell);
-			cell.setPhrase(new Phrase(String.valueOf(new Phrase(x.getCantidad())), fontText));
+			cell.setPhrase(new Phrase(String.valueOf(x.getCantidad()), fontText));
 			table.addCell(cell);
 			cell.setPhrase(new Phrase(x.getNroSerie(), fontText));
 			table.addCell(cell);
