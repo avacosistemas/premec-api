@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -37,7 +39,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Value("${informe.path}")
 	private String informePath;
 
-	public void enviarFormulario(FormularioDTO formulario, String username) throws Exception {
+	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
 
 		ActividadPatch ap = new ActividadPatch();
 
@@ -96,24 +98,53 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		ap.setU_Tareas_Real(sb.toString());
 
-		String path = informePath + "fotosactividades\\" + formulario.getIdActividad() + "\\";
+		String path = informePath + "fotosactividades\\" + formulario.getIdActividad();
 		Files.createDirectories(Paths.get(path));
 
+		String attachmentUrl = urlSAP + "/Attachments2";
+
+		Map<String, Object> attachmentMap = new HashMap<>();
+		
+		List<Map<String, String>> archivos = new ArrayList<>();
+		
 		int i = 1;
 		formulario.getFotos().forEach(foto -> {
 			try {
 				String[] split = foto.getNombre().split("\\.");
-				FileUtils.writeByteArrayToFile(new File(path + "FOTO-" + i + "." + split[split.length - 1]),
-						foto.getArchivo());
+				String fileName = "FOTO-" + Calendar.getInstance().getTimeInMillis() + "-" + i;
+				String fileExtension = split[split.length - 1];
+				String pathname = path + "\\" + fileName + "." + fileExtension;
+				FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
+				
+				Map<String, String> fotoMap = new HashMap<>();
+				fotoMap.put("FileExtension", fileExtension);
+				fotoMap.put("FileName", fileName);
+				fotoMap.put("SourcePath", path);
+				fotoMap.put("UserID", usuarioSAP);
+
+				archivos.add(fotoMap);
+				
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		});
 
-		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
+		attachmentMap.put("Attachments2_Lines", archivos.toArray());
 
 		try {
+
 			RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+
+			HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
+			ResponseEntity<Object> attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach , Object.class);
+			
+			Gson gson = new Gson();
+			Object object = ((Map)attachmentRespose.getBody()).entrySet().toArray()[1];
+			String attchEntry = (object.toString().split("="))[1];
+			
+			ap.setAttachmentEntry(attchEntry);
+			
+			HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
 			String actividadUrl = urlSAP + "/Activities({id})";
 
@@ -123,7 +154,6 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		} catch (Exception e) {
 			throw e;
 		}
-
 	}
 
 	public void setUrlSAP(String urlSAP) {

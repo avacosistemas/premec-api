@@ -222,7 +222,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			ardto.setValoracionResultado(fromJson.get("U_Valoracion").toString());
 			ardto.setValoracionNombreSuperior(fromJson.get("U_NomSupervisor").toString());
 			ardto.setValoracionDNISuperior(((Long)Double.valueOf(fromJson.get("U_DniSupervisor").toString()).longValue()).toString());
-			ardto.setValoracionComentarios(fromJson.get("U_ValoracionComent").toString());
+			Object object2 = fromJson.get("U_ValoracionComent");
+			ardto.setValoracionComentarios(object2 != null ? object2.toString() : "Sin comentarios");
 
 			String customerCode = servicejson.get("CustomerCode").getAsString();
 			String bpContactCode = servicejson.get("ContactCode").getAsString();

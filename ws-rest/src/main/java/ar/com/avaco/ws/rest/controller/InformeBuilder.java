@@ -477,7 +477,7 @@ public class InformeBuilder {
 
 	private void addLogo(Document document)
 			throws BadElementException, MalformedURLException, IOException, DocumentException {
-		Image logo = Image.getInstance("C:\\desarrollo\\logopremec.png");
+		Image logo = Image.getInstance("logopremec.png");
 		logo.scaleToFit(300, 150);
 		document.add(logo);
 	}

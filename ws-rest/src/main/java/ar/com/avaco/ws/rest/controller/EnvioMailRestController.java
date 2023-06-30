@@ -19,10 +19,6 @@ public class EnvioMailRestController {
 
 	@RequestMapping(value = "/sendMail", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> sendMail() {
-
-		mailSenderSMTPService.sendMail("premecapp@avaco.com.ar", "alosgonzalez@gmail.com", "prueba premec", "premec",
-				null);
-
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);

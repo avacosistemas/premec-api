@@ -9,6 +9,7 @@ import javax.annotation.Resource;
 
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -33,7 +34,9 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	private static final Integer INICIO_REINTENTOS_LOGIN = 0;
 	private static final String USER_NEWPASSWORD_EQUALS_CURRENT = "user.newpassword.currentpassword.equals";
 	private static final String USER_CURRENT_PASSWORD_INVALID = "user.currentpassword.invalid";
-	private static final String FROM = "premecapp@avaco.com.ar";
+
+	@Value("${email.from}")
+	private String from;
 
 	/**
 	 * The Password Encoder
@@ -49,7 +52,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		Usuario usuario = this.getRepository().findByUsername(username);
 		return usuario.getUsuariosap();
 	}
-	
+
 	@Override
 	public void updatePassword(Usuario user, String password, String newPassword) {
 		if (!passwordEncoder.matches(password, user.getPassword())) {
@@ -180,7 +183,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		msg.append("La contraseña asignada es: <strong>");
 		msg.append(tmpass);
 		msg.append(".<br>");
-		mailSenderSMTPService.sendMail(FROM, user.getEmail(), subject.toString(), msg.toString(), null);
+		mailSenderSMTPService.sendMail(from, user.getEmail(), subject.toString(), msg.toString(), null);
 	}
 
 	private void notifyPassword(Usuario user, String tmppas) {
@@ -193,7 +196,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		msg.append("La contraseña asignada es: <strong>");
 		msg.append(tmppas);
 		msg.append(".<br>");
-		mailSenderSMTPService.sendMail(FROM, user.getEmail(), subject.toString(), msg.toString(), null);
+		mailSenderSMTPService.sendMail(from, user.getEmail(), subject.toString(), msg.toString(), null);
 	}
 
 	@Override
@@ -245,6 +248,10 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 			throw new UsernameNotFoundException("Usuario " + username + "not found");
 		}
 		return user;
+	}
+
+	public void setFrom(String from) {
+		this.from = from;
 	}
 
 }

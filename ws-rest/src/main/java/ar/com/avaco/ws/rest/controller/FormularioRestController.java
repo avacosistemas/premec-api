@@ -20,16 +20,16 @@ import ar.com.avaco.ws.service.FormularioEPService;
 public class FormularioRestController {
 
 	private FormularioEPService formularioEPService;
-	
+
 	@RequestMapping(value = "/formulario", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> envioFormulario(@RequestBody FormularioDTO formularioDTO) throws Exception {
-		Usuario u = (Usuario)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-		this.formularioEPService.enviarFormulario(formularioDTO,u.getUsername());
+		Usuario u = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		this.formularioEPService.enviarFormulario(formularioDTO, u.getUsuariosap());
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
+
 	@Resource(name = "formularioEPService")
 	public void setService(FormularioEPService service) {
 		this.formularioEPService = service;
