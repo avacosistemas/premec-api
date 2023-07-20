@@ -31,7 +31,6 @@ public class ActividadPatch {
 		map.put("EndDueDate", this.EndDueDate);
 		map.put("EndTime", this.EndTime);
 		map.put("U_Valoracion", this.U_Valoracion);
-		map.put("Details", this.Details);
 		map.put("U_NomSupervisor", this.U_NomSupervisor);
 		map.put("U_DniSupervisor", this.U_DniSupervisor);
 		map.put("U_Repuestos", this.U_Repuestos);

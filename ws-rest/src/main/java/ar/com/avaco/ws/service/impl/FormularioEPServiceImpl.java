@@ -50,23 +50,44 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		Date inicioDate = sdf.parse(formulario.getFechaHoraInicio());
 		Date finDate = sdf.parse(formulario.getFechaHoraFin());
 
+		// Con Cargo
+		ap.setU_ConCargo(formulario.getConCargo());
+
+		// Observaciones Generales
+		ap.setNotes(formulario.getObservacionesGenerales());
+		
+		// Operario
+		// Fecha de Inicio
 		ap.setStartDate(sdfDate.format(inicioDate));
+		// Hora de Inicio
 		ap.setStartTime(sdfHour.format(inicioDate));
-
+		// Fecha Fin
 		ap.setEndDueDate(sdfDate.format(finDate));
+		// Hora Fin
 		ap.setEndTime(sdfHour.format(finDate));
-
+		
+		// Valoracion
+		// Valoracion
 		ap.setU_Valoracion(formulario.getValoracion());
+		// Comentarios
 		ap.setU_ValoracionComent(formulario.getComentarios());
+		// Nombre Supervisor
+		ap.setU_NomSupervisor(formulario.getNombreSupervisor());
+		// DNI Supervisor
+		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
+
+		// Tareas
 		String tareas = new Gson().toJson(formulario.getCheckList());
 		ap.setU_Tareasreal(tareas);
+		
+		// Repuestos
 		ap.setU_Repuestos(new Gson().toJson(formulario.getRepuestos()));
-		ap.setU_NomSupervisor(formulario.getNombreSupervisor());
-		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
-		ap.setNotes(formulario.getObservacionesGenerales());
+
+		// Estado Finalizado
 		ap.setU_Estado("Finalizada");
+		
+		// Id de actividad
 		ap.setDocEntry(formulario.getIdActividad().toString());
-		ap.setU_ConCargo(formulario.getConCargo());
 
 		JsonParser jsonParser = new JsonParser();
 		JsonArray jsonArray = (JsonArray) jsonParser.parse(tareas);
@@ -98,15 +119,15 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		ap.setU_Tareas_Real(sb.toString());
 
-		String path = informePath + "fotosactividades\\" + formulario.getIdActividad();
+		String path = informePath + "\\fotosactividades\\" + formulario.getIdActividad();
 		Files.createDirectories(Paths.get(path));
 
 		String attachmentUrl = urlSAP + "/Attachments2";
 
 		Map<String, Object> attachmentMap = new HashMap<>();
-		
+
 		List<Map<String, String>> archivos = new ArrayList<>();
-		
+
 		int i = 1;
 		formulario.getFotos().forEach(foto -> {
 			try {
@@ -115,7 +136,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				String fileExtension = split[split.length - 1];
 				String pathname = path + "\\" + fileName + "." + fileExtension;
 				FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
-				
+
 				Map<String, String> fotoMap = new HashMap<>();
 				fotoMap.put("FileExtension", fileExtension);
 				fotoMap.put("FileName", fileName);
@@ -123,7 +144,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				fotoMap.put("UserID", usuarioSAP);
 
 				archivos.add(fotoMap);
-				
+
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -136,14 +157,15 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
 
 			HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
-			ResponseEntity<Object> attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach , Object.class);
-			
+			ResponseEntity<Object> attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST,
+					httpEntityAttach, Object.class);
+
 			Gson gson = new Gson();
-			Object object = ((Map)attachmentRespose.getBody()).entrySet().toArray()[1];
+			Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
 			String attchEntry = (object.toString().split("="))[1];
-			
+
 			ap.setAttachmentEntry(attchEntry);
-			
+
 			HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 
 			String actividadUrl = urlSAP + "/Activities({id})";

@@ -48,10 +48,10 @@ public class InformeBuilder {
 		Document document = new Document();
 		try {
 			PdfWriter.getInstance(document,
-					new FileOutputStream(informePath + dto.getIdActividad().toString() + ".pdf"));
+					new FileOutputStream(informePath + "\\" + dto.getIdActividad().toString() + ".pdf"));
 			document.open();
 
-			addLogo(document);
+			addLogo(document, informePath);
 
 			addActividad(document);
 
@@ -72,8 +72,8 @@ public class InformeBuilder {
 			addValoracion(document);
 
 			addComentariosValoracion(document);
-
-			addImages(document, informePath);
+// Se quita el incluir las imagenes en el informe por pedido del cliente 3/7/2023
+//			addImages(document, informePath);
 
 		} catch (DocumentException e) {
 			e.printStackTrace();
@@ -90,7 +90,7 @@ public class InformeBuilder {
 	}
 
 	private void addImages(Document document, String informePath) {
-		File[] fileList = new File(informePath + "fotosactividades\\" + dto.getIdActividad()).listFiles();
+		File[] fileList = new File(informePath + "\\fotosactividades\\" + dto.getIdActividad()).listFiles();
 		if (fileList != null) {
 			for (File file : fileList) {
 				Image img;
@@ -475,9 +475,9 @@ public class InformeBuilder {
 		document.add(p);
 	}
 
-	private void addLogo(Document document)
+	private void addLogo(Document document, String informePath)
 			throws BadElementException, MalformedURLException, IOException, DocumentException {
-		Image logo = Image.getInstance("logopremec.png");
+		Image logo = Image.getInstance(informePath + "\\logopremec.png");
 		logo.scaleToFit(300, 150);
 		document.add(logo);
 	}

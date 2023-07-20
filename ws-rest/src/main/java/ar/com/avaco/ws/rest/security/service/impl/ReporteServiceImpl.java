@@ -35,7 +35,8 @@ public class ReporteServiceImpl implements ReporteService {
 	@Override
 	public void sendMail(String email, String activityCode) {
 
-		File file = new File(informePath + activityCode + ".pdf");
+		File file = new File(informePath + "\\" + activityCode + ".pdf");
+
 		List<File> files = new ArrayList<>();
 		files.add(file);
 
