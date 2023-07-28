@@ -1,7 +1,6 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -28,6 +27,7 @@ import com.google.gson.JsonParser;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
+import ar.com.avaco.ws.dto.FotoDTO;
 import ar.com.avaco.ws.service.FormularioEPService;
 
 @Service("formularioEPService")
@@ -38,6 +38,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	@Value("${informe.path}")
 	private String informePath;
+
+	@Value("${shared.sap.img}")
+	private String sharedSapImg;
 
 	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
 
@@ -55,7 +58,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		// Observaciones Generales
 		ap.setNotes(formulario.getObservacionesGenerales());
-		
+
 		// Operario
 		// Fecha de Inicio
 		ap.setStartDate(sdfDate.format(inicioDate));
@@ -65,7 +68,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setEndDueDate(sdfDate.format(finDate));
 		// Hora Fin
 		ap.setEndTime(sdfHour.format(finDate));
-		
+
 		// Valoracion
 		// Valoracion
 		ap.setU_Valoracion(formulario.getValoracion());
@@ -79,13 +82,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Tareas
 		String tareas = new Gson().toJson(formulario.getCheckList());
 		ap.setU_Tareasreal(tareas);
-		
+
 		// Repuestos
 		ap.setU_Repuestos(new Gson().toJson(formulario.getRepuestos()));
 
 		// Estado Finalizado
 		ap.setU_Estado("Finalizada");
-		
+
 		// Id de actividad
 		ap.setDocEntry(formulario.getIdActividad().toString());
 
@@ -129,26 +132,22 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		List<Map<String, String>> archivos = new ArrayList<>();
 
 		int i = 1;
-		formulario.getFotos().forEach(foto -> {
-			try {
-				String[] split = foto.getNombre().split("\\.");
-				String fileName = "FOTO-" + Calendar.getInstance().getTimeInMillis() + "-" + i;
-				String fileExtension = split[split.length - 1];
-				String pathname = path + "\\" + fileName + "." + fileExtension;
-				FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
+		for(FotoDTO foto : formulario.getFotos()) {
+			String[] split = foto.getNombre().split("\\.");
+			String fileName = "FOTO-" + Calendar.getInstance().getTimeInMillis() + "-" + i;
+			String fileExtension = split[split.length - 1];
+			String pathname = path + "\\" + fileName + "." + fileExtension;
+			FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
 
-				Map<String, String> fotoMap = new HashMap<>();
-				fotoMap.put("FileExtension", fileExtension);
-				fotoMap.put("FileName", fileName);
-				fotoMap.put("SourcePath", path);
-				fotoMap.put("UserID", usuarioSAP);
+			Map<String, String> fotoMap = new HashMap<String, String>();
+			fotoMap.put("FileExtension", fileExtension);
+			fotoMap.put("FileName", fileName);
+			fotoMap.put("SourcePath", path);
+			fotoMap.put("UserID", usuarioSAP);
 
-				archivos.add(fotoMap);
+			archivos.add(fotoMap);
 
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
+		}
 
 		attachmentMap.put("Attachments2_Lines", archivos.toArray());
 
@@ -160,7 +159,6 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			ResponseEntity<Object> attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST,
 					httpEntityAttach, Object.class);
 
-			Gson gson = new Gson();
 			Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
 			String attchEntry = (object.toString().split("="))[1];
 
