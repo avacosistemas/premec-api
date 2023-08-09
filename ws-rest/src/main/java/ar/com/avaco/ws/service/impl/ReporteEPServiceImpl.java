@@ -28,6 +28,13 @@ public class ReporteEPServiceImpl implements ReporteEPService{
 		this.reporteService = reporteService;
 	}
 	
+	@Override
+	public void generarReporte(ActividadReporteDTO eldto) throws DocumentException, IOException {
+		InformeBuilder ib = new InformeBuilder(eldto);
+		ib.generarReporte(informePath);
+	}
+	
+	@Override
 	public void enviarReporte(ActividadReporteDTO eldto) throws MalformedURLException, DocumentException, IOException {
 		InformeBuilder ib = new InformeBuilder(eldto);
 		ib.generarReporte(informePath);

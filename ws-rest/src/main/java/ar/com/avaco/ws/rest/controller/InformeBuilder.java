@@ -63,15 +63,16 @@ public class InformeBuilder {
 
 			addGrillaChecks(document);
 
-			addObservacionesGenerales(document);
+//			addObservacionesGenerales(document);
 
-			addRepuestos(document);
+//			addRepuestos(document);
 
 			addOperarios(document);
 
 			addValoracion(document);
 
 			addComentariosValoracion(document);
+
 // Se quita el incluir las imagenes en el informe por pedido del cliente 3/7/2023
 //			addImages(document, informePath);
 
@@ -352,7 +353,7 @@ public class InformeBuilder {
 
 		Paragraph p = new Paragraph();
 
-		PdfPTable table = new PdfPTable(new float[] { 5, 35, 10, 50 });
+		PdfPTable table = new PdfPTable(new float[] { 5, 35, 10 });
 
 		PdfPCell cell = new PdfPCell();
 		cell.setBorder(0);
@@ -365,8 +366,8 @@ public class InformeBuilder {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Estado", fontHeaderTableChecks));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Comentarios", fontHeaderTableChecks));
-		table.addCell(cell);
+//		cell.setPhrase(new Phrase("Comentarios", fontHeaderTableChecks));
+//		table.addCell(cell);
 
 		List<String> keySet = new ArrayList<String>(dto.getChecks().keySet());
 		Collections.sort(keySet);
@@ -404,8 +405,8 @@ public class InformeBuilder {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("", fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("", fontText));
-		table.addCell(cell);
+//		cell.setPhrase(new Phrase("", fontText));
+//		table.addCell(cell);
 	}
 
 	private void agregarCheckGrilla(String id, String titulo, String estado, String observaciones, PdfPTable table) {
@@ -418,8 +419,8 @@ public class InformeBuilder {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase(estado, fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase(observaciones, fontText));
-		table.addCell(cell);
+//		cell.setPhrase(new Phrase(observaciones, fontText));
+//		table.addCell(cell);
 	}
 
 	private void addInformacionDetallada(Document document) throws DocumentException {

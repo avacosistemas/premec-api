@@ -11,4 +11,6 @@ public interface ReporteEPService {
 
 	public void enviarReporte(ActividadReporteDTO eldto) throws MalformedURLException, DocumentException, IOException;
 
+	public void generarReporte(ActividadReporteDTO eldto) throws DocumentException, IOException;
+
 }

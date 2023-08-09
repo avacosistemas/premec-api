@@ -43,6 +43,27 @@ public class ReporteRestController {
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
+	
+	@RequestMapping(value = "/generarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> generarReporte() {
+
+		try {
+			List<ActividadReporteDTO> actividadesReporte = this.actividadedEPService.getActividadesReporte();
+			actividadesReporte.forEach(x -> {
+				try {
+					this.reporteEPService.generarReporte(x);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		JSONResponse response = new JSONResponse();
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
 
 	@Resource(name = "reporteEPService")
 	public void setReporteEPService(ReporteEPService reporteEPService) {
