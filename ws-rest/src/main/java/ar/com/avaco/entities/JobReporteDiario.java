@@ -16,18 +16,21 @@ import ar.com.avaco.ws.service.ReporteEPService;
 @Service
 public class JobReporteDiario implements Job {
 
-	private ActividadEPService actividadedEPService;
+	private ActividadEPService actividadEPService;
 	private ReporteEPService reporteEPService;
 
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
-		System.out.println("ejecutando job");
+
+		actividadEPService = (ActividadEPService) context.getJobDetail().getJobDataMap().get("actividadEPService");
+		reporteEPService = (ReporteEPService) context.getJobDetail().getJobDataMap().get("reporteEPService");
+		
 		try {
-			List<ActividadReporteDTO> actividadesReporte = this.actividadedEPService.getActividadesReporte();
+			List<ActividadReporteDTO> actividadesReporte = this.actividadEPService.getActividadesReporte();
 			actividadesReporte.forEach(x -> {
 				try {
 					this.reporteEPService.enviarReporte(x);
-					this.actividadedEPService.marcarEnviado(x.getIdActividad());
+					this.actividadEPService.marcarEnviado(x.getIdActividad());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -43,8 +46,8 @@ public class JobReporteDiario implements Job {
 	}
 
 	@Resource(name = "actividadService")
-	public void setActividadedEPService(ActividadEPService actividadedEPService) {
-		this.actividadedEPService = actividadedEPService;
+	public void setActividadEPService(ActividadEPService actividadEPService) {
+		this.actividadEPService = actividadEPService;
 	}
-
+	
 }
