@@ -5,56 +5,20 @@ import java.util.List;
 
 public class FormularioDTO {
 
-	Long idActividad;
-	String observacionesGenerales;
-	String fechaHoraInicio;
-	String fechaHoraFin;
-	String valoracion;
-	String comentarios;
-	String nombreSupervisor;
-	Long dniSupervisor;
+	private Long idActividad;
+	private String observacionesGenerales;
+	private String fechaHoraInicio;
+	private String fechaHoraFin;
+	private String valoracion;
+	private String comentarios;
+	private String nombreSupervisor;
+	private Long dniSupervisor;
 	private String conCargo;
 
-	String tipoMaquina;
-	List<ItemCheckDTO> checkList = new ArrayList<>();
-	List<RepuestoDTO> repuestos = new ArrayList<>();
-	List<FotoDTO> fotos = new ArrayList<>();
-
-	public List<RepuestoDTO> getRepuestos() {
-		return repuestos;
-	}
-
-	public void setRepuestos(List<RepuestoDTO> repuestos) {
-		this.repuestos = repuestos;
-	}
-
-	public List<FotoDTO> getFotos() {
-		return fotos;
-	}
-
-	public void setFotos(List<FotoDTO> fotos) {
-		this.fotos = fotos;
-	}
-
-	public String getObservacionesGenerales() {
-		return observacionesGenerales;
-	}
-
-	public List<ItemCheckDTO> getCheckList() {
-		return checkList;
-	}
-
-	public void setCheckList(List<ItemCheckDTO> checkList) {
-		this.checkList = checkList;
-	}
-
-	public Long getDniSupervisor() {
-		return dniSupervisor;
-	}
-
-	public void setDniSupervisor(Long dniSupervisor) {
-		this.dniSupervisor = dniSupervisor;
-	}
+	private String tipoMaquina;
+	private List<ItemCheckDTO> checkList = new ArrayList<>();
+	private List<RepuestoDTO> repuestos = new ArrayList<>();
+	private List<FotoDTO> fotos = new ArrayList<>();
 
 	public Long getIdActividad() {
 		return idActividad;
@@ -62,6 +26,10 @@ public class FormularioDTO {
 
 	public void setIdActividad(Long idActividad) {
 		this.idActividad = idActividad;
+	}
+
+	public String getObservacionesGenerales() {
+		return observacionesGenerales;
 	}
 
 	public void setObservacionesGenerales(String observacionesGenerales) {
@@ -108,12 +76,12 @@ public class FormularioDTO {
 		this.nombreSupervisor = nombreSupervisor;
 	}
 
-	public String getTipoMaquina() {
-		return tipoMaquina;
+	public Long getDniSupervisor() {
+		return dniSupervisor;
 	}
 
-	public void setTipoMaquina(String tipoMaquina) {
-		this.tipoMaquina = tipoMaquina;
+	public void setDniSupervisor(Long dniSupervisor) {
+		this.dniSupervisor = dniSupervisor;
 	}
 
 	public String getConCargo() {
@@ -122,6 +90,38 @@ public class FormularioDTO {
 
 	public void setConCargo(String conCargo) {
 		this.conCargo = conCargo;
+	}
+
+	public String getTipoMaquina() {
+		return tipoMaquina;
+	}
+
+	public void setTipoMaquina(String tipoMaquina) {
+		this.tipoMaquina = tipoMaquina;
+	}
+
+	public List<ItemCheckDTO> getCheckList() {
+		return checkList;
+	}
+
+	public void setCheckList(List<ItemCheckDTO> checkList) {
+		this.checkList = checkList;
+	}
+
+	public List<RepuestoDTO> getRepuestos() {
+		return repuestos;
+	}
+
+	public void setRepuestos(List<RepuestoDTO> repuestos) {
+		this.repuestos = repuestos;
+	}
+
+	public List<FotoDTO> getFotos() {
+		return fotos;
+	}
+
+	public void setFotos(List<FotoDTO> fotos) {
+		this.fotos = fotos;
 	}
 
 }

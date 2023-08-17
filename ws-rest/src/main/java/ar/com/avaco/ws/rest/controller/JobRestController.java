@@ -22,23 +22,41 @@ public class JobRestController {
 	public void setPremecJobService(PremecJobService premecJobService) {
 		this.premecJobService = premecJobService;
 	}
-	
-	@RequestMapping(value = "/startStopJobService", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> startJobService() throws SchedulerException, InterruptedException {
-		premecJobService.startStopJobService();
+
+	@RequestMapping(value = "/startStopEnvioFormularioSapJob", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> startStopEnvioFormularioSapJob()
+			throws SchedulerException, InterruptedException {
+		premecJobService.startStopEnvioFormularioSapJob();
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
-	@RequestMapping(value = "/isJobRunning", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> isJobRunning() throws SchedulerException, InterruptedException {
-		boolean ret = premecJobService.isJobRunning();
+
+	@RequestMapping(value = "/isEnvioFormularioSapJobRunning", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> isEnvioFormularioSapJobRunning()
+			throws SchedulerException, InterruptedException {
+		boolean ret = premecJobService.isEnvioFormularioSapJobRunning();
 		JSONResponse response = new JSONResponse();
 		response.setData(ret);
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
-	
+
+	@RequestMapping(value = "/startStopReporteDiarioJob", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> startStopReporteDiarioJob() throws SchedulerException, InterruptedException {
+		premecJobService.startStopReporteDiarioJob();
+		JSONResponse response = new JSONResponse();
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/isReporteDiarioJobRunning", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> isReporteDiarioJobRunning() throws SchedulerException, InterruptedException {
+		boolean ret = premecJobService.isReporteDiarioJobRunning();
+		JSONResponse response = new JSONResponse();
+		response.setData(ret);
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
 }

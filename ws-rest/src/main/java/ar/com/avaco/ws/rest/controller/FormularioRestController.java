@@ -21,11 +21,47 @@ public class FormularioRestController {
 
 	private FormularioEPService formularioEPService;
 
+//	@RequestMapping(value = "/formulario", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+//	public ResponseEntity<JSONResponse> envioFormulario(@RequestBody FormularioDTO formularioDTO) {
+//		JSONResponse response = new JSONResponse();
+//		Usuario u = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+//		try {
+//			this.formularioEPService.enviarFormulario(formularioDTO, u.getUsuariosap());
+//			response.setStatus(JSONResponse.OK);
+//		} catch (Exception e) {
+//			response.setStatus(JSONResponse.ERROR);
+//			response.setData(e.getLocalizedMessage());
+//			e.printStackTrace();
+//		}
+//		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+//	}
+
 	@RequestMapping(value = "/formulario", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> envioFormulario(@RequestBody FormularioDTO formularioDTO) throws Exception {
+	public ResponseEntity<JSONResponse> saveFormulario(@RequestBody FormularioDTO formularioDTO) {
 		JSONResponse response = new JSONResponse();
 		Usuario u = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-		this.formularioEPService.enviarFormulario(formularioDTO, u.getUsuariosap());
+		try {
+			this.formularioEPService.grabarFormulario(formularioDTO, u.getUsuariosap());
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/formulariosEnviarJsonSap", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> formulariosEnviar() {
+		JSONResponse response = new JSONResponse();
+		try {
+			this.formularioEPService.enviarFormulariosFromFiles();
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}

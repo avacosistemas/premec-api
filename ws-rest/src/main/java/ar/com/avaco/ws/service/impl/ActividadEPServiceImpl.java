@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Value("${urlSAP}")
 	private String urlSAP;
 
+	private String employeeUrl;
+	private String locationsUrl;
+	private String serviceCallUrl;
+	private String userUrl;
+	private String businessPartnerUrl;
+	private String actividadUrl;
+
+	@PostConstruct
+	public void onInit() {
+		this.actividadUrl = urlSAP + "/Activities({id})";
+		this.employeeUrl = urlSAP + "/EmployeesInfo({id})";
+		this.locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
+		this.serviceCallUrl = urlSAP + "/ServiceCalls({id})";
+		this.userUrl = urlSAP + "/Users({id})";
+		this.businessPartnerUrl = urlSAP + "/BusinessPartners('{id}')";
+	}
+
 	@Override
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
@@ -56,27 +74,26 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		List<ActividadReporteDTO> actividades = new ArrayList<>();
 
-		String employeeUrl = urlSAP + "/EmployeesInfo({id})";
-		String locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
-		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
-		String userUrl = urlSAP + "/Users({id})";
-		String businessPartnerUrl = urlSAP + "/BusinessPartners('{id}')";
-
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 		for (JsonElement element : asJsonArray) {
 			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
-			Long parentId = Double.valueOf(fromJson.get("ParentObjectId").toString()).longValue();
+			ActividadReporteDTO ardto = new ActividadReporteDTO();
+
+			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
+			ardto.setIdActividad(activityCode.longValue());
+
+			Object parentObjectId = fromJson.get("ParentObjectId");
+			if (parentObjectId == null) {
+				throw new Exception("No se puede obtener el parentobjectid de la actividad " + activityCode
+						+ " para el envio del reporte");
+			}
+			Long parentId = Double.valueOf(parentObjectId.toString()).longValue();
 			ResponseEntity<String> responseServiceCall = restTemplate.exchange(
 					serviceCallUrl.replace("{id}", parentId.toString()), HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
-
-			ActividadReporteDTO ardto = new ActividadReporteDTO();
-
-			Double parseDouble = Double.parseDouble(fromJson.get("ActivityCode").toString());
-			ardto.setIdActividad(parseDouble.longValue());
 
 			// Prioridad
 			ardto.setPrioridad(fromJson.get("Priority").toString());
@@ -165,8 +182,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			// Detalle
 			ardto.setDetalle(servicejson.get("Subject").getAsString());
 
-			Object object = fromJson.get("Details");
-			ardto.setTareasARealizar(object != null ? object.toString() : "");
+			Object detailsObject = fromJson.get("Details");
+			ardto.setTareasARealizar(detailsObject != null ? detailsObject.toString() : "");
 
 			// Checks
 			String tareas = new Gson().toJson(fromJson.get("U_Tareasreal"));
@@ -221,7 +238,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			ardto.setValoracionResultado(fromJson.get("U_Valoracion").toString());
 			ardto.setValoracionNombreSuperior(fromJson.get("U_NomSupervisor").toString());
-			ardto.setValoracionDNISuperior(((Long)Double.valueOf(fromJson.get("U_DniSupervisor").toString()).longValue()).toString());
+			ardto.setValoracionDNISuperior(
+					((Long) Double.valueOf(fromJson.get("U_DniSupervisor").toString()).longValue()).toString());
 			Object object2 = fromJson.get("U_ValoracionComent");
 			ardto.setValoracionComentarios(object2 != null ? object2.toString() : "Sin comentarios");
 
@@ -277,11 +295,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
 		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
-
-		String employeeUrl = urlSAP + "/EmployeesInfo({id})";
-		String locationsUrl = urlSAP + "/ActivityLocations?$filter=Code eq {id}";
-		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
-		String userUrl = urlSAP + "/Users({id})";
 
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 		for (JsonElement element : asJsonArray) {
@@ -377,8 +390,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		map.put("U_Estado", "Enviado");
 		map.put("DocEntry", idActividad);
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
-
-		String actividadUrl = urlSAP + "/Activities({id})";
 
 		restTemplate.exchange(actividadUrl.replace("{id}", idActividad.toString()), HttpMethod.PATCH, httpEntity,
 				Object.class);

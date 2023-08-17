@@ -38,6 +38,9 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	@Value("${email.from}")
 	private String from;
 
+	@Value("${email.cc}")
+	private String cc;
+
 	/**
 	 * The Password Encoder
 	 */
@@ -183,7 +186,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		msg.append("La contraseña asignada es: <strong>");
 		msg.append(tmpass);
 		msg.append(".<br>");
-		mailSenderSMTPService.sendMail(from, user.getEmail(), subject.toString(), msg.toString(), null);
+		mailSenderSMTPService.sendMail(from, user.getEmail(), cc, subject.toString(), msg.toString(), null);
 	}
 
 	private void notifyPassword(Usuario user, String tmppas) {
@@ -196,7 +199,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		msg.append("La contraseña asignada es: <strong>");
 		msg.append(tmppas);
 		msg.append(".<br>");
-		mailSenderSMTPService.sendMail(from, user.getEmail(), subject.toString(), msg.toString(), null);
+		mailSenderSMTPService.sendMail(from, user.getEmail(), cc, subject.toString(), msg.toString(), null);
 	}
 
 	@Override
@@ -252,6 +255,10 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 
 	public void setFrom(String from) {
 		this.from = from;
+	}
+
+	public void setCc(String cc) {
+		this.cc = cc;
 	}
 
 }
