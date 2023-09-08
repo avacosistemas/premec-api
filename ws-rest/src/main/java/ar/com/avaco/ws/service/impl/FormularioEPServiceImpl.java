@@ -100,6 +100,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Con Cargo
 		ap.setU_ConCargo(formulario.getConCargo());
 
+		ap.setU_HsMaq(formulario.getHorasMaquina());
+		
 		// Observaciones Generales
 		ap.setNotes(formulario.getObservacionesGenerales());
 
@@ -204,7 +206,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		LOGGER.debug("Grabando formulario " + formularioDTO.getIdActividad());
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		String pathname = jsonPath + "\\actividad-" + formularioDTO.getIdActividad() + "-usuariosap- " + usuariosap
+		String pathname = jsonPath + "\\actividad-" + formularioDTO.getIdActividad() + "-usuariosap-" + usuariosap
 				+ ".txt";
 		try {
 			String json = mapper.writeValueAsString(formularioDTO);
@@ -237,8 +239,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					String readFileToString = FileUtils.readFileToString(file);
 					FormularioDTO formularioDTO = mapper.readValue(readFileToString, FormularioDTO.class);
 					String[] split = file.getName().split("\\.")[0].split("-");
-					String userId = split[1];
-					String formularioId = split[0];
+					String userId = split[3];
+					String formularioId = split[1];
 					LOGGER.debug("Enviando formulario " + formularioId);
 					enviarFormulario(formularioDTO, userId);
 					LOGGER.debug("Formulario " + formularioId + " enviado");

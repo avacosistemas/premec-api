@@ -22,6 +22,7 @@ public class ActividadPatch {
 	private String U_ValoracionComent;
 	private String U_Tareas_Real;
 	private String AttachmentEntry;
+	private String U_HsMaq;
 
 	public Map<String, Object> getAsMap() {
 		Map<String, Object> map = new HashMap<String, Object>();
@@ -41,7 +42,8 @@ public class ActividadPatch {
 		map.put("DocEntry", DocEntry);
 		map.put("U_Tareas_Real", U_Tareas_Real);
 		map.put("AttachmentEntry", AttachmentEntry);
-		
+		map.put("U_HsMaq", U_HsMaq);
+
 		return map;
 	}
 
@@ -179,6 +181,14 @@ public class ActividadPatch {
 
 	public void setAttachmentEntry(String attachmentEntry) {
 		AttachmentEntry = attachmentEntry;
+	}
+
+	public String getU_HsMaq() {
+		return U_HsMaq;
+	}
+
+	public void setU_HsMaq(String u_HsMaq) {
+		U_HsMaq = u_HsMaq;
 	}
 
 }
