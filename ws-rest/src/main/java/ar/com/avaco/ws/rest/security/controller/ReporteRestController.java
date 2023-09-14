@@ -43,7 +43,7 @@ public class ReporteRestController {
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
+
 	@RequestMapping(value = "/generarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> generarReporte() {
 
@@ -59,6 +59,16 @@ public class ReporteRestController {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		JSONResponse response = new JSONResponse();
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/generarreportetest", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> generarReporteTest() {
+
+		this.reporteEPService.generarReporteTest();
 
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);

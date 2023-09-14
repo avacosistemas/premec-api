@@ -13,4 +13,6 @@ public interface ReporteEPService {
 
 	public void generarReporte(ActividadReporteDTO eldto) throws DocumentException, IOException;
 
+	public void generarReporteTest();
+
 }

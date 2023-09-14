@@ -7,6 +7,17 @@ public class RepuestoDTO {
 	int cantidad;
 	String nroSerie;
 
+	public RepuestoDTO() {
+	}
+
+	public RepuestoDTO(String nroArticulo, String descripcion, int cantidad, String nroSerie) {
+		super();
+		this.nroArticulo = nroArticulo;
+		this.descripcion = descripcion;
+		this.cantidad = cantidad;
+		this.nroSerie = nroSerie;
+	}
+
 	public String getNroArticulo() {
 		return nroArticulo;
 	}

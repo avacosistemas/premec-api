@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.rest.controller;
+package ar.com.avaco.ws.rest.reporte;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,7 +31,6 @@ import ar.com.avaco.ws.rest.dto.JSONResponse;
 
 public class InformeBuilder {
 
-	private final static Font fontHeaderSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.WHITE);
 	private final static Font fontHeaderTable = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BaseColor.BLACK);
 	private final static Font fontHeaderTableChecks = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10,
 			BaseColor.WHITE);
@@ -47,11 +46,16 @@ public class InformeBuilder {
 
 		Document document = new Document();
 		try {
-			PdfWriter.getInstance(document,
+			PdfWriter writer = PdfWriter.getInstance(document,
 					new FileOutputStream(informePath + "\\" + dto.getIdActividad().toString() + ".pdf"));
+			
+			writer.setPageEvent(new PDFEventHelper());
+			
 			document.open();
+			
+			document.setMargins(10, 10, 10, 10);
 
-			addLogo(document, informePath);
+//			addLogo(document, informePath);
 
 			addActividad(document);
 
@@ -143,7 +147,7 @@ public class InformeBuilder {
 
 	private void addActividad(Document document) throws DocumentException {
 
-		addHeader("Actividad", document);
+		addHeader("ACTIVIDAD", document);
 
 		Paragraph p = new Paragraph();
 
@@ -399,6 +403,7 @@ public class InformeBuilder {
 		cell.setBorder(0);
 		cell.setFixedHeight(14);
 		cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+		cell.setBorderColorBottom(new BaseColor(228, 228, 228));
 		cell.setPhrase(new Phrase(id, fontHeaderTable));
 		table.addCell(cell);
 		cell.setPhrase(new Phrase(titulo, fontHeaderTable));
@@ -484,15 +489,24 @@ public class InformeBuilder {
 	}
 
 	private void addHeader(String titulo, Document document) throws DocumentException {
+		
+		Font fontHeaderSection = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new BaseColor(44,45,114));
+		
 		Paragraph p = new Paragraph();
-		p.setFont(fontText);
 		PdfPTable tableHeader = new PdfPTable(1);
 		PdfPCell cellHeader = new PdfPCell();
-		cellHeader.setHorizontalAlignment(1);
+		
+		cellHeader.setHorizontalAlignment(Element.ALIGN_LEFT);
 		cellHeader.setPhrase(new Phrase(titulo, fontHeaderSection));
-		cellHeader.setFixedHeight(20);
-		cellHeader.setBackgroundColor(BaseColor.BLACK);
+//		cellHeader.setFixedHeight(22);
+		cellHeader.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		cellHeader.setBorder(0);
+		cellHeader.setBackgroundColor(new BaseColor(238,238,238));
+		cellHeader.setBorderColorBottom(new BaseColor(228, 228, 228));
+		cellHeader.setBorderWidthBottom(1);
+		cellHeader.setPadding(8);
+		cellHeader.setPaddingBottom(9);
+	
 		tableHeader.addCell(cellHeader);
 		p.add(tableHeader);
 		document.add(new Paragraph(new Phrase("  ")));

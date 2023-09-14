@@ -7,6 +7,17 @@ public class ItemCheckDTO {
 	String estado;
 	String observaciones;
 
+	public ItemCheckDTO() {
+	}
+
+	public ItemCheckDTO(String titulo, String nombre, String estado, String observaciones) {
+		super();
+		this.titulo = titulo;
+		this.nombre = nombre;
+		this.estado = estado;
+		this.observaciones = observaciones;
+	}
+
 	public String getNombre() {
 		return nombre;
 	}
