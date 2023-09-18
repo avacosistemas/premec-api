@@ -58,6 +58,23 @@ public class AuthenticationRestController {
 		return ResponseEntity.ok(new JwtAuthenticationResponse(token, usuario));
 	}
 
+	@RequestMapping(value = "/authAdmin", method = RequestMethod.POST)
+	public ResponseEntity<?> createAuthenticationTokenAdmin(@RequestBody JwtAuthenticationRequest authenticationRequest)
+			throws AuthenticationException {
+		authenticate(authenticationRequest.getUsername(), authenticationRequest.getPassword());
+
+		// Reload password post-security so we can generate the token
+		final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+		final String token = jwtTokenUtil.generateToken(userDetails);
+		
+		User usuario=userService.getByUsername(userDetails.getUsername());		
+		if (!usuario.getAdmin().booleanValue()) {
+			throw new AuthenticationException("El usuario " + authenticationRequest.getUsername() + " no es admin", null);
+		}
+		// Return the token and user datas
+		return ResponseEntity.ok(new JwtAuthenticationResponse(token, usuario));
+	}
+	
 	@RequestMapping(value = "/refresh", method = RequestMethod.POST)
 	public ResponseEntity<?> refreshAndGetAuthenticationToken(HttpServletRequest request) {
 		String authToken = request.getHeader(tokenHeader);

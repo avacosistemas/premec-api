@@ -14,6 +14,7 @@ public class FormularioDTO {
 	private String nombreSupervisor;
 	private Long dniSupervisor;
 	private String conCargo;
+	private String horasMaquina;
 
 	private String tipoMaquina;
 	private List<ItemCheckDTO> checkList = new ArrayList<>();
@@ -122,6 +123,14 @@ public class FormularioDTO {
 
 	public void setFotos(List<FotoDTO> fotos) {
 		this.fotos = fotos;
+	}
+
+	public String getHorasMaquina() {
+		return horasMaquina;
+	}
+
+	public void setHorasMaquina(String horasMaquina) {
+		this.horasMaquina = horasMaquina;
 	}
 
 }
