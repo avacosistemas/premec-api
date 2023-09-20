@@ -55,7 +55,7 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 		dto.setCodigoArticulo("CodigoArt");
 		dto.setConCargo("Si");
 		dto.setDetalle(
-				"Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle ");
+				"Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle  Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle Detalle");
 		dto.setDireccion("Direccion Direccion Direccion Direccion Direccion ");
 		dto.setEmail("email@gmail.com");
 		dto.setEmpleado("Empleado");
@@ -75,7 +75,7 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 				"Observaciones Generales Observaciones Generales Observaciones Generales Observaciones Generales Observaciones Generales Observaciones Generales ");
 		dto.setPrioridad("prioridad");
 		dto.setTareasARealizar(
-				"Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar ");
+				"Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizar Tareas a realizarTareas a realizarTareas a realizarTareas a realizarTareas a realizarTareas a realizar ");
 		dto.setValoracionComentarios("comentarios comentarios comentarios comentarios ");
 		dto.setValoracionDNISuperior("30218977");
 		dto.setValoracionNombreSuperior("NombreSuperior");
@@ -94,6 +94,10 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Nivel de Aceite", "OK", "Obs"));
 		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Bomba principal", "OK", "Obs"));
 		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Mangueras en gral", "No OK", "Obs"));
+		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Bomba principal", "OK", "Obs"));
+		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Mangueras en gral", "No OK", "Obs"));
+		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Bomba principal", "OK", "Obs"));
+		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Mangueras en gral", "No OK", "Obs"));
 		hidra.add(new ItemCheckDTO(sistemaHidraulico, "Cilindros en gral", "No Ok", "Obs"));
 		checks.put(sistemaHidraulico, hidra);
 
@@ -102,9 +106,49 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 		elect.add(new ItemCheckDTO(sistemaElectrico, "Módulos electrónicos", "OK", "Obs"));
 		elect.add(new ItemCheckDTO(sistemaElectrico, "Contactores, switch, sensores", "OK", "Obs"));
 		elect.add(new ItemCheckDTO(sistemaElectrico, "Tableros y comandos", "No OK", "Obs"));
+		elect.add(new ItemCheckDTO(sistemaElectrico, "Tableros y comandos", "No OK", "Obs"));
+		elect.add(new ItemCheckDTO(sistemaElectrico, "Contactores, switch, sensores", "OK", "Obs"));
+		elect.add(new ItemCheckDTO(sistemaElectrico, "Tableros y comandos", "No OK", "Obs"));
 		elect.add(new ItemCheckDTO(sistemaElectrico, "Cableado de mando y potencia", "No Ok", "Obs"));
-		checks.put(sistemaHidraulico, elect);
+		elect.add(new ItemCheckDTO(sistemaElectrico, "Tableros y comandos", "No OK", "Obs"));
+		elect.add(new ItemCheckDTO(sistemaElectrico, "Cableado de mando y potencia", "No Ok", "Obs"));
+		checks.put(sistemaElectrico, elect);
 
+		List<ItemCheckDTO> elect4 = new ArrayList<>();
+		String sistemaElectrico4 = "SISTEMA ELECTRICO 666";
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Módulos electrónicos", "OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Contactores, switch, sensores", "OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Tableros y comandos", "No OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Tableros y comandos", "No OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Contactores, switch, sensores", "OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Tableros y comandos", "No OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Cableado de mando y potencia", "No Ok", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Tableros y comandos", "No OK", "Obs"));
+		elect4.add(new ItemCheckDTO(sistemaElectrico4, "Cableado de mando y potencia", "No Ok", "Obs"));
+		checks.put(sistemaElectrico4, elect4);
+
+		List<ItemCheckDTO> elect2 = new ArrayList<>();
+		String sistemaElectrico2 = "SISTEMA ELECTRICO 2";
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Módulos electrónicos", "OK", "Obs"));
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Contactores, switch, sensores", "OK", "Obs"));
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Contactores, switch, sensores", "OK", "Obs"));
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Tableros y comandos", "No OK", "Obs"));
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Cableado de mando y potencia", "No Ok", "Obs"));
+		elect2.add(new ItemCheckDTO(sistemaElectrico2, "Tableros y comandos", "No OK", "Obs"));
+		checks.put(sistemaElectrico2, elect2);
+
+		List<ItemCheckDTO> elect3 = new ArrayList<>();
+		String sistemaElectrico3 = "SISTEMA ELECTRICO 3";
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Módulos electrónicos", "OK", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Contactores, switch, sensores", "OK", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Contactores, switch, sensores", "OK", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Tableros y comandos", "No OK", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Cableado de mando y potencia", "No Ok", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Tableros y comandos", "No OK", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Cableado de mando y potencia", "No Ok", "Obs"));
+		elect3.add(new ItemCheckDTO(sistemaElectrico3, "Módulos electrónicos", "OK", "Obs"));
+		checks.put(sistemaElectrico3, elect3);
+		
 		dto.setChecks(checks);
 
 		try {

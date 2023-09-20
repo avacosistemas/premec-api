@@ -16,26 +16,33 @@ import com.itextpdf.text.pdf.PdfWriter;
 public class PDFEventHelper extends PdfPageEventHelper {
 
 	@Override
-	public void onOpenDocument(PdfWriter writer, Document document) {
+	public void onStartPage(PdfWriter writer, Document document) {
 		try {
+			String primerpagina = "primer-pagina.jpg";
+			String segundapagina = "segunda-pagina.jpg";
 
-			String filename = "Header.jpg";
 			ClassLoader classLoader = getClass().getClassLoader();
-	        URL resource = classLoader.getResource(filename);
 
+			URL resourcePP = classLoader.getResource(primerpagina);
+			URL resourceSP = classLoader.getResource(segundapagina);
 
-            File file = new File(resource.toURI());
+			File filePP = new File(resourcePP.toURI());
+			File fileSP = new File(resourceSP.toURI());
 
-			
-			Image background = Image.getInstance(file.getAbsolutePath());
-			
-			
-			
+			Image background = null;
+			if (document.getPageNumber() == 1) {
+				background = Image.getInstance(filePP.getAbsolutePath());
+			} else {
+				background = Image.getInstance(fileSP.getAbsolutePath());
+			}
+
 			// This scales the image to the page,
 			// use the image's width & height if you don't want to scale.
 			float width = document.getPageSize().getWidth();
 			float height = background.getHeight() * document.getPageSize().getWidth() / background.getWidth();
-			writer.getDirectContent().addImage(background, width, 0, 0, height, 0, 0);
+		
+			writer.getDirectContentUnder().addImage(background, width, 0, 0, height, 0, 0);
+		
 		} catch (DocumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
