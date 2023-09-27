@@ -38,7 +38,7 @@ public class ActividadPatch {
 		map.put("U_Estado", U_Estado);
 		map.put("U_ConCargo", U_ConCargo);
 		map.put("U_ValoracionComent", U_ValoracionComent);
-		map.put("DocEntry", DocEntry);
+//		map.put("DocEntry", DocEntry);
 		map.put("U_Tareas_Real", U_Tareas_Real);
 		map.put("AttachmentEntry", AttachmentEntry);
 		return map;

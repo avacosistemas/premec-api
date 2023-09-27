@@ -508,7 +508,8 @@ public class InformeBuilder {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase("Con Cargo", fontHeaderTable));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase(dto.getConCargo() != null && dto.getConCargo().equals("Y") ? "Si" : "No", fontText));
+//		cell.setPhrase(new Phrase(dto.getConCargo() != null && dto.getConCargo().equals("Y") ? "Si" : "No", fontText));
+		cell.setPhrase(new Phrase(dto.getConCargo()));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Detalle", fontHeaderTable));

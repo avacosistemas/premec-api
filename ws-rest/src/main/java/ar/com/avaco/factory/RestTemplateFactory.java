@@ -11,17 +11,21 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.http.impl.client.HttpClients;
+import org.apache.log4j.Logger;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import ar.com.avaco.model.PostLoginSAPDTO;
 import ar.com.avaco.model.ResponseLoginSAPDTO;
 
 public class RestTemplateFactory {
+
+	private static final Logger LOGGER = Logger.getLogger(RestTemplateFactory.class);
 
 	private static RestTemplateFactory instance;
 
@@ -69,6 +73,8 @@ public class RestTemplateFactory {
 		// Crear un objeto RestTemplate que use la fábrica de solicitudes HTTP
 		RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
 
+		restTemplate.setErrorHandler(new SapResponseErrorHandler());
+
 		// Crear los encabezados HTTP
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Content-Type", "application/json");
@@ -82,15 +88,20 @@ public class RestTemplateFactory {
 
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(dto.getAsMap(), headers);
 
-		ResponseEntity<ResponseLoginSAPDTO> response = restTemplate.exchange(urlLogin, HttpMethod.POST, httpEntity,
-				ResponseLoginSAPDTO.class);
+		try {
+			ResponseEntity<ResponseLoginSAPDTO> response = restTemplate.exchange(urlLogin, HttpMethod.POST, httpEntity,
+					ResponseLoginSAPDTO.class);
+			headers.add("Cookie", "B1SESSION=" + response.getBody().getSessionId() + "; ROUTEID=.node2");
+			headers.setCacheControl("no-cache");
 
-		headers.add("Cookie", "B1SESSION=" + response.getBody().getSessionId() + "; ROUTEID=.node2");
-		headers.setCacheControl("no-cache");
+			restTemplate.setDefaultUriVariables(headers);
+			return restTemplate;
+		} catch (RestClientException rce) {
+			LOGGER.error("Error al ejecutar login");
+			LOGGER.error(rce.getMessage());
+			throw rce;
+		}
 
-		restTemplate.setDefaultUriVariables(headers);
-
-		return restTemplate;
 	}
 
 }

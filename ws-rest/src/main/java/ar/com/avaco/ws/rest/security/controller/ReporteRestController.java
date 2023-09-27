@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
@@ -75,6 +76,21 @@ public class ReporteRestController {
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 
+	@RequestMapping(value = "/marcarenviada", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> marcarEnviada(@RequestParam Long idActividad) {
+
+		try {
+			this.actividadedEPService.marcarEnviado(idActividad);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		JSONResponse response = new JSONResponse();
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	
+	
 	@Resource(name = "reporteEPService")
 	public void setReporteEPService(ReporteEPService reporteEPService) {
 		this.reporteEPService = reporteEPService;

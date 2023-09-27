@@ -10,6 +10,7 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.stereotype.Service;
 
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.service.ActividadEPService;
 import ar.com.avaco.ws.service.ReporteEPService;
@@ -33,17 +34,20 @@ public class JobReporteDiario implements Job {
 			List<ActividadReporteDTO> actividadesReporte = this.actividadEPService.getActividadesReporte();
 			actividadesReporte.forEach(x -> {
 				try {
+				
 					LOGGER.debug("Iniciando envio reporte actividad " + x.getIdActividad());
 					this.reporteEPService.enviarReporte(x);
 					LOGGER.debug("Reporte actividad " + x.getIdActividad() + " enviado");
-					try {
-						LOGGER.debug("Marcando actividad " + x.getIdActividad() + " como enviada en SAP");
-						this.actividadEPService.marcarEnviado(x.getIdActividad());
-						LOGGER.debug("Actividad " + x.getIdActividad() + " marcada como enviada en SAP");
-					} catch (Exception e) {
-						LOGGER.debug("No se pudo marcar la actividad " + x.getIdActividad() + " como enviada");
-						e.printStackTrace();
-					}
+					
+					LOGGER.debug("Marcando actividad " + x.getIdActividad() + " como enviada en SAP");
+					this.actividadEPService.marcarEnviado(x.getIdActividad());
+					LOGGER.debug("Actividad " + x.getIdActividad() + " marcada como enviada en SAP");
+				
+				} catch (SapBusinessException e) {
+					LOGGER.debug("No se pudo marcar la actividad " + x.getIdActividad() + " como enviada");
+					LOGGER.debug(e.getMessage());
+					e.printStackTrace();
+
 				} catch (Exception e) {
 					LOGGER.debug("No se pudo enviar el reporte de la actividad " + x.getIdActividad());
 					e.printStackTrace();

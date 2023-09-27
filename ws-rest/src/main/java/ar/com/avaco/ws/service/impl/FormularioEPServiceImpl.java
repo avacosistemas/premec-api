@@ -18,11 +18,11 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -68,41 +68,19 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
 		LOGGER.debug("Actividad: " + idActividad + " - RestTemplate Generado");
 
+		SAPWSUtils sapUtils = new SAPWSUtils(restTemplate, urlSAP);
+
+		Gson gson = new Gson();
 
 		if (formulario.getHorasMaquina() != null) {
-			
-			LOGGER.debug("Obteniendo ParentObjectId (ServiceCallID) de la actividad " + idActividad);
-			String parentObjectIdUrl = urlSAP
-					+ "/Activities({id})?$select=ParentObjectId".replace("{id}", idActividad.toString());
-			LOGGER.debug(urlSAP);
-			
-			Gson gson = new Gson();
-			String parentObjectId;
-			try {
-				ResponseEntity<String> responseParentObjectId = restTemplate.exchange(parentObjectIdUrl, HttpMethod.GET,
-						null, new ParameterizedTypeReference<String>() {
-						});
-				parentObjectId = gson.fromJson(responseParentObjectId.getBody(), JsonObject.class).get("ParentObjectId")
-						.getAsString();
-			} catch (Exception e) {
-				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el parentObjectId");
-				throw e;
-			}
 
-			LOGGER.debug("Actividad: " + idActividad + " - Obteniendo ServiceCall Activities");
-			String serviceCallActivitiesUrl = urlSAP
-					+ "/ServiceCalls({id})?$select=ServiceCallActivities".replace("{id}", parentObjectId);
-			LOGGER.debug(urlSAP);
-			
-			ResponseEntity<String> serviceCallActivities = restTemplate.exchange(serviceCallActivitiesUrl,
-					HttpMethod.GET, null, new ParameterizedTypeReference<String>() {
-					});
+			Long parentObjectId = sapUtils.getParentObjectId(idActividad);
 
-			LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Obtenidas");
+			JsonArray serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
+
+			LOGGER.debug("Actividad: " + idActividad + " - Buscando la ServiceCall Activities asociada");
 			Map<String, Object> serviceCallMap = new HashMap<>();
 			try {
-				JsonArray serviceCallActivitiesJson = gson.fromJson(serviceCallActivities.getBody(), JsonObject.class)
-						.get("ServiceCallActivities").getAsJsonArray();
 				for (JsonElement x : serviceCallActivitiesJson) {
 					JsonObject item = x.getAsJsonObject();
 					String acco = item.get("ActivityCode").toString();
@@ -110,27 +88,36 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 						int lineNum = item.get("LineNum").getAsInt();
 						serviceCallMap = generateServiceCallMap(parentObjectId, idActividad, lineNum,
 								formulario.getHorasMaquina());
-						LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Encontrada LineNum " + lineNum);
+						LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Encontrada LineNum "
+								+ lineNum);
 						break;
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity");
+				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity asociada");
 				throw e;
 			}
+
+			if (serviceCallMap.isEmpty()) {
+				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity");
+				throw new Exception("Actividad: " + idActividad + " - No se pudo encontar el servicecall activity");
+			}
+
 			LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities obtenida correctamente");
 
 			LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
 			String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 			LOGGER.debug(serviceCallUrl);
-			
+
 			HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
 			try {
-				restTemplate.exchange(serviceCallUrl.replace("{id}", parentObjectId), HttpMethod.PATCH,
-						httpEntityPatchServiceCall, Object.class);
-			} catch (Exception e) {
+				String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
+				restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
+			} catch (RestClientException rce) {
 				LOGGER.error("Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call");
-				throw e;
+				LOGGER.error(serviceCallUrl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
 			}
 			LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
 		}
@@ -138,17 +125,19 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 		String attachmentUrl = urlSAP + "/Attachments2";
 		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
+		ResponseEntity<Object> attachmentRespose = null;
 		try {
-			ResponseEntity<Object> attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST,
-					httpEntityAttach, Object.class);
-			Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
-			String attchEntry = (object.toString().split("="))[1];
-
-			ap.setAttachmentEntry(attchEntry);
-		} catch (Exception e) {
+			attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
+		} catch (RestClientException rce) {
 			LOGGER.error("Actividad: " + idActividad + " - Error al intentar subir attachments");
-			throw e;
+			LOGGER.error(attachmentUrl);
+			LOGGER.error(rce.getMessage());
+			throw rce;
 		}
+		Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
+		String attchEntry = (object.toString().split("="))[1];
+
+		ap.setAttachmentEntry(attchEntry);
 		LOGGER.debug("Actividad: " + idActividad + " - Attachments Enviados");
 
 		LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
@@ -157,18 +146,20 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		try {
 			restTemplate.exchange(actividadUrl.replace("{id}", idActividad.toString()), HttpMethod.PATCH, httpEntity,
 					Object.class);
-		} catch (Exception e) {
-			LOGGER.error("Error al intentar subir attachments");
-			throw e;
+		} catch (RestClientException rce) {
+			LOGGER.error("Actividad: " + idActividad + " - Error al intentar actualizar la actividad");
+			LOGGER.error(attachmentUrl);
+			LOGGER.error(rce.getMessage());
+			throw rce;
 		}
 		LOGGER.debug("Actividad Actualizada");
 
 	}
 
-	private Map<String, Object> generateServiceCallMap(String parentObjectId, Long idActividad, int lineNum,
+	private Map<String, Object> generateServiceCallMap(Long parentObjectId, Long idActividad, int lineNum,
 			String horasMaquina) {
 		Map<String, Object> map = new HashMap<>();
-		map.put("ServiceCallID", Long.parseLong(parentObjectId));
+		map.put("ServiceCallID", parentObjectId);
 
 		Map<String, Object> serviceCallActivity = new HashMap<>();
 		serviceCallActivity.put("LineNum", lineNum);
@@ -230,7 +221,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setU_Estado("Finalizada");
 
 		// Id de actividad
-		ap.setDocEntry(formulario.getIdActividad().toString());
+//		ap.setDocEntry(formulario.getIdActividad().toString());
+		// se comenta el docentry porque no es el id de actividad ver de ajustar mas
+		// adelante
 
 		// Checks formateados
 		JsonParser jsonParser = new JsonParser();
@@ -367,7 +360,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		}
 
 		if (errors.size() > 0) {
-			throw new Exception(errors.stream().map(String::valueOf).collect(Collectors.joining(System.lineSeparator())));
+			throw new Exception(
+					errors.stream().map(String::valueOf).collect(Collectors.joining(System.lineSeparator())));
 		}
 
 	}

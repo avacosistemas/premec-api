@@ -10,12 +10,14 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
@@ -36,6 +38,8 @@ import ar.com.avaco.ws.service.ActividadEPService;
 
 @Service("actividadService")
 public class ActividadEPServiceImpl implements ActividadEPService {
+
+	private static final Logger LOGGER = Logger.getLogger(ActividadEPServiceImpl.class);
 
 	private UsuarioService usuarioService;
 
@@ -65,9 +69,17 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
 
 		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada'";
-		ResponseEntity<String> responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
-				new ParameterizedTypeReference<String>() {
-				});
+		ResponseEntity<String> responseActividades = null;
+		try {
+			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (RestClientException rce) {
+			LOGGER.error("Error al obtener las actividades para reporte");
+			LOGGER.error(actividadUrl);
+			LOGGER.error(rce.getMessage());
+			throw rce;
+		}
 
 		Gson gson = new Gson();
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
@@ -89,10 +101,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						+ " para el envio del reporte");
 			}
 			Long parentId = Double.valueOf(parentObjectId.toString()).longValue();
-			ResponseEntity<String> responseServiceCall = restTemplate.exchange(
-					serviceCallUrl.replace("{id}", parentId.toString()), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+			ResponseEntity<String> responseServiceCall = null;
+			String scurl = serviceCallUrl.replace("{id}", parentId.toString());
+			try {
+				responseServiceCall = restTemplate.exchange(scurl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener la service call para envio de reporte");
+				LOGGER.error(scurl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
 			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
 
 			// Prioridad
@@ -105,10 +125,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			// Asignado Por
 			if (fromJson.get("ResponseAssignee") != null) {
 				Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
-				ResponseEntity<String> responseUser = restTemplate.exchange(
-						userUrl.replace("{id}", asignadoPorId.toString()), HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
+				String usrUrl = userUrl.replace("{id}", asignadoPorId.toString());
+				ResponseEntity<String> responseUser = null;
+				try {
+					responseUser = restTemplate.exchange(usrUrl, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					LOGGER.error("Error al obtener el usuario responsable para reporte");
+					LOGGER.error(usrUrl);
+					LOGGER.error(rce.getMessage());
+					throw rce;
+				}
 				JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
 				ardto.setAsignadoPor(userjson.get("UserName").toString());
 			} else {
@@ -121,10 +149,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			// Empleado
 			if (fromJson.get("HandledByEmployee") != null) {
 				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
-				ResponseEntity<String> responseEmployee = restTemplate.exchange(
-						employeeUrl.replace("{id}", handledByEmployeeId.toString()), HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
+				String heURL = employeeUrl.replace("{id}", handledByEmployeeId.toString());
+				ResponseEntity<String> responseEmployee = null;
+				try {
+					responseEmployee = restTemplate.exchange(heURL, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					LOGGER.error("Error al obtener el empleado para reporte");
+					LOGGER.error(heURL);
+					LOGGER.error(rce.getMessage());
+					throw rce;
+				}
 				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
 				ardto.setEmpleado(
 						employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
@@ -153,10 +189,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			// Direccion
 			Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
-			ResponseEntity<String> responseLocation = restTemplate.exchange(
-					locationsUrl.replace("{id}", locationId.toString()), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+			String lourl = locationsUrl.replace("{id}", locationId.toString());
+			ResponseEntity<String> responseLocation = null;
+			try {
+				responseLocation = restTemplate.exchange(lourl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener la direccion para reporte");
+				LOGGER.error(lourl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
 			JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 			ardto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
 					? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
@@ -245,11 +289,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			String customerCode = servicejson.get("CustomerCode").getAsString();
 			String bpContactCode = servicejson.get("ContactCode").getAsString();
-
-			ResponseEntity<String> responseBusinessPartner = restTemplate.exchange(
-					businessPartnerUrl.replace("{id}", customerCode), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+			ResponseEntity<String> responseBusinessPartner = null;
+			String bpurl = businessPartnerUrl.replace("{id}", customerCode);
+			try {
+				responseBusinessPartner = restTemplate.exchange(bpurl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener el business partner para reporte");
+				LOGGER.error(bpurl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
 			JsonObject responseBPjson = gson.fromJson(responseBusinessPartner.getBody(), JsonObject.class);
 			LinkedTreeMap fromJsonBP = gson.fromJson(responseBPjson.getAsJsonObject().toString(), LinkedTreeMap.class);
 			List<LinkedTreeMap> mailobj = (List<LinkedTreeMap>) fromJsonBP.get("ContactEmployees");
@@ -286,10 +337,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
 				+ fechaActividad + " and U_Estado eq 'Pendiente'";
-
-		ResponseEntity<String> responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
-				new ParameterizedTypeReference<String>() {
-				});
+		ResponseEntity<String> responseActividades = null;
+		try {
+			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (RestClientException rce) {
+			LOGGER.error(
+					"Error al obtener las actividades del empleado " + usuarioSAP + " para el dia " + fechaActividad);
+			LOGGER.error(actividadUrl);
+			LOGGER.error(rce.getMessage());
+			throw rce;
+		}
 
 		Gson gson = new Gson();
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
@@ -315,10 +374,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			if (fromJson.get("HandledByEmployee") != null) {
 				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
-				ResponseEntity<String> responseEmployee = restTemplate.exchange(
-						employeeUrl.replace("{id}", handledByEmployeeId.toString()), HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
+				ResponseEntity<String> responseEmployee = null;
+				String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
+				try {
+					responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					LOGGER.error("Error al obtener el empleado");
+					LOGGER.error(eurl);
+					LOGGER.error(rce.getMessage());
+					throw rce;
+				}
 				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
 				atdto.setEmpleado(
 						employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
@@ -327,28 +394,52 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			}
 
 			Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
-			ResponseEntity<String> responseLocation = restTemplate.exchange(
-					locationsUrl.replace("{id}", locationId.toString()), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+			String lurl = locationsUrl.replace("{id}", locationId.toString());
+			ResponseEntity<String> responseLocation = null;
+			try {
+				responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener el domicilio");
+				LOGGER.error(lurl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
 			JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 			atdto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
 					? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
 					: "No encontrada " + locationId.toString());
 
 			Long parentId = Double.valueOf(fromJson.get("ParentObjectId").toString()).longValue();
-			ResponseEntity<String> responseServiceCall = restTemplate.exchange(
-					serviceCallUrl.replace("{id}", parentId.toString()), HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+			String surl = serviceCallUrl.replace("{id}", parentId.toString());
+			ResponseEntity<String> responseServiceCall = null;
+			try {
+				responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener el servicio");
+				LOGGER.error(surl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
 			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
 
 			if (fromJson.get("ResponseAssignee") != null) {
 				Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
-				ResponseEntity<String> responseUser = restTemplate.exchange(
-						userUrl.replace("{id}", asignadoPorId.toString()), HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
+				ResponseEntity<String> responseUser = null;
+				String uurl = userUrl.replace("{id}", asignadoPorId.toString());
+				try {
+					responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					LOGGER.error("Error al obtener el responsable");
+					LOGGER.error(uurl);
+					LOGGER.error(rce.getMessage());
+					throw rce;
+				}
 				JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
 				atdto.setAsignadoPor(userjson.get("UserName").toString());
 			} else {
@@ -390,9 +481,15 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		map.put("U_Estado", "Enviado");
 		map.put("DocEntry", idActividad);
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
-
-		restTemplate.exchange(actividadUrl.replace("{id}", idActividad.toString()), HttpMethod.PATCH, httpEntity,
-				Object.class);
+		String url = actividadUrl.replace("{id}", idActividad.toString());
+		try {
+			restTemplate.exchange(url, HttpMethod.PATCH, httpEntity, Object.class);
+		} catch (RestClientException rce) {
+			LOGGER.error("Error al actualizar el estado de la actividad " + idActividad);
+			LOGGER.error(url);
+			LOGGER.error(rce.getMessage());
+			throw rce;
+		}
 	}
 
 	@Resource(name = "usuarioService")

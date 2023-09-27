@@ -30,8 +30,6 @@ public class ReporteServiceImpl implements ReporteService {
 	@Autowired
 	private MailSenderSMTPService mailSenderSMTPService;
 
-	// https://support.hostinger.es/es/articles/3589821-usar-smtp-en-wordpress-hostinger-gmail
-	// Could not connect to SMTP host: smtp.hostinger.com, port: 465, response: -1
 	@Override
 	public void sendMail(String email, String activityCode) {
 
