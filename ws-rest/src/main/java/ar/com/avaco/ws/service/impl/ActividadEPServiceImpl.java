@@ -479,7 +479,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");
-		map.put("DocEntry", idActividad);
+//		map.put("DocEntry", idActividad);
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
 		String url = actividadUrl.replace("{id}", idActividad.toString());
 		try {
