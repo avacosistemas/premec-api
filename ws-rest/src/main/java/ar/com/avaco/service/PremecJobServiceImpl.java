@@ -84,7 +84,7 @@ public class PremecJobServiceImpl implements PremecJobService {
 			LOGGER.debug("Job Reporte Diario creado");
 
 			scheduler.start();
-			scheduler.pauseAll();
+//			scheduler.pauseAll();
 		}
 	}
 
