@@ -164,7 +164,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		Map<String, Object> serviceCallActivity = new HashMap<>();
 		serviceCallActivity.put("LineNum", lineNum);
 		serviceCallActivity.put("ActivityCode", idActividad);
-		serviceCallActivity.put("U_HsMaq", Long.parseLong(horasMaquina));
+		serviceCallActivity.put("U_U_HsMaq", Long.parseLong(horasMaquina));
 
 		Map<String, Object>[] array = new HashMap[1];
 		array[0] = serviceCallActivity;

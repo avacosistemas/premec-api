@@ -213,7 +213,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				JsonObject item = x.getAsJsonObject();
 				String acco = item.get("ActivityCode").toString();
 				if (acco.equals(accoStr)) {
-					JsonElement jsonElement = item.get("U_HsMaq");
+					JsonElement jsonElement = item.get("U_U_HsMaq");
 					int hsmaq = jsonElement.isJsonNull() ? 0 : jsonElement.getAsInt();
 					ardto.setHorasMaquina(hsmaq);
 				}
@@ -461,7 +461,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				JsonObject item = x.getAsJsonObject();
 				String acco = item.get("ActivityCode").toString();
 				if (acco.equals(accoStr)) {
-					JsonElement jsonElement = item.get("U_HsMaq");
+					JsonElement jsonElement = item.get("U_U_HsMaq");
 					int hsmaq = jsonElement.isJsonNull() ? 0 : jsonElement.getAsInt();
 					atdto.setHorasMaquina(hsmaq);
 				}
