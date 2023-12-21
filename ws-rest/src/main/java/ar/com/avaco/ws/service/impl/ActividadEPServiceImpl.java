@@ -30,6 +30,7 @@ import com.google.gson.internal.LinkedTreeMap;
 
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
@@ -169,7 +170,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			}
 
 			// Fecha
-			ardto.setFecha(fromJson.get("StartDate").toString());
+			
+			String fechastring = fromJson.get("StartDate").toString().substring(0,10);
+			ardto.setFecha(fechastring);
+			
 			// Hora
 			ardto.setHora(fromJson.get("ActivityTime").toString());
 
@@ -365,7 +369,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			atdto.setIdActividad(activityCode.longValue());
 			Double ac = (Double) fromJson.get("ActivityCode");
 			atdto.setNumero(String.valueOf(ac.intValue()));
-			atdto.setFecha(fromJson.get("StartDate").toString());
+
+			String fechastring = fromJson.get("StartDate").toString().substring(0,10);
+			atdto.setFecha(fechastring);
+			
 			atdto.setHora(fromJson.get("ActivityTime").toString());
 			Object object = fromJson.get("Details");
 			atdto.setTareasARealizar(object != null ? object.toString() : "");
