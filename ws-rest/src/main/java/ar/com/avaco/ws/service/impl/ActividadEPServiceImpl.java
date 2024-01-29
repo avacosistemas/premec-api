@@ -30,7 +30,6 @@ import com.google.gson.internal.LinkedTreeMap;
 
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
-import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
@@ -88,6 +87,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		List<ActividadReporteDTO> actividades = new ArrayList<>();
 
 		JsonArray asJsonArray = array.getAsJsonArray("value");
+		
+		LOGGER.debug("Iniciando proceso de envio de reporte");
+		
 		for (JsonElement element : asJsonArray) {
 			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
@@ -96,6 +98,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
 			ardto.setIdActividad(activityCode.longValue());
 
+			LOGGER.debug("Procesando Actividad " + activityCode.longValue());
+			
 			Object parentObjectId = fromJson.get("ParentObjectId");
 			if (parentObjectId == null) {
 				throw new Exception("No se puede obtener el parentobjectid de la actividad " + activityCode
@@ -233,52 +237,76 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			Object detailsObject = fromJson.get("Details");
 			ardto.setTareasARealizar(detailsObject != null ? detailsObject.toString() : "");
 
-			// Checks
-			String tareas = new Gson().toJson(fromJson.get("U_Tareasreal"));
 			JsonParser jsonParser = new JsonParser();
-			JsonArray jsonArray = jsonParser.parse(jsonParser.parse(tareas).getAsString().toString()).getAsJsonArray();
-			Map<String, List<ItemCheckDTO>> map = new HashMap<>();
-			jsonArray.forEach(x -> {
-				JsonObject item = x.getAsJsonObject();
-				if (!item.get("estado").getAsString().equals("No aplica")) {
-					String titulo = item.get("titulo").getAsString();
-					List<ItemCheckDTO> list = map.get(titulo);
-					if (list == null) {
-						list = new ArrayList<ItemCheckDTO>();
-					}
-					ItemCheckDTO e = new ItemCheckDTO();
-					e.setEstado(item.get("estado").getAsString());
-					e.setNombre(item.get("nombre").getAsString());
-					e.setObservaciones(item.get("observaciones").getAsString());
-					e.setTitulo(titulo);
-					list.add(e);
-					map.put(titulo, list);
-				}
-			});
-			ardto.setChecks(map);
 
+			// Checks
+			try {
+				String tareas = new Gson().toJson(fromJson.get("U_Tareasreal"));
+				Map<String, List<ItemCheckDTO>> map = new HashMap<>();
+				if (tareas != null) {
+					JsonElement parse = jsonParser.parse(tareas);
+					if (!parse.isJsonNull()) {
+						JsonArray jsonArray = jsonParser.parse(parse.getAsString().toString()).getAsJsonArray();
+						jsonArray.forEach(x -> {
+							JsonObject item = x.getAsJsonObject();
+							if (!item.get("estado").getAsString().equals("No aplica")) {
+								String titulo = item.get("titulo").getAsString();
+								List<ItemCheckDTO> list = map.get(titulo);
+								if (list == null) {
+									list = new ArrayList<ItemCheckDTO>();
+								}
+								ItemCheckDTO e = new ItemCheckDTO();
+								e.setEstado(item.get("estado").getAsString());
+								e.setNombre(item.get("nombre").getAsString());
+								e.setObservaciones(item.get("observaciones").getAsString());
+								e.setTitulo(titulo);
+								list.add(e);
+								map.put(titulo, list);
+							}
+						});
+					}
+				}
+				ardto.setChecks(map);
+
+			} catch (Exception e) {
+				LOGGER.debug("Problemas al procesar los checks de la actividad " + activityCode.longValue());
+				throw e;
+			}
+			
 			Object notesobj = fromJson.get("Notes");
 			ardto.setObservacionesGenerales(notesobj == null ? "" : notesobj.toString());
 
-			String repuestos = new Gson().toJson(fromJson.get("U_Repuestos"));
-			JsonArray jsonArrayRepuestos = jsonParser.parse(jsonParser.parse(repuestos).getAsString().toString())
-					.getAsJsonArray();
-			List<RepuestoDTO> listRepuestos = new ArrayList<>();
-			jsonArrayRepuestos.forEach(x -> {
-				JsonObject item = x.getAsJsonObject();
-				String cantidad = item.get("cantidad").getAsString();
-				String descripcion = item.get("descripcion").getAsString();
-				String nroArticulo = item.get("nroArticulo").getAsString();
-				String nroSerie = item.get("nroSerie").getAsString();
-				RepuestoDTO rep = new RepuestoDTO();
-				rep.setCantidad(Integer.parseInt(cantidad));
-				rep.setDescripcion(descripcion);
-				rep.setNroArticulo(nroArticulo);
-				rep.setNroSerie(nroSerie);
-				listRepuestos.add(rep);
-			});
-			ardto.setRepuestos(listRepuestos);
-
+			try {
+				List<RepuestoDTO> listRepuestos = new ArrayList<>();
+				String repuestos = new Gson().toJson(fromJson.get("U_Repuestos"));
+				if (repuestos != null) {
+					JsonElement parse = jsonParser.parse(repuestos);
+					if (!parse.isJsonNull()) {
+						String asString = parse.getAsString();
+						String string = asString.toString();
+						JsonArray jsonArrayRepuestos = jsonParser.parse(string)
+								.getAsJsonArray();
+						jsonArrayRepuestos.forEach(x -> {
+							JsonObject item = x.getAsJsonObject();
+							String cantidad = item.get("cantidad").getAsString();
+							String descripcion = item.get("descripcion").getAsString();
+							String nroArticulo = item.get("nroArticulo").getAsString();
+							String nroSerie = item.get("nroSerie").getAsString();
+							RepuestoDTO rep = new RepuestoDTO();
+							rep.setCantidad(Integer.parseInt(cantidad));
+							rep.setDescripcion(descripcion);
+							rep.setNroArticulo(nroArticulo);
+							rep.setNroSerie(nroSerie);
+							listRepuestos.add(rep);
+						});
+					}
+				}
+				ardto.setRepuestos(listRepuestos);
+			} catch (Exception e) {
+				LOGGER.debug("Problemas al procesar los repuestos de la actividad " + activityCode.longValue());
+				throw e;
+			}
+			
 			ardto.setFechaInicioOperario(fromJson.get("StartDate").toString());
 			ardto.setHoraInicioOperario(fromJson.get("StartTime").toString());
 			ardto.setFechaFinoOperario(fromJson.get("EndDueDate").toString());

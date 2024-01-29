@@ -27,7 +27,7 @@
 		<beans:property name="javaMailProperties">
 		   <beans:props>
 	       	      <beans:prop key="mail.smtp.auth">true</beans:prop>
-	       	      <beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
+	       	      <beans:prop key="mail.smtp.starttls.enable">false</beans:prop>
 	       	      <beans:prop key="mail.smtp.ssl.trust">${mailsender.host}</beans:prop>
 <!-- 	       	      <beans:prop key="mail.smtp.connectiontimeout">5000</beans:prop> -->
 	       	      <beans:prop key="mail.smtp.timeout">5000</beans:prop>
