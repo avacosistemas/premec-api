@@ -32,22 +32,24 @@ import ar.com.avaco.ws.rest.service.AbstractConvertService;
 @Transactional
 @Service("userService")
 public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario> implements UserService {
-	
+
 	@Resource(name = "profileService")
 	private ProfileService profileService;
-    
+
 	private UsuarioService usuarioService;
-	
+
 	public User convertToDto(Usuario usuario) {
 		Set<Profile> profiles = new HashSet<>();
-		if(usuario.getAccesos() != null) {			
+		if (usuario.getAccesos() != null) {
 			usuario.getAccesos().stream().forEach(e -> {
 				profiles.add(profileService.convertToDto(e.getPerfil()));
 			});
 		}
-		return new User(usuario.getId(),usuario.getUsername(), usuario.getNombre(), usuario.getApellido(), profiles, usuario.getEmail(), usuario.getUsuariosap(), usuario.isEnabled(), usuario.getAdmin());
-	}
 
+		return new User(usuario.getId(), usuario.getUsername(), usuario.getNombre(), usuario.getApellido(), profiles,
+				usuario.getEmail(), usuario.getUsuariosap(), usuario.isEnabled(), usuario.getAdmin(),
+				usuario.getDeposito());
+	}
 
 	@Override
 	protected Usuario newEntity() {
@@ -63,7 +65,8 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 		entity.setBloqueado(!dto.isEnabled());
 		entity.setAdmin(dto.getAdmin());
 		entity.setUsuariosap(dto.getUsuariosap());
-		if(dto.getProfiles() != null) {			
+		entity.setDeposito(dto.getDeposito());
+		if (dto.getProfiles() != null) {
 			Set<Acceso> accesos = new HashSet<>();
 			dto.getProfiles().stream().forEach(e -> {
 				Acceso acceso = new Acceso();
@@ -77,8 +80,7 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 		}
 		return entity;
 	}
-	
-	
+
 	@Resource(name = "usuarioService")
 	public void setUsuarioService(UsuarioService usuarioService) {
 		this.service = usuarioService;
@@ -101,32 +103,28 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 		getService().updatePassword(loadUserByUsername, resetPassword.getPassword(), resetPassword.getNewPassword());
 	}
 
-
 	@Override
 	public void updateValidation(User user) throws ErrorValidationException {
 		Map<String, String> errores = new HashMap<>();
-		//Se valida que el nombre de usuario sea distinto de los existentes
+		// Se valida que el nombre de usuario sea distinto de los existentes
 		Usuario usuario = this.service.get(user.getId());
-		
-		if(!usuario.getUsername().equals(user.getUsername()) && 
-				getService().isUserExists(user.getUsername())){
+
+		if (!usuario.getUsername().equals(user.getUsername()) && getService().isUserExists(user.getUsername())) {
 			errores.put("username", "Este nombre de usuario ya existe");
 		}
-		
-		if(!usuario.getEmail().equals(user.getEmail()) &&
-				getService().isUserExistWithEmail(user.getEmail())){
+
+		if (!usuario.getEmail().equals(user.getEmail()) && getService().isUserExistWithEmail(user.getEmail())) {
 			errores.put("email", "Este email ya se encuentra registrado");
 		}
-		
-		if(!errores.isEmpty()) {
+
+		if (!errores.isEmpty()) {
 			throw new ErrorValidationException("Se han encontrado errores de negocio en el objeto analizado", errores);
 		}
 	}
-
 
 	@Override
 	public User getByUsername(String username) {
 		return convertToDto(getService().findByUsername(username));
 	}
-	
+
 }

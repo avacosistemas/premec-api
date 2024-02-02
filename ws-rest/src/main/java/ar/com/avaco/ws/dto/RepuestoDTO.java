@@ -4,13 +4,13 @@ public class RepuestoDTO {
 
 	String nroArticulo;
 	String descripcion;
-	int cantidad;
+	Double cantidad;
 	String nroSerie;
 
 	public RepuestoDTO() {
 	}
 
-	public RepuestoDTO(String nroArticulo, String descripcion, int cantidad, String nroSerie) {
+	public RepuestoDTO(String nroArticulo, String descripcion, Double cantidad, String nroSerie) {
 		super();
 		this.nroArticulo = nroArticulo;
 		this.descripcion = descripcion;
@@ -34,11 +34,11 @@ public class RepuestoDTO {
 		this.descripcion = descripcion;
 	}
 
-	public int getCantidad() {
+	public Double getCantidad() {
 		return cantidad;
 	}
 
-	public void setCantidad(int cantidad) {
+	public void setCantidad(Double cantidad) {
 		this.cantidad = cantidad;
 	}
 

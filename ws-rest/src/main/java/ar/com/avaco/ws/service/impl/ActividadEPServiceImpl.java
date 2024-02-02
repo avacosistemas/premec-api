@@ -45,6 +45,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	@Value("${urlSAP}")
 	private String urlSAP;
+	@Value("${userSAP}")
+	private String userSAP;
+	@Value("${passSAP}")
+	private String passSAP;
+	@Value("${dbSAP}")
+	private String dbSAP;
 
 	private String employeeUrl;
 	private String locationsUrl;
@@ -66,9 +72,13 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
-		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
-		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada'";
+		
+		// Se agrega validacion para levantar las actividades que no sean de taller.
+
+		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Pendiente' and U_Taller eq 'N'";
+		
 		ResponseEntity<String> responseActividades = null;
 		try {
 			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
@@ -293,7 +303,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 							String nroArticulo = item.get("nroArticulo").getAsString();
 							String nroSerie = item.get("nroSerie").getAsString();
 							RepuestoDTO rep = new RepuestoDTO();
-							rep.setCantidad(Integer.parseInt(cantidad));
+							rep.setCantidad(Double.parseDouble(cantidad));
 							rep.setDescripcion(descripcion);
 							rep.setNroArticulo(nroArticulo);
 							rep.setNroSerie(nroSerie);
@@ -359,7 +369,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
 		RestTemplate restTemplate = null;
-		restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+		restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
 		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
@@ -367,20 +377,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		Date parse = sdfinput.parse(fecha);
 		String fechaActividad = "'" + sdfoutput.format(parse) + "'";
 
-		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
-				+ fechaActividad + " and U_Estado eq 'Pendiente'";
-		ResponseEntity<String> responseActividades = null;
-		try {
-			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-		} catch (RestClientException rce) {
-			LOGGER.error(
-					"Error al obtener las actividades del empleado " + usuarioSAP + " para el dia " + fechaActividad);
-			LOGGER.error(actividadUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
-		}
+		ResponseEntity<String> responseActividades = obtenerActividadesPorUsuarioYFecha(restTemplate, usuarioSAP,
+				fechaActividad);
 
 		Gson gson = new Gson();
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
@@ -392,6 +390,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
 			ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
+			
+			// Campo U_Taller para determinar si la actividad es en taller o cliente
+			atdto.setActividadTaller(fromJson.get("U_Taller") == null || fromJson.get("U_Taller").equals("Y") ? true : false);
+			
 			atdto.setPrioridad(fromJson.get("Priority").toString());
 			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
 			atdto.setIdActividad(activityCode.longValue());
@@ -428,24 +430,28 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				atdto.setEmpleado("--");
 			}
 
-			Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
-			String lurl = locationsUrl.replace("{id}", locationId.toString());
-			ResponseEntity<String> responseLocation = null;
-			try {
-				responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener el domicilio");
-				LOGGER.error(lurl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
-			atdto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
-					? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
-					: "No encontrada " + locationId.toString());
+			if (atdto.getActividadTaller()) {
+				Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
+				String lurl = locationsUrl.replace("{id}", locationId.toString());
+				ResponseEntity<String> responseLocation = null;
+				try {
+					responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					LOGGER.error("Error al obtener el domicilio");
+					LOGGER.error(lurl);
+					LOGGER.error(rce.getMessage());
+					throw rce;
+				}
+				JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
+				atdto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
+						? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
+						: "No encontrada " + locationId.toString());
 
+			}
+
+			// Obtengo la service call usando prentobjectid
 			Long parentId = Double.valueOf(fromJson.get("ParentObjectId").toString()).longValue();
 			String surl = serviceCallUrl.replace("{id}", parentId.toString());
 			ResponseEntity<String> responseServiceCall = null;
@@ -482,12 +488,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			}
 
 			atdto.setLlamadaID(servicejson.get("ServiceCallID").toString());
+			
 			String itemCode = servicejson.get("ItemCode") == JsonNull.INSTANCE ? ""
 					: servicejson.get("ItemCode").toString();
 			atdto.setCodigoArticulo(itemCode);
 			atdto.setDetalle(servicejson.get("Subject").getAsString());
 			atdto.setNroSerie(servicejson.get("InternalSerialNum").getAsString());
-			atdto.setCliente(servicejson.get("CustomerName").getAsString());
+			
+			if (atdto.getActividadTaller()) {
+				atdto.setCliente(servicejson.get("CustomerName").getAsString());
+			}
 			atdto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
 
 			String accoStr = String.valueOf(activityCode.longValue());
@@ -508,9 +518,28 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		return actividades;
 	}
 
+	private ResponseEntity<String> obtenerActividadesPorUsuarioYFecha(RestTemplate restTemplate, String usuarioSAP,
+			String fechaActividad) {
+		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
+				+ fechaActividad + " and U_Estado eq 'Pendiente'";
+		ResponseEntity<String> responseActividades = null;
+		try {
+			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (RestClientException rce) {
+			LOGGER.error(
+					"Error al obtener las actividades del empleado " + usuarioSAP + " para el dia " + fechaActividad);
+			LOGGER.error(actividadUrl);
+			LOGGER.error(rce.getMessage());
+			throw rce;
+		}
+		return responseActividades;
+	}
+
 	@Override
 	public void marcarEnviado(Long idActividad) throws Exception {
-		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");

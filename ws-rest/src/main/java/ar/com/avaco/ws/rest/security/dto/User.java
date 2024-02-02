@@ -27,13 +27,14 @@ public class User extends Entity<Long> implements Serializable {
 	private boolean enabled;
 	private String usuariosap;
 	private Boolean admin;
+	private String deposito;
 
 	public User() {
 
 	}
 
 	public User(Long id, String username, String name, String lastname, Set<Profile> profiles, String email,
-			String usuariosap, boolean enabled, Boolean admin) {
+			String usuariosap, boolean enabled, Boolean admin, String deposito) {
 		super();
 		this.id = id;
 		this.username = username;
@@ -44,6 +45,7 @@ public class User extends Entity<Long> implements Serializable {
 		this.usuariosap = usuariosap;
 		this.enabled = enabled;
 		this.admin = admin;
+		this.deposito = deposito;
 	}
 
 	public Long getId() {
@@ -116,6 +118,14 @@ public class User extends Entity<Long> implements Serializable {
 
 	public void setAdmin(Boolean admin) {
 		this.admin = admin;
+	}
+
+	public String getDeposito() {
+		return deposito;
+	}
+
+	public void setDeposito(String deposito) {
+		this.deposito = deposito;
 	}
 
 }

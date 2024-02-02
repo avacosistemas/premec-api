@@ -29,12 +29,21 @@ public class RestTemplateFactory {
 
 	private static RestTemplateFactory instance;
 
-	private RestTemplateFactory() {
+	private String urlSAP;
+	private String user;
+	private String pass;
+	private String db;
+	
+	private RestTemplateFactory(String urlSAP, String user, String pass, String db) {
+		this.urlSAP = urlSAP;
+		this.user = user;
+		this.pass = pass;
+		this.db = db;
 	}
 
-	public static RestTemplateFactory getInstance() {
+	public static RestTemplateFactory getInstance(String urlSAP, String user, String pass, String db) {
 		if (instance == null) {
-			instance = new RestTemplateFactory();
+			instance = new RestTemplateFactory(urlSAP, user, pass, db);
 		}
 		return instance;
 	}
@@ -80,11 +89,11 @@ public class RestTemplateFactory {
 		headers.set("Content-Type", "application/json");
 
 		PostLoginSAPDTO dto = new PostLoginSAPDTO();
-		dto.setCompanyDB("AR_PRD_PREMEC");
-		dto.setPassword("Prd2019.");
-		dto.setUserName("manager");
+		dto.setCompanyDB(db);
+		dto.setPassword(pass);
+		dto.setUserName(user);
 
-		String urlLogin = "https://vm-sap:50000/b1s/v1/Login";
+		String urlLogin = urlSAP + "/Login";
 
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(dto.getAsMap(), headers);
 

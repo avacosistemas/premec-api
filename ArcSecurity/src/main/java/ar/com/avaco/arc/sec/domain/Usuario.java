@@ -97,6 +97,9 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 	@Column(name = "admin")
 	private Boolean admin;
 
+	@Column(name = "deposito")
+	private String deposito;
+
 	/**
 	 * Listado de emails asociados al usuario para realizar la notificacion de
 	 * operaciones como nominaciones, autorizaciones, etc.
@@ -472,6 +475,14 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 
 	public void setAdmin(Boolean admin) {
 		this.admin = admin;
+	}
+
+	public String getDeposito() {
+		return deposito;
+	}
+
+	public void setDeposito(String deposito) {
+		this.deposito = deposito;
 	}
 
 }

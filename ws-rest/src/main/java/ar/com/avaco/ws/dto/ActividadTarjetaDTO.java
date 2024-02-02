@@ -20,6 +20,8 @@ public class ActividadTarjetaDTO {
 	private String tareasARealizar;
 	private Boolean conCargo;
 
+	private Boolean actividadTaller;
+
 	public Long getIdActividad() {
 		return idActividad;
 	}
@@ -155,4 +157,13 @@ public class ActividadTarjetaDTO {
 	public void setConCargo(Boolean conCargo) {
 		this.conCargo = conCargo;
 	}
+
+	public Boolean getActividadTaller() {
+		return actividadTaller;
+	}
+
+	public void setActividadTaller(Boolean actividadTaller) {
+		this.actividadTaller = actividadTaller;
+	}
+
 }

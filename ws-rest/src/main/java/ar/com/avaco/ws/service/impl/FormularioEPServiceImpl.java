@@ -45,6 +45,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	@Value("${urlSAP}")
 	private String urlSAP;
+	@Value("${userSAP}")
+	private String userSAP;
+	@Value("${passSAP}")
+	private String passSAP;
+	@Value("${dbSAP}")
+	private String dbSAP;
 
 	@Value("${informe.path}")
 	private String informePath;
@@ -65,7 +71,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
 		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
 
-		RestTemplate restTemplate = RestTemplateFactory.getInstance().getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 		LOGGER.debug("Actividad: " + idActividad + " - RestTemplate Generado");
 
 		SAPWSUtils sapUtils = new SAPWSUtils(restTemplate, urlSAP);
@@ -200,15 +206,17 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Hora Fin
 		ap.setEndTime(sdfHour.format(finDate));
 
-		// Valoracion
-		// Valoracion
-		ap.setU_Valoracion(formulario.getValoracion());
-		// Comentarios
-		ap.setU_ValoracionComent(formulario.getComentarios());
-		// Nombre Supervisor
-		ap.setU_NomSupervisor(formulario.getNombreSupervisor());
-		// DNI Supervisor
-		ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
+		// Valoracion si actividad no es de taller		
+		if (!formulario.getActividadTaller()) {
+			// Valoracion
+			ap.setU_Valoracion(formulario.getValoracion());
+			// Comentarios
+			ap.setU_ValoracionComent(formulario.getComentarios());
+			// Nombre Supervisor
+			ap.setU_NomSupervisor(formulario.getNombreSupervisor());
+			// DNI Supervisor
+			ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
+		}
 
 		// Tareas
 		String tareas = new Gson().toJson(formulario.getCheckList());

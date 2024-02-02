@@ -21,6 +21,8 @@ public class FormularioDTO {
 	private List<RepuestoDTO> repuestos = new ArrayList<>();
 	private List<FotoDTO> fotos = new ArrayList<>();
 
+	private Boolean actividadTaller;
+
 	public Long getIdActividad() {
 		return idActividad;
 	}
@@ -131,6 +133,14 @@ public class FormularioDTO {
 
 	public void setHorasMaquina(String horasMaquina) {
 		this.horasMaquina = horasMaquina;
+	}
+
+	public Boolean getActividadTaller() {
+		return actividadTaller;
+	}
+
+	public void setActividadTaller(Boolean actividadTaller) {
+		this.actividadTaller = actividadTaller;
 	}
 
 }

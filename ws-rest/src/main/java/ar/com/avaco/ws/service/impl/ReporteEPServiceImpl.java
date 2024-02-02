@@ -82,10 +82,10 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 		dto.setValoracionResultado("Bien");
 
 		List<RepuestoDTO> repuestos = new ArrayList<RepuestoDTO>();
-		repuestos.add(new RepuestoDTO("art1", "desc1", 1, "nroserie1"));
-		repuestos.add(new RepuestoDTO("art2", "desc2", 2, "nroserie2"));
-		repuestos.add(new RepuestoDTO("art3", "desc3", 3, "nroserie3"));
-		repuestos.add(new RepuestoDTO("art4", "desc4", 4, "nroserie4"));
+		repuestos.add(new RepuestoDTO("art1", "desc1", 1D, "nroserie1"));
+		repuestos.add(new RepuestoDTO("art2", "desc2", 2D, "nroserie2"));
+		repuestos.add(new RepuestoDTO("art3", "desc3", 3D, "nroserie3"));
+		repuestos.add(new RepuestoDTO("art4", "desc4", 4D, "nroserie4"));
 		dto.setRepuestos(repuestos);
 
 		Map<String, List<ItemCheckDTO>> checks = new HashMap<String, List<ItemCheckDTO>>();

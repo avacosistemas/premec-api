@@ -55,6 +55,11 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		Usuario usuario = this.getRepository().findByUsername(username);
 		return usuario.getUsuariosap();
 	}
+	
+	public String getDeposito(String username) {
+		Usuario usuario = this.getRepository().findByUsername(username);
+		return usuario.getDeposito();
+	}
 
 	@Override
 	public void updatePassword(Usuario user, String password, String newPassword) {
