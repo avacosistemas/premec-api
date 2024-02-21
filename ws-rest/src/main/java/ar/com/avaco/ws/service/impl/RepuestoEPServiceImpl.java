@@ -3,6 +3,7 @@ package ar.com.avaco.ws.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.annotation.Resource;
 
@@ -96,6 +97,7 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 		repuesto.setItemCode(itemCode);
 		repuesto.setItemName(itemName);
 		repuesto.setStock(stock);
+		repuesto.setSeriado(new Random().nextBoolean());
 
 		return repuesto;
 	}

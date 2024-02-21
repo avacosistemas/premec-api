@@ -5,6 +5,15 @@ public class RepuestoDepositoDTO {
 	private String itemCode;
 	private String itemName;
 	private Double stock;
+	private boolean seriado;
+
+	public boolean isSeriado() {
+		return seriado;
+	}
+
+	public void setSeriado(boolean seriado) {
+		this.seriado = seriado;
+	}
 
 	public String getItemCode() {
 		return itemCode;

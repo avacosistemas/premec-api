@@ -449,6 +449,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
 						: "No encontrada " + locationId.toString());
 
+			} else {
+				atdto.setDireccion("");
 			}
 
 			// Obtengo la service call usando prentobjectid
@@ -497,6 +499,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			
 			if (atdto.getActividadTaller()) {
 				atdto.setCliente(servicejson.get("CustomerName").getAsString());
+			} else {
+				atdto.setCliente("");
 			}
 			atdto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
 

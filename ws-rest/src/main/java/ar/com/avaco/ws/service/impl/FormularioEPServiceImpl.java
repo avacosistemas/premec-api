@@ -207,7 +207,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setEndTime(sdfHour.format(finDate));
 
 		// Valoracion si actividad no es de taller		
-		if (!formulario.getActividadTaller()) {
+		if (formulario.getActividadTaller() == null || !formulario.getActividadTaller()) {
 			// Valoracion
 			ap.setU_Valoracion(formulario.getValoracion());
 			// Comentarios
