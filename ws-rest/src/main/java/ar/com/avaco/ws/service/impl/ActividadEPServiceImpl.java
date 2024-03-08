@@ -10,6 +10,7 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -28,6 +29,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.internal.LinkedTreeMap;
 
+import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
@@ -52,12 +54,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Value("${dbSAP}")
 	private String dbSAP;
 
+	@Value("${email.from}")
+	private String from;
+
+	@Value("${email.errores}")
+	private String toErrores;
+
+	@Value("${email.errores.cc}")
+	private String toErroresCC;
+
 	private String employeeUrl;
 	private String locationsUrl;
 	private String serviceCallUrl;
 	private String userUrl;
 	private String businessPartnerUrl;
 	private String actividadUrl;
+
+	private MailSenderSMTPService mailService;
 
 	@PostConstruct
 	public void onInit() {
@@ -69,26 +82,32 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		this.businessPartnerUrl = urlSAP + "/BusinessPartners('{id}')";
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
+				.getLoggedRestTemplate();
 
-		
 		// Se agrega validacion para levantar las actividades que no sean de taller.
 
-		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Pendiente' and U_Taller eq 'N'";
-		
+		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and U_Taller eq 'N'";
+
 		ResponseEntity<String> responseActividades = null;
 		try {
 			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
-		} catch (RestClientException rce) {
-			LOGGER.error("Error al obtener las actividades para reporte");
-			LOGGER.error(actividadUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
+		} catch (Exception e) {
+			e.printStackTrace();
+			String subject = "Error al obtener actividades para envio de reportes";
+			StringBuilder body = new StringBuilder();
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			throw e;
 		}
 
 		Gson gson = new Gson();
@@ -97,433 +116,512 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		List<ActividadReporteDTO> actividades = new ArrayList<>();
 
 		JsonArray asJsonArray = array.getAsJsonArray("value");
-		
-		LOGGER.debug("Iniciando proceso de envio de reporte");
-		
-		for (JsonElement element : asJsonArray) {
-			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
+		LOGGER.debug("Iniciando proceso de envio de reporte");
+
+		for (JsonElement element : asJsonArray) {
+			LinkedTreeMap<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
+					LinkedTreeMap.class);
+
+			Double activityCode = (Double) fromJson.get(FieldUtils.ACTIVITY_CODE);
 			ActividadReporteDTO ardto = new ActividadReporteDTO();
 
-			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
-			ardto.setIdActividad(activityCode.longValue());
-
-			LOGGER.debug("Procesando Actividad " + activityCode.longValue());
-			
-			Object parentObjectId = fromJson.get("ParentObjectId");
-			if (parentObjectId == null) {
-				throw new Exception("No se puede obtener el parentobjectid de la actividad " + activityCode
-						+ " para el envio del reporte");
-			}
-			Long parentId = Double.valueOf(parentObjectId.toString()).longValue();
-			ResponseEntity<String> responseServiceCall = null;
-			String scurl = serviceCallUrl.replace("{id}", parentId.toString());
 			try {
-				responseServiceCall = restTemplate.exchange(scurl, HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener la service call para envio de reporte");
-				LOGGER.error(scurl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
-
-			// Prioridad
-			ardto.setPrioridad(fromJson.get("Priority").toString());
-			Double ac = (Double) fromJson.get("ActivityCode");
-
-			// Numero
-			ardto.setNumero(String.valueOf(ac.intValue()));
-
-			// Asignado Por
-			if (fromJson.get("ResponseAssignee") != null) {
-				Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
-				String usrUrl = userUrl.replace("{id}", asignadoPorId.toString());
-				ResponseEntity<String> responseUser = null;
+			
+	
+				ardto.setIdActividad(activityCode.longValue());
+	
+				LOGGER.debug("Procesando Actividad " + activityCode.longValue());
+	
+				Long parentId = FieldUtils.getLong(fromJson, FieldUtils.PARENT_OBJECT_ID, true);
+	
+				// Actividad de taller o cliente
+				Boolean actividadTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
+	
+				String surl = serviceCallUrl.replace("{id}", parentId.toString());
+				ResponseEntity<String> responseServiceCall = null;
 				try {
-					responseUser = restTemplate.exchange(usrUrl, HttpMethod.GET, null,
+					responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
 				} catch (RestClientException rce) {
-					LOGGER.error("Error al obtener el usuario responsable para reporte");
-					LOGGER.error(usrUrl);
-					LOGGER.error(rce.getMessage());
-					throw rce;
+					rce.printStackTrace();
+					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
 				}
-				JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
-				ardto.setAsignadoPor(userjson.get("UserName").toString());
-			} else {
-				ardto.setAsignadoPor("--");
-			}
-
-			// Lamada Id
-			ardto.setLlamadaID(servicejson.get("ServiceCallID").toString());
-
-			// Empleado
-			if (fromJson.get("HandledByEmployee") != null) {
-				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
-				String heURL = employeeUrl.replace("{id}", handledByEmployeeId.toString());
-				ResponseEntity<String> responseEmployee = null;
+	
+				LinkedTreeMap<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
+						LinkedTreeMap.class);
+	
+				// Prioridad
+				ardto.setPrioridad(FieldUtils.getString(fromJson, FieldUtils.PRIORITY, false));
+	
+				// Numero
+				ardto.setNumero(activityCode.toString());
+	
+				// Asignado Por
+				String asignadoPor = "";
+				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
+				if (asignadoPorId != null) {
+					ResponseEntity<String> responseUser = null;
+					String uurl = userUrl.replace("{id}", asignadoPorId.toString());
+					try {
+						responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+								new ParameterizedTypeReference<String>() {
+								});
+					} catch (RestClientException rce) {
+						rce.printStackTrace();
+						throw new Exception("No se pudo obtener el empleado con id " + asignadoPorId + ". URL " + uurl);
+					}
+					JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
+					asignadoPor = userjson.get("UserName").toString();
+				}
+				ardto.setAsignadoPor(asignadoPor);
+	
+				// Llamada Id
+				ardto.setLlamadaID(parentId.toString());
+	
+				// Empleado
+				// Id del Empleado Responsable
+				Long handledByEmployeeId = FieldUtils.getLong(fromJson, FieldUtils.HANDLED_BY_EMPLOYEE, false);
+	
+				String empleado = "";
+				if (handledByEmployeeId != null) {
+					ResponseEntity<String> responseEmployee = null;
+					String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
+					try {
+						responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
+								new ParameterizedTypeReference<String>() {
+								});
+					} catch (RestClientException rce) {
+						rce.printStackTrace();
+						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl, rce);
+					}
+					JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
+					String fn = employeejson.get(FieldUtils.FIRST_NAME).getAsString();
+					String ln = employeejson.get(FieldUtils.LAST_NAME).getAsString();
+					empleado = fn + " " + ln;
+				}
+				ardto.setEmpleado(empleado);
+	
+				// Fecha
+				ardto.setFecha(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true, 0, 10));
+	
+				// Hora
+				ardto.setHora(FieldUtils.getString(fromJson, FieldUtils.ACTIVITY_TIME, false));
+	
+				// Codigo de articulo
+				String itemCode = servicejson.get(FieldUtils.ITEM_CODE) == JsonNull.INSTANCE ? ""
+						: servicejson.get(FieldUtils.ITEM_CODE).toString();
+				ardto.setCodigoArticulo(itemCode);
+	
+				// Nro Serie
+				ardto.setNroSerie(FieldUtils.getString(servicejson, FieldUtils.INTERNAL_SERIAL_NUM, false));
+	
+				// Cliente
+				String cliente = "";
+				if (!actividadTaller) {
+					cliente = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_NAME, true);
+				}
+				ardto.setCliente(cliente);
+	
+				// Nro Fabricante
+				ardto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
+	
+				// Direccion
+				String direccion = "";
+	
+				// Si es una actividad en un cliente...
+				if (!actividadTaller) {
+	
+					// Location
+					Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
+					if (locationId > 0) {
+						String lurl = locationsUrl.replace("{id}", locationId.toString());
+						ResponseEntity<String> responseLocation = null;
+						try {
+							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+									new ParameterizedTypeReference<String>() {
+									});
+						} catch (RestClientException rce) {
+							rce.printStackTrace();
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						}
+						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
+						if (locationjson.getAsJsonArray("value").size() == 1) {
+							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString();
+						} else {
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						} 
+					}	
+				}
+				ardto.setDireccion(direccion);
+	
+				// Hs Maquina
+				List<LinkedTreeMap<String, Object>> serviceCallActivities = (List<LinkedTreeMap<String, Object>>) servicejson
+						.get("ServiceCallActivities");
+				for (LinkedTreeMap<String, Object> x : serviceCallActivities) {
+					Long acco = FieldUtils.getLong(x, FieldUtils.ACTIVITY_CODE, true);
+					if (activityCode.longValue() == acco.longValue()) {
+						Integer hm = FieldUtils.getInteger(x, FieldUtils.U_U_HS_MAQ, false);
+						ardto.setHorasMaquina(hm != null ? hm : 0);
+					}
+				}
+	
+				// Con cargo
+				ardto.setConCargo(FieldUtils.getBoolean(fromJson, FieldUtils.U_CON_CARGO, true).toString());
+	
+				// Detalle
+				ardto.setDetalle(FieldUtils.getString(servicejson, FieldUtils.SUBJECT, false));
+	
+				// Tareas a Realizar
+				ardto.setTareasARealizar(FieldUtils.getString(fromJson, FieldUtils.DETAILS, false));
+	
+				JsonParser jsonParser = new JsonParser();
+	
+				// Checks
 				try {
-					responseEmployee = restTemplate.exchange(heURL, HttpMethod.GET, null,
-							new ParameterizedTypeReference<String>() {
-							});
-				} catch (RestClientException rce) {
-					LOGGER.error("Error al obtener el empleado para reporte");
-					LOGGER.error(heURL);
-					LOGGER.error(rce.getMessage());
-					throw rce;
-				}
-				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
-				ardto.setEmpleado(
-						employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
-			} else {
-				ardto.setEmpleado("--");
-			}
-
-			// Fecha
-			
-			String fechastring = fromJson.get("StartDate").toString().substring(0,10);
-			ardto.setFecha(fechastring);
-			
-			// Hora
-			ardto.setHora(fromJson.get("ActivityTime").toString());
-
-			// Codigo de articulo
-			String itemCode = servicejson.get("ItemCode") == JsonNull.INSTANCE ? ""
-					: servicejson.get("ItemCode").toString();
-			ardto.setCodigoArticulo(itemCode);
-
-			// Nro Serie
-			ardto.setNroSerie(servicejson.get("InternalSerialNum").getAsString());
-
-			// Cliente
-			ardto.setCliente(servicejson.get("CustomerName").getAsString());
-
-			// Nro Fabricante
-			ardto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
-
-			// Direccion
-			Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
-			String lourl = locationsUrl.replace("{id}", locationId.toString());
-			ResponseEntity<String> responseLocation = null;
-			try {
-				responseLocation = restTemplate.exchange(lourl, HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener la direccion para reporte");
-				LOGGER.error(lourl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
-			ardto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
-					? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
-					: "No encontrada " + locationId.toString());
-
-			// Hs Maquina
-			String accoStr = String.valueOf(ac.longValue());
-			JsonArray serviceCallActivities = servicejson.get("ServiceCallActivities").getAsJsonArray();
-			serviceCallActivities.forEach(x -> {
-				JsonObject item = x.getAsJsonObject();
-				String acco = item.get("ActivityCode").toString();
-				if (acco.equals(accoStr)) {
-					JsonElement jsonElement = item.get("U_U_HsMaq");
-					int hsmaq = jsonElement.isJsonNull() ? 0 : jsonElement.getAsInt();
-					ardto.setHorasMaquina(hsmaq);
-				}
-			});
-
-			// Con cargo
-			ardto.setConCargo(
-					fromJson.get("U_ConCargo") == null || !fromJson.get("U_ConCargo").equals("Y") ? "No" : "Si");
-
-			// Detalle
-			ardto.setDetalle(servicejson.get("Subject").getAsString());
-
-			Object detailsObject = fromJson.get("Details");
-			ardto.setTareasARealizar(detailsObject != null ? detailsObject.toString() : "");
-
-			JsonParser jsonParser = new JsonParser();
-
-			// Checks
-			try {
-				String tareas = new Gson().toJson(fromJson.get("U_Tareasreal"));
-				Map<String, List<ItemCheckDTO>> map = new HashMap<>();
-				if (tareas != null) {
-					JsonElement parse = jsonParser.parse(tareas);
-					if (!parse.isJsonNull()) {
-						JsonArray jsonArray = jsonParser.parse(parse.getAsString().toString()).getAsJsonArray();
-						jsonArray.forEach(x -> {
-							JsonObject item = x.getAsJsonObject();
-							if (!item.get("estado").getAsString().equals("No aplica")) {
-								String titulo = item.get("titulo").getAsString();
-								List<ItemCheckDTO> list = map.get(titulo);
-								if (list == null) {
-									list = new ArrayList<ItemCheckDTO>();
+					String tareas = new Gson().toJson(fromJson.get(FieldUtils.U_TAREASREAL));
+					Map<String, List<ItemCheckDTO>> map = new HashMap<>();
+					if (tareas != null) {
+						JsonElement parse = jsonParser.parse(tareas);
+						if (!parse.isJsonNull()) {
+							JsonArray jsonArray = jsonParser.parse(parse.getAsString().toString()).getAsJsonArray();
+							jsonArray.forEach(x -> {
+								JsonObject item = x.getAsJsonObject();
+								if (!item.get("estado").getAsString().equals("No aplica")) {
+									String titulo = item.get("titulo").getAsString();
+									List<ItemCheckDTO> list = map.get(titulo);
+									if (list == null) {
+										list = new ArrayList<ItemCheckDTO>();
+									}
+									ItemCheckDTO e = new ItemCheckDTO();
+									e.setEstado(item.get("estado").getAsString());
+									e.setNombre(item.get("nombre").getAsString());
+									e.setObservaciones(item.get("observaciones").getAsString());
+									e.setTitulo(titulo);
+									list.add(e);
+									map.put(titulo, list);
 								}
-								ItemCheckDTO e = new ItemCheckDTO();
-								e.setEstado(item.get("estado").getAsString());
-								e.setNombre(item.get("nombre").getAsString());
-								e.setObservaciones(item.get("observaciones").getAsString());
-								e.setTitulo(titulo);
-								list.add(e);
-								map.put(titulo, list);
-							}
-						});
+							});
+						}
+					}
+					ardto.setChecks(map);
+	
+				} catch (Exception e) {
+					e.printStackTrace();
+					throw new Exception("Problemas al procesar los checks de la actividad " + activityCode.longValue(), e);
+				}
+	
+				// Observaciones Generales
+				ardto.setObservacionesGenerales(FieldUtils.getString(fromJson, FieldUtils.NOTES, false));
+	
+				// Repuestos
+				try {
+					List<RepuestoDTO> listRepuestos = new ArrayList<>();
+					String repuestos = new Gson().toJson(fromJson.get("U_Repuestos"));
+					if (repuestos != null) {
+						JsonElement parse = jsonParser.parse(repuestos);
+						if (!parse.isJsonNull()) {
+							String asString = parse.getAsString();
+							String string = asString.toString();
+							JsonArray jsonArrayRepuestos = jsonParser.parse(string).getAsJsonArray();
+							jsonArrayRepuestos.forEach(x -> {
+								JsonObject item = x.getAsJsonObject();
+								String cantidad = item.get("cantidad").getAsString();
+								String descripcion = item.get("descripcion").getAsString();
+								String nroArticulo = item.get("nroArticulo").getAsString();
+								String nroSerie = item.get("nroSerie").getAsString();
+								RepuestoDTO rep = new RepuestoDTO();
+								rep.setCantidad(Double.parseDouble(cantidad));
+								rep.setDescripcion(descripcion);
+								rep.setNroArticulo(nroArticulo);
+								rep.setNroSerie(nroSerie);
+								listRepuestos.add(rep);
+							});
+						}
+					}
+					ardto.setRepuestos(listRepuestos);
+				} catch (Exception e) {
+					e.printStackTrace();
+					throw new Exception("Problemas al procesar los repuestos de la actividad " + activityCode.longValue(),
+							e);
+				}
+	
+				ardto.setFechaInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true));
+				ardto.setHoraInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_TIME, true));
+				ardto.setFechaFinoOperario(FieldUtils.getString(fromJson, FieldUtils.END_DUE_DATE, true));
+				ardto.setHoraFinOperario(FieldUtils.getString(fromJson, FieldUtils.END_TIME, true));
+				ardto.setValoracionResultado(FieldUtils.getString(fromJson, FieldUtils.U_VALORACION, true));
+				ardto.setValoracionNombreSuperior(FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
+				ardto.setValoracionDNISuperior(FieldUtils.getString(fromJson, FieldUtils.U_DNI_SUPERVISOR, true));
+	
+				String valoracion = FieldUtils.getString(fromJson, FieldUtils.U_VALORACION_COMENT, false);
+				valoracion = !StringUtils.isBlank(valoracion) ? valoracion : "Sin Comentarios";
+				ardto.setValoracionComentarios(valoracion);
+	
+				String customerCode = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_CODE, true);
+				String bpContactCode = FieldUtils.getString(servicejson, FieldUtils.CONTACT_CODE, true);
+	
+				ResponseEntity<String> responseBusinessPartner = null;
+				String bpurl = businessPartnerUrl.replace("{id}", customerCode);
+				try {
+					responseBusinessPartner = restTemplate.exchange(bpurl, HttpMethod.GET, null,
+							new ParameterizedTypeReference<String>() {
+							});
+				} catch (RestClientException rce) {
+					rce.printStackTrace();
+					throw new Exception("Error al obtener el business partner para reporte" + activityCode.longValue(),
+							rce.getCause());
+				}
+	
+				JsonObject responseBPjson = gson.fromJson(responseBusinessPartner.getBody(), JsonObject.class);
+				LinkedTreeMap<String, Object> fromJsonBP = gson.fromJson(responseBPjson.getAsJsonObject().toString(),
+						LinkedTreeMap.class);
+				List<LinkedTreeMap<String, Object>> mailobj = (List<LinkedTreeMap<String, Object>>) fromJsonBP
+						.get("ContactEmployees");
+	
+				String email = null;
+	
+				for (LinkedTreeMap<String, Object> x : mailobj) {
+					Integer parseDouble2 = ((Double) Double.parseDouble(x.get("InternalCode").toString())).intValue();
+					if (parseDouble2.toString().equals(bpContactCode)) {
+						Object o = x.get("E_Mail");
+						if (o != null)
+							email = o.toString();
 					}
 				}
-				ardto.setChecks(map);
-
+	
+				ardto.setEmail(email);
 			} catch (Exception e) {
-				LOGGER.debug("Problemas al procesar los checks de la actividad " + activityCode.longValue());
+				e.printStackTrace();
+				String subject = "Error al obtener actividad " + activityCode.longValue() + " para envio de reporte";
+				StringBuilder body = new StringBuilder();
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
 				throw e;
 			}
-			
-			Object notesobj = fromJson.get("Notes");
-			ardto.setObservacionesGenerales(notesobj == null ? "" : notesobj.toString());
-
-			try {
-				List<RepuestoDTO> listRepuestos = new ArrayList<>();
-				String repuestos = new Gson().toJson(fromJson.get("U_Repuestos"));
-				if (repuestos != null) {
-					JsonElement parse = jsonParser.parse(repuestos);
-					if (!parse.isJsonNull()) {
-						String asString = parse.getAsString();
-						String string = asString.toString();
-						JsonArray jsonArrayRepuestos = jsonParser.parse(string)
-								.getAsJsonArray();
-						jsonArrayRepuestos.forEach(x -> {
-							JsonObject item = x.getAsJsonObject();
-							String cantidad = item.get("cantidad").getAsString();
-							String descripcion = item.get("descripcion").getAsString();
-							String nroArticulo = item.get("nroArticulo").getAsString();
-							String nroSerie = item.get("nroSerie").getAsString();
-							RepuestoDTO rep = new RepuestoDTO();
-							rep.setCantidad(Double.parseDouble(cantidad));
-							rep.setDescripcion(descripcion);
-							rep.setNroArticulo(nroArticulo);
-							rep.setNroSerie(nroSerie);
-							listRepuestos.add(rep);
-						});
-					}
-				}
-				ardto.setRepuestos(listRepuestos);
-			} catch (Exception e) {
-				LOGGER.debug("Problemas al procesar los repuestos de la actividad " + activityCode.longValue());
-				throw e;
-			}
-			
-			ardto.setFechaInicioOperario(fromJson.get("StartDate").toString());
-			ardto.setHoraInicioOperario(fromJson.get("StartTime").toString());
-			ardto.setFechaFinoOperario(fromJson.get("EndDueDate").toString());
-			ardto.setHoraFinOperario(fromJson.get("EndTime").toString());
-
-			ardto.setValoracionResultado(fromJson.get("U_Valoracion").toString());
-			ardto.setValoracionNombreSuperior(fromJson.get("U_NomSupervisor").toString());
-			ardto.setValoracionDNISuperior(
-					((Long) Double.valueOf(fromJson.get("U_DniSupervisor").toString()).longValue()).toString());
-			Object object2 = fromJson.get("U_ValoracionComent");
-			ardto.setValoracionComentarios(object2 != null ? object2.toString() : "Sin comentarios");
-
-			String customerCode = servicejson.get("CustomerCode").getAsString();
-			String bpContactCode = servicejson.get("ContactCode").getAsString();
-			ResponseEntity<String> responseBusinessPartner = null;
-			String bpurl = businessPartnerUrl.replace("{id}", customerCode);
-			try {
-				responseBusinessPartner = restTemplate.exchange(bpurl, HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener el business partner para reporte");
-				LOGGER.error(bpurl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			JsonObject responseBPjson = gson.fromJson(responseBusinessPartner.getBody(), JsonObject.class);
-			LinkedTreeMap fromJsonBP = gson.fromJson(responseBPjson.getAsJsonObject().toString(), LinkedTreeMap.class);
-			List<LinkedTreeMap> mailobj = (List<LinkedTreeMap>) fromJsonBP.get("ContactEmployees");
-
-			String email = null;
-
-			for (LinkedTreeMap x : mailobj) {
-				Integer parseDouble2 = ((Double) Double.parseDouble(x.get("InternalCode").toString())).intValue();
-				if (parseDouble2.toString().equals(bpContactCode)) {
-					Object o = x.get("E_Mail");
-					if (o != null)
-						email = o.toString();
-				}
-			}
-
-			ardto.setEmail(email);
-
 			actividades.add(ardto);
 		}
 		return actividades;
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
-		RestTemplate restTemplate = null;
-		restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
+				.getLoggedRestTemplate();
 
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
 		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = sdfinput.parse(fecha);
-		String fechaActividad = "'" + sdfoutput.format(parse) + "'";
+		String currentDate = sdfoutput.format(parse);
+		String fechaActividad = "'" + currentDate + "'";
 
-		ResponseEntity<String> responseActividades = obtenerActividadesPorUsuarioYFecha(restTemplate, usuarioSAP,
-				fechaActividad);
+		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
+
+		ResponseEntity<String> responseActividades = null;
+
+		try {
+			responseActividades = obtenerActividadesPorUsuarioYFecha(restTemplate, usuarioSAP, fechaActividad);
+		} catch (Exception e) {
+			e.printStackTrace();
+			String subject = "Error al obtener actividades del usuario " + username + " para la fecha " + currentDate;
+			StringBuilder body = new StringBuilder();
+			body.append("Fecha: " + currentDate + "<br>");
+			body.append("Usuario: " + username + "<br>");
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			throw e;
+		}
 
 		Gson gson = new Gson();
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
-		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
-
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 		for (JsonElement element : asJsonArray) {
-			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
-			ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
-			
-			// Campo U_Taller para determinar si la actividad es en taller o cliente
-			atdto.setActividadTaller(fromJson.get("U_Taller") == null || fromJson.get("U_Taller").equals("Y") ? true : false);
-			
-			atdto.setPrioridad(fromJson.get("Priority").toString());
-			Double activityCode = Double.parseDouble(fromJson.get("ActivityCode").toString());
-			atdto.setIdActividad(activityCode.longValue());
-			Double ac = (Double) fromJson.get("ActivityCode");
-			atdto.setNumero(String.valueOf(ac.intValue()));
+			Long activityCode = null;
 
-			String fechastring = fromJson.get("StartDate").toString().substring(0,10);
-			atdto.setFecha(fechastring);
-			
-			atdto.setHora(fromJson.get("ActivityTime").toString());
-			Object object = fromJson.get("Details");
-			atdto.setTareasARealizar(object != null ? object.toString() : "");
-			atdto.setConCargo(
-					fromJson.get("U_ConCargo") == null || !fromJson.get("U_ConCargo").equals("Y") ? false : true);
-
-			if (fromJson.get("HandledByEmployee") != null) {
-				Long handledByEmployeeId = Double.valueOf(fromJson.get("HandledByEmployee").toString()).longValue();
-				ResponseEntity<String> responseEmployee = null;
-				String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
-				try {
-					responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
-							new ParameterizedTypeReference<String>() {
-							});
-				} catch (RestClientException rce) {
-					LOGGER.error("Error al obtener el empleado");
-					LOGGER.error(eurl);
-					LOGGER.error(rce.getMessage());
-					throw rce;
-				}
-				JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
-				atdto.setEmpleado(
-						employeejson.get("FirstName").getAsString() + " " + employeejson.get("LastName").getAsString());
-			} else {
-				atdto.setEmpleado("--");
-			}
-
-			if (atdto.getActividadTaller()) {
-				Long locationId = Double.valueOf(fromJson.get("Location").toString()).longValue();
-				String lurl = locationsUrl.replace("{id}", locationId.toString());
-				ResponseEntity<String> responseLocation = null;
-				try {
-					responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
-							new ParameterizedTypeReference<String>() {
-							});
-				} catch (RestClientException rce) {
-					LOGGER.error("Error al obtener el domicilio");
-					LOGGER.error(lurl);
-					LOGGER.error(rce.getMessage());
-					throw rce;
-				}
-				JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
-				atdto.setDireccion(locationjson.getAsJsonArray("value").size() == 1
-						? locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString()
-						: "No encontrada " + locationId.toString());
-
-			} else {
-				atdto.setDireccion("");
-			}
-
-			// Obtengo la service call usando prentobjectid
-			Long parentId = Double.valueOf(fromJson.get("ParentObjectId").toString()).longValue();
-			String surl = serviceCallUrl.replace("{id}", parentId.toString());
-			ResponseEntity<String> responseServiceCall = null;
 			try {
-				responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
-						new ParameterizedTypeReference<String>() {
-						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener el servicio");
-				LOGGER.error(surl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			JsonObject servicejson = gson.fromJson(responseServiceCall.getBody(), JsonObject.class);
 
-			if (fromJson.get("ResponseAssignee") != null) {
-				Long asignadoPorId = Double.valueOf(fromJson.get("ResponseAssignee").toString()).longValue();
-				ResponseEntity<String> responseUser = null;
-				String uurl = userUrl.replace("{id}", asignadoPorId.toString());
+				LinkedTreeMap<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
+						LinkedTreeMap.class);
+
+				ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
+
+				// Activity Code
+				activityCode = FieldUtils.getActivityCode(fromJson, username);
+				atdto.setIdActividad(activityCode);
+
+				// Actividad de Taller o Cliente
+				atdto.setActividadTaller(FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true));
+
+				// Prioridad
+				atdto.setPrioridad(FieldUtils.getString(fromJson, FieldUtils.PRIORITY, false));
+
+				// Numero igual activity code
+				atdto.setNumero(activityCode.toString());
+
+				// Fecha
+				atdto.setFecha(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true, 0, 10));
+
+				// Hora
+				atdto.setHora(FieldUtils.getString(fromJson, FieldUtils.ACTIVITY_TIME, false));
+
+				// Tareas a realizar
+				atdto.setTareasARealizar(FieldUtils.getString(fromJson, FieldUtils.DETAILS, false));
+
+				// Con cargo
+				atdto.setConCargo(FieldUtils.getBoolean(fromJson, FieldUtils.U_CON_CARGO, true));
+
+				// Id del Empleado Responsable
+				Long handledByEmployeeId = FieldUtils.getLong(fromJson, FieldUtils.HANDLED_BY_EMPLOYEE, false);
+
+				String empleado = "";
+				if (handledByEmployeeId != null) {
+					ResponseEntity<String> responseEmployee = null;
+					String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
+					try {
+						responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
+								new ParameterizedTypeReference<String>() {
+								});
+					} catch (RestClientException rce) {
+						rce.printStackTrace();
+						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl,
+								rce);
+					}
+					JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
+					String fn = employeejson.get(FieldUtils.FIRST_NAME).getAsString();
+					String ln = employeejson.get(FieldUtils.LAST_NAME).getAsString();
+					empleado = fn + " " + ln;
+				}
+				atdto.setEmpleado(empleado);
+
+				String direccion = "";
+
+				// Si es una actividad en un cliente...
+				if (!atdto.getActividadTaller()) {
+
+					// Location
+					Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
+					
+					if (locationId > 0) {
+						String lurl = locationsUrl.replace("{id}", locationId.toString());
+						ResponseEntity<String> responseLocation = null;
+						try {
+							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+									new ParameterizedTypeReference<String>() {
+									});
+						} catch (RestClientException rce) {
+							rce.printStackTrace();
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						}
+						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
+						if (locationjson.getAsJsonArray("value").size() == 1) {
+							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
+									.getAsString();
+						} else {
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						}
+					}
+				}
+				atdto.setDireccion(direccion);
+
+				// Obtengo la service call usando prentobjectid
+				Long parentId = FieldUtils.getLong(fromJson, FieldUtils.PARENT_OBJECT_ID, true);
+				String surl = serviceCallUrl.replace("{id}", parentId.toString());
+				ResponseEntity<String> responseServiceCall = null;
 				try {
-					responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+					responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
 				} catch (RestClientException rce) {
-					LOGGER.error("Error al obtener el responsable");
-					LOGGER.error(uurl);
-					LOGGER.error(rce.getMessage());
-					throw rce;
+					rce.printStackTrace();
+					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
 				}
-				JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
-				atdto.setAsignadoPor(userjson.get("UserName").toString());
-			} else {
-				atdto.setAsignadoPor("--");
-			}
 
-			atdto.setLlamadaID(servicejson.get("ServiceCallID").toString());
-			
-			String itemCode = servicejson.get("ItemCode") == JsonNull.INSTANCE ? ""
-					: servicejson.get("ItemCode").toString();
-			atdto.setCodigoArticulo(itemCode);
-			atdto.setDetalle(servicejson.get("Subject").getAsString());
-			atdto.setNroSerie(servicejson.get("InternalSerialNum").getAsString());
-			
-			if (atdto.getActividadTaller()) {
-				atdto.setCliente(servicejson.get("CustomerName").getAsString());
-			} else {
-				atdto.setCliente("");
-			}
-			atdto.setNroFabricante(servicejson.get("ManufacturerSerialNum").toString());
+				LinkedTreeMap<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
+						LinkedTreeMap.class);
 
-			String accoStr = String.valueOf(activityCode.longValue());
-			JsonArray serviceCallActivities = servicejson.get("ServiceCallActivities").getAsJsonArray();
-			serviceCallActivities.forEach(x -> {
-				JsonObject item = x.getAsJsonObject();
-				String acco = item.get("ActivityCode").toString();
-				if (acco.equals(accoStr)) {
-					JsonElement jsonElement = item.get("U_U_HsMaq");
-					int hsmaq = jsonElement.isJsonNull() ? 0 : jsonElement.getAsInt();
-					atdto.setHorasMaquina(hsmaq);
+				String asignadoPor = "";
+				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
+				if (asignadoPorId != null) {
+					ResponseEntity<String> responseUser = null;
+					String uurl = userUrl.replace("{id}", asignadoPorId.toString());
+					try {
+						responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+								new ParameterizedTypeReference<String>() {
+								});
+					} catch (RestClientException rce) {
+						rce.printStackTrace();
+						throw new Exception("No se pudo obtener el empleado con id " + asignadoPorId + ". URL " + uurl);
+					}
+					JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
+					asignadoPor = userjson.get("UserName").toString();
 				}
-			});
+				atdto.setAsignadoPor(asignadoPor);
 
-			actividades.add(atdto);
+				// Es el parent object id
+				atdto.setLlamadaID(parentId.toString());
+
+				// El código de articulo
+				atdto.setCodigoArticulo(FieldUtils.getString(servicejson, FieldUtils.ITEM_CODE, true));
+
+				// Detalle de la service call
+				atdto.setDetalle(FieldUtils.getString(servicejson, FieldUtils.SUBJECT, false));
+
+				// Nro de serie
+				atdto.setNroSerie(FieldUtils.getString(servicejson, FieldUtils.INTERNAL_SERIAL_NUM, false));
+
+				// Cliente
+				String cliente = "";
+				if (!atdto.getActividadTaller()) {
+					cliente = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_NAME, true);
+				}
+				atdto.setCliente(cliente);
+
+				// Nro Fabricante
+				atdto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
+
+				List<LinkedTreeMap<String, Object>> serviceCallActivities = (List<LinkedTreeMap<String, Object>>) servicejson
+						.get("ServiceCallActivities");
+				for (LinkedTreeMap<String, Object> x : serviceCallActivities) {
+					Long acco = FieldUtils.getLong(x, FieldUtils.ACTIVITY_CODE, true);
+					if (activityCode.equals(acco)) {
+						Integer hm = FieldUtils.getInteger(x, FieldUtils.U_U_HS_MAQ, false);
+						atdto.setHorasMaquina(hm != null ? hm : 0);
+					}
+				}
+				actividades.add(atdto);
+			} catch (Exception e) {
+				e.printStackTrace();
+				String subject = "Error al obtener actividad " + activityCode.longValue() + " del usuario " + username
+						+ " para la fecha " + currentDate;
+				StringBuilder body = new StringBuilder("Actividad: " + activityCode.toString() + "<br>");
+				body.append("Fecha: " + currentDate + "<br>");
+				body.append("Usuario: " + username + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			}
 		}
 
 		return actividades;
+
 	}
 
 	private ResponseEntity<String> obtenerActividadesPorUsuarioYFecha(RestTemplate restTemplate, String usuarioSAP,
-			String fechaActividad) {
+			String fechaActividad) throws Exception {
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
 				+ fechaActividad + " and U_Estado eq 'Pendiente'";
 		ResponseEntity<String> responseActividades = null;
@@ -532,30 +630,33 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (RestClientException rce) {
-			LOGGER.error(
-					"Error al obtener las actividades del empleado " + usuarioSAP + " para el dia " + fechaActividad);
-			LOGGER.error(actividadUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
+			rce.printStackTrace();
+			throw new Exception("Error al obtener las actividades del empleado " + usuarioSAP + " para el dia "
+					+ fechaActividad + " - " + actividadUrl, rce);
 		}
 		return responseActividades;
 	}
 
 	@Override
 	public void marcarEnviado(Long idActividad) throws Exception {
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
+				.getLoggedRestTemplate();
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");
-//		map.put("DocEntry", idActividad);
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
 		String url = actividadUrl.replace("{id}", idActividad.toString());
 		try {
 			restTemplate.exchange(url, HttpMethod.PATCH, httpEntity, Object.class);
 		} catch (RestClientException rce) {
-			LOGGER.error("Error al actualizar el estado de la actividad " + idActividad);
-			LOGGER.error(url);
-			LOGGER.error(rce.getMessage());
+			rce.printStackTrace();
+			String subject = "Error al actualizar actividad " + idActividad + " para marcarla como enviada";
+			StringBuilder body = new StringBuilder("Actividad: " + idActividad + "<br>");
+			body.append("Error: " + rce.getMessage() + "<br>");
+			if (rce.getCause() != null) {
+				body.append("Causa: " + rce.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
 			throw rce;
 		}
 	}
@@ -563,5 +664,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Resource(name = "usuarioService")
 	public void setUsuarioService(UsuarioService usuarioService) {
 		this.usuarioService = usuarioService;
+	}
+
+	@Resource(name = "mailSenderSMTPService")
+	public void setMailService(MailSenderSMTPService mailService) {
+		this.mailService = mailService;
 	}
 }

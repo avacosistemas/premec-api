@@ -1,12 +1,14 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.stream.Collectors;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -52,7 +54,10 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 		String deposito = usuarioService.getDeposito(username);
 
 		String repuestosUrl = urlSAP
-				+ "/$crossjoin(Items,Items/ItemWarehouseInfoCollection)?$expand=Items($select=ItemCode,ItemName),Items/ItemWarehouseInfoCollection($select=WarehouseCode,InStock)&$filter=Items/ItemCode eq Items/ItemWarehouseInfoCollection/ItemCode and Items/ItemWarehouseInfoCollection/WarehouseCode eq '"
+				+ "/$crossjoin(Items,Items/ItemWarehouseInfoCollection)?$expand=Items"
+				+ "($select=ItemCode,ItemName),Items/ItemWarehouseInfoCollection"
+				+ "($select=WarehouseCode,InStock)&$filter=Items/ItemCode eq " 
+				+ "Items/ItemWarehouseInfoCollection/ItemCode and Items/ItemWarehouseInfoCollection/WarehouseCode eq '"
 				+ deposito + "' and Items/ItemWarehouseInfoCollection/InStock gt 0";
 
 		ResponseEntity<String> responseRepuestos = null;
@@ -81,7 +86,63 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 			repuestos.add(ardto);
 		}
+
+		if (!repuestos.isEmpty()) {
+		
+			String seriadosUrl = generarUrlConsultaSeriado(repuestos);
+			
+			ResponseEntity<String> responseRepuestosSeriados = null;
+			try {
+				responseRepuestosSeriados = restTemplate.exchange(seriadosUrl, HttpMethod.GET, null,
+						new ParameterizedTypeReference<String>() {
+						});
+			} catch (RestClientException rce) {
+				LOGGER.error("Error al obtener los repuestos del usuario " + username);
+				LOGGER.error(repuestosUrl);
+				LOGGER.error(rce.getMessage());
+				throw rce;
+			}
+	
+			actualizarSeriadoRepuestos(repuestos, responseRepuestosSeriados);
+			
+		}
 		return repuestos;
+	}
+
+	private void actualizarSeriadoRepuestos(List<RepuestoDepositoDTO> repuestos,
+			ResponseEntity<String> responseRepuestosSeriados) {
+		Gson gson = new Gson(); 
+
+		JsonObject array = gson.fromJson(responseRepuestosSeriados.getBody(), JsonObject.class);
+		JsonArray asJsonArray = array.getAsJsonArray("value");
+
+		Map<String, Boolean> seriados = new HashMap<String, Boolean>();
+		
+		for (JsonElement element : asJsonArray) {
+			String itemCode = element.getAsJsonObject().get("ItemCode").toString();
+			String itemSerialNumber = element.getAsJsonObject().get("ManageSerialNumbers").toString();
+			seriados.put(itemCode, itemSerialNumber.contains("tYES"));
+		}
+		
+		for (int i = 0; i< repuestos.size(); i++) {
+			RepuestoDepositoDTO dto = repuestos.get(i);
+			dto.setSeriado(seriados.get("\"" + dto.getItemCode() + "\""));
+			repuestos.set(i, dto);
+		}
+	}
+
+	private String generarUrlConsultaSeriado(List<RepuestoDepositoDTO> repuestos) {
+		List<String> codes = repuestos.stream().map(RepuestoDepositoDTO::getItemCode).collect(Collectors.toList());
+		
+		for (int i = 0; i< codes.size(); i++) {
+			String string = "ItemCode eq '" + codes.get(i) + "'";
+			codes.set(i, string);
+		}
+		
+		String join = StringUtils.join(codes, " or ");
+		
+		String seriadosUrl = urlSAP + "/Items?$select=ItemCode,ManageSerialNumbers&$filter=" + join;
+		return seriadosUrl;
 	}
 
 	private RepuestoDepositoDTO generarRepuesto(LinkedTreeMap fromJson) {
@@ -97,7 +158,6 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 		repuesto.setItemCode(itemCode);
 		repuesto.setItemName(itemName);
 		repuesto.setStock(stock);
-		repuesto.setSeriado(new Random().nextBoolean());
 
 		return repuesto;
 	}

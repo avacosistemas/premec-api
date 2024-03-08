@@ -13,11 +13,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import ar.com.avaco.arc.core.service.MailSenderSMTPService;
+import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
@@ -52,100 +56,132 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Value("${dbSAP}")
 	private String dbSAP;
 
+	@Value("${email.from}")
+	private String from;
+
+	@Value("${email.errores}")
+	private String toErrores;
+
+	@Value("${email.errores.cc}")
+	private String toErroresCC;
+
 	@Value("${informe.path}")
 	private String informePath;
 
 	@Value("${json.path}")
 	private String jsonPath;
 
+	@Value("${json.path.revision}")
+	private String jsonPathRevision;
+
+	private MailSenderSMTPService mailService;
+
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
 
-	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
+	@Override
+	public void grabarFormulario(FormularioDTO formularioDTO, String usuariosap) throws Exception {
+		LOGGER.debug("Grabando formulario " + formularioDTO.getIdActividad());
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		String pathname = jsonPath + "\\actividad-" + formularioDTO.getIdActividad() + "-usuariosap-" + usuariosap
+				+ ".txt";
+		try {
+			String json = mapper.writeValueAsString(formularioDTO);
+			File file = new File(pathname);
+			FileUtils.writeStringToFile(file, json);
+		} catch (JsonProcessingException e) {
+			LOGGER.debug("No se pudo serializar el formulario " + formularioDTO.getIdActividad());
+			e.printStackTrace();
+			throw new Exception("No se pudo serializar el formulario " + formularioDTO.getIdActividad(), e);
+		} catch (IOException e) {
+			LOGGER.debug("No se pudo grabar el archivo" + pathname);
+			e.printStackTrace();
+			throw new Exception("No se pudo grabar el archivo " + pathname, e);
+		}
+	}
+
+	@Override
+	public void enviarFormulariosFromFiles() throws Exception {
+
+		LOGGER.debug("Iniciando envio de formularios SAP");
+		ObjectMapper mapper = new ObjectMapper();
+		File folder = new File(jsonPath);
+		File[] listOfFiles = folder.listFiles();
+
+		for (File file : listOfFiles) {
+			if (file.isFile()) {
+				Long activityCode = null;
+				String fileName = null;
+				try {
+					String readFileToString = FileUtils.readFileToString(file);
+					FormularioDTO formularioDTO = mapper.readValue(readFileToString, FormularioDTO.class);
+					fileName = file.getName();
+					String[] split = fileName.split("\\.")[0].split("-");
+					String userId = split[3];
+					String formularioId = split[1];
+					LOGGER.debug("##### Enviando formulario " + formularioId);
+					activityCode = formularioDTO.getIdActividad();
+					enviarFormulario(formularioDTO, userId);
+					LOGGER.debug("##### Formulario " + formularioId + " enviado");
+					file.delete();
+					LOGGER.debug("Archivo borrado luego del envio");
+				} catch (ParentObjectIdNotFoundException e) {
+					e.printStackTrace();
+					String subject = "Error al enviar actividad " + activityCode + " a SAP";
+					StringBuilder body = new StringBuilder("Actividad: " + activityCode.toString() + "<br>");
+					body.append("La actividad " + activityCode.toString() + " no tiene parent object id asignado.<br>");
+					body.append("Se mueve el archivo " + fileName + " a la carpeta " + jsonPathRevision + "<br>");
+					body.append("Error: " + e.getMessage() + "<br>");
+					if (e.getCause() != null) {
+						body.append("Causa: " + e.getCause().toString() + "<br>");
+					}
+					mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+					FileUtils.moveFileToDirectory(file, new File(jsonPathRevision), true);
+				} catch (Exception e) {
+					e.printStackTrace();
+					String subject = "Error al enviar actividad " + activityCode + " a SAP";
+					StringBuilder body = new StringBuilder("Actividad: " + activityCode.toString() + "<br>");
+					body.append("Error: " + e.getMessage() + "<br>");
+					if (e.getCause() != null) {
+						body.append("Causa: " + e.getCause().toString() + "<br>");
+					}
+					mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+				}
+
+			}
+		}
+
+	}
+
+	@Override
+	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws ParentObjectIdNotFoundException, Exception {
 		Long idActividad = formulario.getIdActividad();
 
-		// GENERO ACTIVIDAD PATCH
-		ActividadPatch ap = generarActividadPatch(formulario);
-		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
-
-		// GENERO ATTACHMENT MAP
-		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
-		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
-
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
+				.getLoggedRestTemplate();
 		LOGGER.debug("Actividad: " + idActividad + " - RestTemplate Generado");
 
 		SAPWSUtils sapUtils = new SAPWSUtils(restTemplate, urlSAP);
 
-		Gson gson = new Gson();
+		Long parentObjectId = sapUtils.getParentObjectId(idActividad);
 
-		if (formulario.getHorasMaquina() != null) {
+		JsonArray serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
 
-			Long parentObjectId = sapUtils.getParentObjectId(idActividad);
+		Map<String, Object> serviceCallMap = obtenerServiceCallSap(formulario, idActividad, parentObjectId,
+				serviceCallActivitiesJson);
+		enviarHsMaquinaSap(idActividad, restTemplate, parentObjectId, serviceCallMap);
 
-			JsonArray serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
+		ActividadPatch ap = generarActividadPatch(formulario);
+		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
+		enviarActividadSap(idActividad, ap, restTemplate);
 
-			LOGGER.debug("Actividad: " + idActividad + " - Buscando la ServiceCall Activities asociada");
-			Map<String, Object> serviceCallMap = new HashMap<>();
-			try {
-				for (JsonElement x : serviceCallActivitiesJson) {
-					JsonObject item = x.getAsJsonObject();
-					String acco = item.get("ActivityCode").toString();
-					if (acco.equals(idActividad.toString())) {
-						int lineNum = item.get("LineNum").getAsInt();
-						serviceCallMap = generateServiceCallMap(parentObjectId, idActividad, lineNum,
-								formulario.getHorasMaquina());
-						LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Encontrada LineNum "
-								+ lineNum);
-						break;
-					}
-				}
-			} catch (Exception e) {
-				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity asociada");
-				throw e;
-			}
+		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
+		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
+		enviarAttachmentsSap(idActividad, ap, attachmentMap, restTemplate);
 
-			if (serviceCallMap.isEmpty()) {
-				LOGGER.error("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity");
-				throw new Exception("Actividad: " + idActividad + " - No se pudo encontar el servicecall activity");
-			}
+	}
 
-			LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities obtenida correctamente");
-
-			LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
-			String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
-			LOGGER.debug(serviceCallUrl);
-
-			HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
-			try {
-				String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
-				restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
-			} catch (RestClientException rce) {
-				LOGGER.error("Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call");
-				LOGGER.error(serviceCallUrl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
-			}
-			LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
-		}
-
-		LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
-		String attachmentUrl = urlSAP + "/Attachments2";
-		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
-		ResponseEntity<Object> attachmentRespose = null;
-		try {
-			attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
-		} catch (RestClientException rce) {
-			LOGGER.error("Actividad: " + idActividad + " - Error al intentar subir attachments");
-			LOGGER.error(attachmentUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
-		}
-		Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
-		String attchEntry = (object.toString().split("="))[1];
-
-		ap.setAttachmentEntry(attchEntry);
-		LOGGER.debug("Actividad: " + idActividad + " - Attachments Enviados");
-
+	private void enviarActividadSap(Long idActividad, ActividadPatch ap, RestTemplate restTemplate) throws Exception {
 		LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 		String actividadUrl = urlSAP + "/Activities({id})";
@@ -153,13 +189,114 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			restTemplate.exchange(actividadUrl.replace("{id}", idActividad.toString()), HttpMethod.PATCH, httpEntity,
 					Object.class);
 		} catch (RestClientException rce) {
-			LOGGER.error("Actividad: " + idActividad + " - Error al intentar actualizar la actividad");
-			LOGGER.error(attachmentUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
+			throw new Exception(
+					"Actividad: " + idActividad + " - Error al intentar actualizar la actividad. URL " + actividadUrl,
+					rce);
 		}
 		LOGGER.debug("Actividad Actualizada");
+	}
 
+	private void enviarHsMaquinaSap(Long idActividad, RestTemplate restTemplate, Long parentObjectId,
+			Map<String, Object> serviceCallMap) throws Exception {
+		LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
+		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
+		LOGGER.debug(serviceCallUrl);
+
+		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
+		try {
+			String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
+			restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
+		} catch (RestClientException rce) {
+			throw new Exception("Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call. URL "
+					+ serviceCallUrl, rce);
+		}
+		LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
+	}
+
+	private Map<String, Object> obtenerServiceCallSap(FormularioDTO formulario, Long idActividad, Long parentObjectId,
+			JsonArray serviceCallActivitiesJson) throws Exception {
+		LOGGER.debug("Actividad: " + idActividad + " - Buscando la ServiceCall Activities asociada");
+		Map<String, Object> serviceCallMap = new HashMap<>();
+		try {
+			for (JsonElement x : serviceCallActivitiesJson) {
+				JsonObject item = x.getAsJsonObject();
+				String acco = item.get("ActivityCode").toString();
+				if (acco.equals(idActividad.toString())) {
+					int lineNum = item.get("LineNum").getAsInt();
+					serviceCallMap = generateServiceCallMap(parentObjectId, idActividad, lineNum,
+							formulario.getHorasMaquina());
+					LOGGER.debug(
+							"Actividad: " + idActividad + " - ServiceCall Activities Encontrada LineNum " + lineNum);
+					break;
+				}
+			}
+		} catch (Exception e) {
+			throw new Exception("Actividad: " + idActividad + " - No se pudo obtener el servicecall activity asociada",
+					e);
+		}
+
+		if (serviceCallMap.isEmpty()) {
+			throw new Exception("Actividad: " + idActividad + " - No se pudo encontar el servicecall activity.");
+		}
+
+		LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities obtenida correctamente");
+		return serviceCallMap;
+	}
+
+	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap,
+			RestTemplate restTemplate) throws Exception {
+		String actividadAttachmentUrl = urlSAP + "/Activities({idActividad})?$select=AttachmentEntry";
+		actividadAttachmentUrl = actividadAttachmentUrl.replace("{idActividad}", idActividad.toString());
+
+		ResponseEntity<String> attCountResult = null;
+		try {
+			attCountResult = restTemplate.exchange(actividadAttachmentUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (Exception e) {
+			e.printStackTrace();
+			String subject = "Error al obtener attachments previo al envio del formulario de la actividad "
+					+ idActividad;
+			StringBuilder body = new StringBuilder();
+			body.append("No se puso consultar el attachmentEntry de la actividad " + idActividad + ". URL: "
+					+ actividadAttachmentUrl);
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			throw e;
+		}
+
+		Gson gson = new Gson();
+		JsonObject array = gson.fromJson(attCountResult.getBody(), JsonObject.class);
+
+		if (array.get("AttachmentEntry") != null && !array.get("AttachmentEntry").isJsonNull()) {
+			String subject = "Error: La actividad " + idActividad + " ya tiene attachments. Revisar errores previos."
+					+ "<br>";
+			StringBuilder body = new StringBuilder();
+			body.append("Error: La actividad " + idActividad
+					+ " ya tiene attachments. Revisar errores previos. Tal vez sea necesario borrar los attachments para que vuelvan a subir las fotos sin duplicarse.");
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			throw new Exception("La actividad " + idActividad + " ya tiene attachments. Revisar errores previos.");
+		}
+
+		LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
+
+		String attachmentUrl = urlSAP + "/Attachments2";
+		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
+		ResponseEntity<Object> attachmentRespose = null;
+		try {
+			attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
+		} catch (RestClientException rce) {
+			throw new Exception(
+					"Actividad: " + idActividad + " - Error al intentar subir attachments. URL " + attachmentUrl, rce);
+		}
+		Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
+		String attchEntry = (object.toString().split("="))[1];
+
+		ap.setAttachmentEntry(attchEntry);
+		LOGGER.debug("Actividad: " + idActividad + " - Attachments Enviados");
 	}
 
 	private Map<String, Object> generateServiceCallMap(Long parentObjectId, Long idActividad, int lineNum,
@@ -180,15 +317,21 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		return map;
 	}
 
-	private ActividadPatch generarActividadPatch(FormularioDTO formulario) throws ParseException {
+	private ActividadPatch generarActividadPatch(FormularioDTO formulario) {
 		ActividadPatch ap = new ActividadPatch();
 
 		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd");
 		SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm:ss");
 
-		Date inicioDate = sdf.parse(formulario.getFechaHoraInicio());
-		Date finDate = sdf.parse(formulario.getFechaHoraFin());
+		Date inicioDate = null;
+		Date finDate = null;
+		try {
+			inicioDate = sdf.parse(formulario.getFechaHoraInicio());
+			finDate = sdf.parse(formulario.getFechaHoraFin());
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
 
 		// Con Cargo
 		ap.setU_ConCargo(formulario.getConCargo());
@@ -206,7 +349,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Hora Fin
 		ap.setEndTime(sdfHour.format(finDate));
 
-		// Valoracion si actividad no es de taller		
+		// Valoracion si actividad no es de taller
 		if (formulario.getActividadTaller() == null || !formulario.getActividadTaller()) {
 			// Valoracion
 			ap.setU_Valoracion(formulario.getValoracion());
@@ -218,20 +361,17 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
 		}
 
+		Gson gson = new Gson();
+
 		// Tareas
-		String tareas = new Gson().toJson(formulario.getCheckList());
+		String tareas = gson.toJson(formulario.getCheckList());
 		ap.setU_Tareasreal(tareas);
 
 		// Repuestos
-		ap.setU_Repuestos(new Gson().toJson(formulario.getRepuestos()));
+		ap.setU_Repuestos(gson.toJson(formulario.getRepuestos()));
 
 		// Estado Finalizado
 		ap.setU_Estado("Finalizada");
-
-		// Id de actividad
-//		ap.setDocEntry(formulario.getIdActividad().toString());
-		// se comenta el docentry porque no es el id de actividad ver de ajustar mas
-		// adelante
 
 		// Checks formateados
 		JsonParser jsonParser = new JsonParser();
@@ -266,7 +406,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		return ap;
 	}
 
-	private Map<String, Object> generarAttachmentMap(FormularioDTO formulario, String usuarioSAP) throws IOException {
+	private Map<String, Object> generarAttachmentMap(FormularioDTO formulario, String usuarioSAP) throws Exception {
 		String path = informePath + "\\fotosactividades\\" + formulario.getIdActividad();
 
 		File folder = new File(path);
@@ -276,10 +416,20 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				f.delete();
 			}
 			Path p = Paths.get(path);
-			Files.deleteIfExists(p);
+			try {
+				Files.deleteIfExists(p);
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new Exception("No se pudo borrar el path " + path, e);
+			}
 		}
 
-		Files.createDirectories(Paths.get(path));
+		try {
+			Files.createDirectories(Paths.get(path));
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new Exception("No se pudo generar el path " + path, e);
+		}
 
 		Map<String, Object> attachmentMap = new HashMap<>();
 
@@ -291,7 +441,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			String fileName = "FOTO-" + Calendar.getInstance().getTimeInMillis() + "-" + i;
 			String fileExtension = split[split.length - 1];
 			String pathname = path + "\\" + fileName + "." + fileExtension;
-			FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
+			try {
+				FileUtils.writeByteArrayToFile(new File(pathname), foto.getArchivo());
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new Exception("No se pudo generar la foto " + pathname, e);
+			}
 
 			Map<String, String> fotoMap = new HashMap<String, String>();
 			fotoMap.put("FileExtension", fileExtension);
@@ -307,83 +462,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		return attachmentMap;
 	}
 
-	@Override
-	public void grabarFormulario(FormularioDTO formularioDTO, String usuariosap) throws Exception {
-		LOGGER.debug("Grabando formulario " + formularioDTO.getIdActividad());
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		String pathname = jsonPath + "\\actividad-" + formularioDTO.getIdActividad() + "-usuariosap-" + usuariosap
-				+ ".txt";
-		try {
-			String json = mapper.writeValueAsString(formularioDTO);
-			File file = new File(pathname);
-			FileUtils.writeStringToFile(file, json);
-		} catch (JsonProcessingException e) {
-			LOGGER.debug("No se pudo serializar el formulario " + formularioDTO.getIdActividad());
-			e.printStackTrace();
-			throw new Exception("No se pudo serializar el formulario " + formularioDTO.getIdActividad());
-		} catch (IOException e) {
-			LOGGER.debug("No se pudo grabar el archivo" + pathname);
-			e.printStackTrace();
-			throw new Exception("No se pudo grabar el archivo " + pathname);
-		}
-	}
-
-	@Override
-	public void enviarFormulariosFromFiles() throws Exception {
-
-		List<String> errors = new ArrayList<>();
-
-		LOGGER.debug("Iniciando envio de formularios");
-		ObjectMapper mapper = new ObjectMapper();
-		File folder = new File(jsonPath);
-		File[] listOfFiles = folder.listFiles();
-
-		for (File file : listOfFiles) {
-			if (file.isFile()) {
-				try {
-					String readFileToString = FileUtils.readFileToString(file);
-					FormularioDTO formularioDTO = mapper.readValue(readFileToString, FormularioDTO.class);
-					String[] split = file.getName().split("\\.")[0].split("-");
-					String userId = split[3];
-					String formularioId = split[1];
-					LOGGER.debug("##### Enviando formulario " + formularioId);
-					enviarFormulario(formularioDTO, userId);
-					LOGGER.debug("##### Formulario " + formularioId + " enviado");
-					file.delete();
-					LOGGER.debug("Archivo borrado luego del envio");
-				} catch (IOException e) {
-					LOGGER.error("No se puede leer el archivo " + file.getName());
-					LOGGER.error(e.getMessage());
-					LOGGER.error(e.getStackTrace());
-					errors.add("No se puede leer el archivo " + file.getName());
-				} catch (Exception e) {
-					LOGGER.error("No se pudo enviar el formulario " + file.getName());
-					LOGGER.error(e.getMessage());
-					LOGGER.error(e.getStackTrace());
-					errors.add("No se pudo enviar el formulario " + file.getName());
-				}
-
-			}
-		}
-
-		if (errors.size() > 0) {
-			throw new Exception(
-					errors.stream().map(String::valueOf).collect(Collectors.joining(System.lineSeparator())));
-		}
-
-	}
-
-	public void setUrlSAP(String urlSAP) {
-		this.urlSAP = urlSAP;
-	}
-
-	public void setInformePath(String informePath) {
-		this.informePath = informePath;
-	}
-
-	public void setJsonPath(String jsonPath) {
-		this.jsonPath = jsonPath;
+	@Resource(name = "mailSenderSMTPService")
+	public void setMailService(MailSenderSMTPService mailService) {
+		this.mailService = mailService;
 	}
 
 }
