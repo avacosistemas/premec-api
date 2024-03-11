@@ -102,6 +102,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			e.printStackTrace();
 			String subject = "Error al obtener actividades para envio de reportes";
 			StringBuilder body = new StringBuilder();
+			body.append("URL " + actividadUrl);
 			body.append("Error: " + e.getMessage() + "<br>");
 			if (e.getCause() != null) {
 				body.append("Causa: " + e.getCause().toString() + "<br>");
@@ -127,17 +128,13 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			ActividadReporteDTO ardto = new ActividadReporteDTO();
 
 			try {
-			
-	
+
 				ardto.setIdActividad(activityCode.longValue());
-	
+
 				LOGGER.debug("Procesando Actividad " + activityCode.longValue());
-	
+
 				Long parentId = FieldUtils.getLong(fromJson, FieldUtils.PARENT_OBJECT_ID, true);
-	
-				// Actividad de taller o cliente
-				Boolean actividadTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
-	
+
 				String surl = serviceCallUrl.replace("{id}", parentId.toString());
 				ResponseEntity<String> responseServiceCall = null;
 				try {
@@ -148,16 +145,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					rce.printStackTrace();
 					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
 				}
-	
+
 				LinkedTreeMap<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
 						LinkedTreeMap.class);
-	
+
 				// Prioridad
 				ardto.setPrioridad(FieldUtils.getString(fromJson, FieldUtils.PRIORITY, false));
-	
+
 				// Numero
 				ardto.setNumero(activityCode.toString());
-	
+
 				// Asignado Por
 				String asignadoPor = "";
 				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
@@ -176,14 +173,14 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					asignadoPor = userjson.get("UserName").toString();
 				}
 				ardto.setAsignadoPor(asignadoPor);
-	
+
 				// Llamada Id
 				ardto.setLlamadaID(parentId.toString());
-	
+
 				// Empleado
 				// Id del Empleado Responsable
 				Long handledByEmployeeId = FieldUtils.getLong(fromJson, FieldUtils.HANDLED_BY_EMPLOYEE, false);
-	
+
 				String empleado = "";
 				if (handledByEmployeeId != null) {
 					ResponseEntity<String> responseEmployee = null;
@@ -194,7 +191,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 								});
 					} catch (RestClientException rce) {
 						rce.printStackTrace();
-						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl, rce);
+						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl,
+								rce);
 					}
 					JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
 					String fn = employeejson.get(FieldUtils.FIRST_NAME).getAsString();
@@ -202,60 +200,56 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					empleado = fn + " " + ln;
 				}
 				ardto.setEmpleado(empleado);
-	
+
 				// Fecha
 				ardto.setFecha(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true, 0, 10));
-	
+
 				// Hora
 				ardto.setHora(FieldUtils.getString(fromJson, FieldUtils.ACTIVITY_TIME, false));
-	
+
 				// Codigo de articulo
 				String itemCode = servicejson.get(FieldUtils.ITEM_CODE) == JsonNull.INSTANCE ? ""
 						: servicejson.get(FieldUtils.ITEM_CODE).toString();
 				ardto.setCodigoArticulo(itemCode);
-	
+
 				// Nro Serie
 				ardto.setNroSerie(FieldUtils.getString(servicejson, FieldUtils.INTERNAL_SERIAL_NUM, false));
-	
+
 				// Cliente
-				String cliente = "";
-				if (!actividadTaller) {
-					cliente = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_NAME, true);
-				}
+				String cliente = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_NAME, true);
 				ardto.setCliente(cliente);
-	
+
 				// Nro Fabricante
 				ardto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
-	
+
 				// Direccion
 				String direccion = "";
-	
+
 				// Si es una actividad en un cliente...
-				if (!actividadTaller) {
-	
-					// Location
-					Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
-					if (locationId > 0) {
-						String lurl = locationsUrl.replace("{id}", locationId.toString());
-						ResponseEntity<String> responseLocation = null;
-						try {
-							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
-									new ParameterizedTypeReference<String>() {
-									});
-						} catch (RestClientException rce) {
-							rce.printStackTrace();
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
-						}
-						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
-						if (locationjson.getAsJsonArray("value").size() == 1) {
-							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name").getAsString();
-						} else {
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
-						} 
-					}	
+
+				// Location
+				Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
+				if (locationId > 0) {
+					String lurl = locationsUrl.replace("{id}", locationId.toString());
+					ResponseEntity<String> responseLocation = null;
+					try {
+						responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+								new ParameterizedTypeReference<String>() {
+								});
+					} catch (RestClientException rce) {
+						rce.printStackTrace();
+						throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+					}
+					JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
+					if (locationjson.getAsJsonArray("value").size() == 1) {
+						direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
+								.getAsString();
+					} else {
+						throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+					}
 				}
 				ardto.setDireccion(direccion);
-	
+
 				// Hs Maquina
 				List<LinkedTreeMap<String, Object>> serviceCallActivities = (List<LinkedTreeMap<String, Object>>) servicejson
 						.get("ServiceCallActivities");
@@ -266,18 +260,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						ardto.setHorasMaquina(hm != null ? hm : 0);
 					}
 				}
-	
+
 				// Con cargo
 				ardto.setConCargo(FieldUtils.getBoolean(fromJson, FieldUtils.U_CON_CARGO, true).toString());
-	
+
 				// Detalle
 				ardto.setDetalle(FieldUtils.getString(servicejson, FieldUtils.SUBJECT, false));
-	
+
 				// Tareas a Realizar
 				ardto.setTareasARealizar(FieldUtils.getString(fromJson, FieldUtils.DETAILS, false));
-	
+
 				JsonParser jsonParser = new JsonParser();
-	
+
 				// Checks
 				try {
 					String tareas = new Gson().toJson(fromJson.get(FieldUtils.U_TAREASREAL));
@@ -306,15 +300,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						}
 					}
 					ardto.setChecks(map);
-	
+
 				} catch (Exception e) {
 					e.printStackTrace();
-					throw new Exception("Problemas al procesar los checks de la actividad " + activityCode.longValue(), e);
+					throw new Exception("Problemas al procesar los checks de la actividad " + activityCode.longValue(),
+							e);
 				}
-	
+
 				// Observaciones Generales
 				ardto.setObservacionesGenerales(FieldUtils.getString(fromJson, FieldUtils.NOTES, false));
-	
+
 				// Repuestos
 				try {
 					List<RepuestoDTO> listRepuestos = new ArrayList<>();
@@ -343,10 +338,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ardto.setRepuestos(listRepuestos);
 				} catch (Exception e) {
 					e.printStackTrace();
-					throw new Exception("Problemas al procesar los repuestos de la actividad " + activityCode.longValue(),
-							e);
+					throw new Exception(
+							"Problemas al procesar los repuestos de la actividad " + activityCode.longValue(), e);
 				}
-	
+
 				ardto.setFechaInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true));
 				ardto.setHoraInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_TIME, true));
 				ardto.setFechaFinoOperario(FieldUtils.getString(fromJson, FieldUtils.END_DUE_DATE, true));
@@ -354,14 +349,14 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ardto.setValoracionResultado(FieldUtils.getString(fromJson, FieldUtils.U_VALORACION, true));
 				ardto.setValoracionNombreSuperior(FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
 				ardto.setValoracionDNISuperior(FieldUtils.getString(fromJson, FieldUtils.U_DNI_SUPERVISOR, true));
-	
+
 				String valoracion = FieldUtils.getString(fromJson, FieldUtils.U_VALORACION_COMENT, false);
 				valoracion = !StringUtils.isBlank(valoracion) ? valoracion : "Sin Comentarios";
 				ardto.setValoracionComentarios(valoracion);
-	
+
 				String customerCode = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_CODE, true);
 				String bpContactCode = FieldUtils.getString(servicejson, FieldUtils.CONTACT_CODE, true);
-	
+
 				ResponseEntity<String> responseBusinessPartner = null;
 				String bpurl = businessPartnerUrl.replace("{id}", customerCode);
 				try {
@@ -373,15 +368,15 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					throw new Exception("Error al obtener el business partner para reporte" + activityCode.longValue(),
 							rce.getCause());
 				}
-	
+
 				JsonObject responseBPjson = gson.fromJson(responseBusinessPartner.getBody(), JsonObject.class);
 				LinkedTreeMap<String, Object> fromJsonBP = gson.fromJson(responseBPjson.getAsJsonObject().toString(),
 						LinkedTreeMap.class);
 				List<LinkedTreeMap<String, Object>> mailobj = (List<LinkedTreeMap<String, Object>>) fromJsonBP
 						.get("ContactEmployees");
-	
+
 				String email = null;
-	
+
 				for (LinkedTreeMap<String, Object> x : mailobj) {
 					Integer parseDouble2 = ((Double) Double.parseDouble(x.get("InternalCode").toString())).intValue();
 					if (parseDouble2.toString().equals(bpContactCode)) {
@@ -390,7 +385,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 							email = o.toString();
 					}
 				}
-	
+
 				ardto.setEmail(email);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -512,7 +507,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 					// Location
 					Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
-					
+
 					if (locationId > 0) {
 						String lurl = locationsUrl.replace("{id}", locationId.toString());
 						ResponseEntity<String> responseLocation = null;
@@ -522,14 +517,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 									});
 						} catch (RestClientException rce) {
 							rce.printStackTrace();
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+							throw new Exception(
+									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
 						}
 						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 						if (locationjson.getAsJsonArray("value").size() == 1) {
 							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
 									.getAsString();
 						} else {
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+							throw new Exception(
+									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
 						}
 					}
 				}

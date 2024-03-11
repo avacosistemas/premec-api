@@ -172,21 +172,24 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		enviarHsMaquinaSap(idActividad, restTemplate, parentObjectId, serviceCallMap);
 
 		ActividadPatch ap = generarActividadPatch(formulario);
-		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
-		enviarActividadSap(idActividad, ap, restTemplate);
 
 		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
 		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
 		enviarAttachmentsSap(idActividad, ap, attachmentMap, restTemplate);
+		
+		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
+		enviarActividadSap(idActividad, ap, restTemplate);
+
+		
 
 	}
 
 	private void enviarActividadSap(Long idActividad, ActividadPatch ap, RestTemplate restTemplate) throws Exception {
 		LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
-		String actividadUrl = urlSAP + "/Activities({id})";
+		String actividadUrl = urlSAP + "/Activities({id})".replace("{id}", idActividad.toString());
 		try {
-			restTemplate.exchange(actividadUrl.replace("{id}", idActividad.toString()), HttpMethod.PATCH, httpEntity,
+			restTemplate.exchange(actividadUrl, HttpMethod.PATCH, httpEntity,
 					Object.class);
 		} catch (RestClientException rce) {
 			throw new Exception(
@@ -202,13 +205,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		LOGGER.debug(serviceCallUrl);
 
+		String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
 		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
 		try {
-			String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
 			restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
 		} catch (RestClientException rce) {
 			throw new Exception("Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call. URL "
-					+ serviceCallUrl, rce);
+					+ scUrl, rce);
 		}
 		LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
 	}
