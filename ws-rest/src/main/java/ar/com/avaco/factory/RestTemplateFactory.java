@@ -102,6 +102,7 @@ public class RestTemplateFactory {
 					ResponseLoginSAPDTO.class);
 			headers.add("Cookie", "B1SESSION=" + response.getBody().getSessionId() + "; ROUTEID=.node2");
 			headers.setCacheControl("no-cache");
+			headers.add("Prefer", "odata.maxpagesize=0");
 
 			restTemplate.setDefaultUriVariables(headers);
 			return restTemplate;

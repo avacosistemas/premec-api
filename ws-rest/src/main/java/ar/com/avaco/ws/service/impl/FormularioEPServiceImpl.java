@@ -19,7 +19,6 @@ import javax.annotation.Resource;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -248,41 +247,41 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap,
 			RestTemplate restTemplate) throws Exception {
-		String actividadAttachmentUrl = urlSAP + "/Activities({idActividad})?$select=AttachmentEntry";
-		actividadAttachmentUrl = actividadAttachmentUrl.replace("{idActividad}", idActividad.toString());
-
-		ResponseEntity<String> attCountResult = null;
-		try {
-			attCountResult = restTemplate.exchange(actividadAttachmentUrl, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-		} catch (Exception e) {
-			e.printStackTrace();
-			String subject = "Error al obtener attachments previo al envio del formulario de la actividad "
-					+ idActividad;
-			StringBuilder body = new StringBuilder();
-			body.append("No se puso consultar el attachmentEntry de la actividad " + idActividad + ". URL: "
-					+ actividadAttachmentUrl);
-			body.append("Error: " + e.getMessage() + "<br>");
-			if (e.getCause() != null) {
-				body.append("Causa: " + e.getCause().toString() + "<br>");
-			}
-			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-			throw e;
-		}
-
-		Gson gson = new Gson();
-		JsonObject array = gson.fromJson(attCountResult.getBody(), JsonObject.class);
-
-		if (array.get("AttachmentEntry") != null && !array.get("AttachmentEntry").isJsonNull()) {
-			String subject = "Error: La actividad " + idActividad + " ya tiene attachments. Revisar errores previos."
-					+ "<br>";
-			StringBuilder body = new StringBuilder();
-			body.append("Error: La actividad " + idActividad
-					+ " ya tiene attachments. Revisar errores previos. Tal vez sea necesario borrar los attachments para que vuelvan a subir las fotos sin duplicarse.");
-			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-			throw new Exception("La actividad " + idActividad + " ya tiene attachments. Revisar errores previos.");
-		}
+//		String actividadAttachmentUrl = urlSAP + "/Activities({idActividad})?$select=AttachmentEntry";
+//		actividadAttachmentUrl = actividadAttachmentUrl.replace("{idActividad}", idActividad.toString());
+//
+//		ResponseEntity<String> attCountResult = null;
+//		try {
+//			attCountResult = restTemplate.exchange(actividadAttachmentUrl, HttpMethod.GET, null,
+//					new ParameterizedTypeReference<String>() {
+//					});
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			String subject = "Error al obtener attachments previo al envio del formulario de la actividad "
+//					+ idActividad;
+//			StringBuilder body = new StringBuilder();
+//			body.append("No se puso consultar el attachmentEntry de la actividad " + idActividad + ". URL: "
+//					+ actividadAttachmentUrl);
+//			body.append("Error: " + e.getMessage() + "<br>");
+//			if (e.getCause() != null) {
+//				body.append("Causa: " + e.getCause().toString() + "<br>");
+//			}
+//			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+//			throw e;
+//		}
+//
+//		Gson gson = new Gson();
+//		JsonObject array = gson.fromJson(attCountResult.getBody(), JsonObject.class);
+//
+//		if (array.get("AttachmentEntry") != null && !array.get("AttachmentEntry").isJsonNull()) {
+//			String subject = "Error: La actividad " + idActividad + " ya tiene attachments. Revisar errores previos."
+//					+ "<br>";
+//			StringBuilder body = new StringBuilder();
+//			body.append("Error: La actividad " + idActividad
+//					+ " ya tiene attachments. Revisar errores previos. Tal vez sea necesario borrar los attachments para que vuelvan a subir las fotos sin duplicarse.");
+//			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+//			throw new Exception("La actividad " + idActividad + " ya tiene attachments. Revisar errores previos.");
+//		}
 
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 

@@ -91,7 +91,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		// Se agrega validacion para levantar las actividades que no sean de taller.
 
-		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and U_Taller eq 'N'";
+		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and Closed eq 'tNO'";
 
 		ResponseEntity<String> responseActividades = null;
 		try {
@@ -222,32 +222,37 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Nro Fabricante
 				ardto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
 
+				// Es taller
+				Boolean esTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
+				ardto.setEsTaller(esTaller);
+				
 				// Direccion
 				String direccion = "";
 
-				// Si es una actividad en un cliente...
+				if (!esTaller) {
 
-				// Location
-				Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
-				if (locationId > 0) {
-					String lurl = locationsUrl.replace("{id}", locationId.toString());
-					ResponseEntity<String> responseLocation = null;
-					try {
-						responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
-								new ParameterizedTypeReference<String>() {
-								});
-					} catch (RestClientException rce) {
-						rce.printStackTrace();
-						throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+					// Location
+					Long locationId = FieldUtils.getLong(fromJson, FieldUtils.LOCATION, true);
+					if (locationId > 0) {
+						String lurl = locationsUrl.replace("{id}", locationId.toString());
+						ResponseEntity<String> responseLocation = null;
+						try {
+							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+									new ParameterizedTypeReference<String>() {
+									});
+						} catch (RestClientException rce) {
+							rce.printStackTrace();
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						}
+						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
+						if (locationjson.getAsJsonArray("value").size() == 1) {
+							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
+									.getAsString();
+						} else {
+							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						}
 					}
-					JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
-					if (locationjson.getAsJsonArray("value").size() == 1) {
-						direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
-								.getAsString();
-					} else {
-						throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
-					}
-				}
+				} 
 				ardto.setDireccion(direccion);
 
 				// Hs Maquina
@@ -355,7 +360,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ardto.setValoracionComentarios(valoracion);
 
 				String customerCode = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_CODE, true);
-				String bpContactCode = FieldUtils.getString(servicejson, FieldUtils.CONTACT_CODE, true);
+				Integer bpContactCode = FieldUtils.getInteger(servicejson, FieldUtils.CONTACT_CODE, true);
 
 				ResponseEntity<String> responseBusinessPartner = null;
 				String bpurl = businessPartnerUrl.replace("{id}", customerCode);
@@ -379,7 +384,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 				for (LinkedTreeMap<String, Object> x : mailobj) {
 					Integer parseDouble2 = ((Double) Double.parseDouble(x.get("InternalCode").toString())).intValue();
-					if (parseDouble2.toString().equals(bpContactCode)) {
+					if (parseDouble2.equals(bpContactCode)) {
 						Object o = x.get("E_Mail");
 						if (o != null)
 							email = o.toString();
@@ -620,7 +625,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	private ResponseEntity<String> obtenerActividadesPorUsuarioYFecha(RestTemplate restTemplate, String usuarioSAP,
 			String fechaActividad) throws Exception {
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
-				+ fechaActividad + " and U_Estado eq 'Pendiente'";
+				+ fechaActividad + " and U_Estado eq 'Pendiente' and Closed eq 'tNO'";
 		ResponseEntity<String> responseActividades = null;
 		try {
 			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,

@@ -29,6 +29,8 @@ public class ActividadReporteDTO {
 	private String detalle;
 	private String tareasARealizar;
 
+	private boolean esTaller;
+
 	private Map<String, List<ItemCheckDTO>> checks = new HashMap<String, List<ItemCheckDTO>>();
 
 	private String observacionesGenerales;
@@ -278,6 +280,14 @@ public class ActividadReporteDTO {
 
 	public void setConCargo(String conCargo) {
 		this.conCargo = conCargo;
+	}
+
+	public boolean isEsTaller() {
+		return esTaller;
+	}
+
+	public void setEsTaller(boolean esTaller) {
+		this.esTaller = esTaller;
 	}
 
 }

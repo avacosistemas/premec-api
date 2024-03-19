@@ -12,6 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -60,9 +62,14 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 				+ "Items/ItemWarehouseInfoCollection/ItemCode and Items/ItemWarehouseInfoCollection/WarehouseCode eq '"
 				+ deposito + "' and Items/ItemWarehouseInfoCollection/InStock gt 0";
 
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Prefer", "odata.maxpagesize=0");
+
+		HttpEntity requestEntity = new HttpEntity<>(headers);
+		
 		ResponseEntity<String> responseRepuestos = null;
 		try {
-			responseRepuestos = restTemplate.exchange(repuestosUrl, HttpMethod.GET, null,
+			responseRepuestos = restTemplate.exchange(repuestosUrl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (RestClientException rce) {
@@ -126,7 +133,9 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 		
 		for (int i = 0; i< repuestos.size(); i++) {
 			RepuestoDepositoDTO dto = repuestos.get(i);
-			dto.setSeriado(seriados.get("\"" + dto.getItemCode() + "\""));
+			Boolean seriado = seriados.get("\"" + dto.getItemCode() + "\"");
+			boolean ser = seriado == null ? false : seriado.booleanValue();
+			dto.setSeriado(ser);
 			repuestos.set(i, dto);
 		}
 	}

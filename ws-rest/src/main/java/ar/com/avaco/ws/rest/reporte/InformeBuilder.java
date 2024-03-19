@@ -85,7 +85,9 @@ public class InformeBuilder {
 
 			addOperarios(document);
 
-			addValoracion(document);
+			if (!dto.isEsTaller()) {
+				addValoracion(document);
+			}
 
 //			addComentariosValoracion(document);
 
