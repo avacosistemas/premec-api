@@ -351,13 +351,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ardto.setHoraInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_TIME, true));
 				ardto.setFechaFinoOperario(FieldUtils.getString(fromJson, FieldUtils.END_DUE_DATE, true));
 				ardto.setHoraFinOperario(FieldUtils.getString(fromJson, FieldUtils.END_TIME, true));
-				ardto.setValoracionResultado(FieldUtils.getString(fromJson, FieldUtils.U_VALORACION, true));
-				ardto.setValoracionNombreSuperior(FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
-				ardto.setValoracionDNISuperior(FieldUtils.getString(fromJson, FieldUtils.U_DNI_SUPERVISOR, true));
 
-				String valoracion = FieldUtils.getString(fromJson, FieldUtils.U_VALORACION_COMENT, false);
-				valoracion = !StringUtils.isBlank(valoracion) ? valoracion : "Sin Comentarios";
-				ardto.setValoracionComentarios(valoracion);
+				if (!esTaller) {
+					ardto.setValoracionResultado(FieldUtils.getString(fromJson, FieldUtils.U_VALORACION, true));
+					ardto.setValoracionNombreSuperior(FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
+					ardto.setValoracionDNISuperior(FieldUtils.getString(fromJson, FieldUtils.U_DNI_SUPERVISOR, true));
+
+					String valoracion = FieldUtils.getString(fromJson, FieldUtils.U_VALORACION_COMENT, false);
+					valoracion = !StringUtils.isBlank(valoracion) ? valoracion : "Sin Comentarios";
+					ardto.setValoracionComentarios(valoracion);
+				}
 
 				String customerCode = FieldUtils.getString(servicejson, FieldUtils.CUSTOMER_CODE, true);
 				Integer bpContactCode = FieldUtils.getInteger(servicejson, FieldUtils.CONTACT_CODE, true);
@@ -392,6 +395,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				}
 
 				ardto.setEmail(email);
+				actividades.add(ardto);
 			} catch (Exception e) {
 				e.printStackTrace();
 				String subject = "Error al obtener actividad " + activityCode.longValue() + " para envio de reporte";
@@ -401,9 +405,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
 				mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-				throw e;
 			}
-			actividades.add(ardto);
 		}
 		return actividades;
 	}

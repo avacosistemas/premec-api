@@ -26,6 +26,7 @@ public class ReporteRestController {
 	@RequestMapping(value = "/enviarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> enviarReporte() {
 
+		int i = 0;
 		try {
 			List<ActividadReporteDTO> actividadesReporte = this.actividadedEPService.getActividadesReporte();
 			actividadesReporte.forEach(x -> {

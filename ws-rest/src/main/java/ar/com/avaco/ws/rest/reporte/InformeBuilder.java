@@ -79,7 +79,9 @@ public class InformeBuilder {
 
 			addGrillaChecks(document);
 
-//			addObservacionesGenerales(document);
+			if (dto.isEsTaller()) {
+				addObservacionesGenerales(document);
+			}
 
 //			addRepuestos(document);
 
@@ -362,23 +364,16 @@ public class InformeBuilder {
 	}
 
 	private void addObservacionesGenerales(Document document) throws DocumentException {
-
-		Paragraph p = new Paragraph();
-
-		PdfPTable table = new PdfPTable(new float[] { 20, 80 });
-
-		PdfPCell cell = new PdfPCell();
-		cell.setBorder(0);
-		cell.setFixedHeight(20);
-
-		cell.setPhrase(new Phrase("Observaciones Generales", fontHeaderTable));
-		table.addCell(cell);
+		PdfPCell cell = getPDFPCell();
+		cell.setBorderWidthBottom(0);
+		cell.setHorizontalAlignment(Element.ALIGN_LEFT);
 		cell.setPhrase(new Phrase(dto.getObservacionesGenerales(), fontText));
+		cell.setPadding(0);
+		PdfPTable table = new PdfPTable(1);
+		table.setWidthPercentage(100);
 		table.addCell(cell);
 
-		p.add(table);
-
-		document.add(p);
+		addSeccion(document, table, "Observaciones Generales");
 	}
 
 	private void addGrillaChecks(Document document) throws DocumentException {
