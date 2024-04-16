@@ -25,9 +25,11 @@ public class ActividadReporteDTO {
 	private String nroFabricante;
 	private String direccion;
 	private int horasMaquina;
-	private String conCargo;
+	private boolean conCargo;
 	private String detalle;
 	private String tareasARealizar;
+
+	private String tipoActividad;
 
 	private boolean esTaller;
 
@@ -274,11 +276,11 @@ public class ActividadReporteDTO {
 		this.valoracionComentarios = valoracionComentarios;
 	}
 
-	public String getConCargo() {
+	public boolean isConCargo() {
 		return conCargo;
 	}
 
-	public void setConCargo(String conCargo) {
+	public void setConCargo(boolean conCargo) {
 		this.conCargo = conCargo;
 	}
 
@@ -288,6 +290,14 @@ public class ActividadReporteDTO {
 
 	public void setEsTaller(boolean esTaller) {
 		this.esTaller = esTaller;
+	}
+
+	public String getTipoActividad() {
+		return tipoActividad;
+	}
+
+	public void setTipoActividad(String tipoActividad) {
+		this.tipoActividad = tipoActividad;
 	}
 
 }

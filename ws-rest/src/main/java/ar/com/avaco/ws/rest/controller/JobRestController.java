@@ -26,9 +26,10 @@ public class JobRestController {
 	@RequestMapping(value = "/startStopEnvioFormularioSapJob", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> startStopEnvioFormularioSapJob()
 			throws SchedulerException, InterruptedException {
-		premecJobService.startStopEnvioFormularioSapJob();
+		String ret = premecJobService.startStopEnvioFormularioSapJob();
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
+		response.setData(ret);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 
@@ -37,15 +38,16 @@ public class JobRestController {
 			throws SchedulerException, InterruptedException {
 		boolean ret = premecJobService.isEnvioFormularioSapJobRunning();
 		JSONResponse response = new JSONResponse();
-		response.setData(ret);
+		response.setData(ret ? "Iniciado" : "Pausado");
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 
 	@RequestMapping(value = "/startStopReporteDiarioJob", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> startStopReporteDiarioJob() throws SchedulerException, InterruptedException {
-		premecJobService.startStopReporteDiarioJob();
+		String ret = premecJobService.startStopReporteDiarioJob();
 		JSONResponse response = new JSONResponse();
+		response.setData(ret);
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
@@ -54,7 +56,7 @@ public class JobRestController {
 	public ResponseEntity<JSONResponse> isReporteDiarioJobRunning() throws SchedulerException, InterruptedException {
 		boolean ret = premecJobService.isReporteDiarioJobRunning();
 		JSONResponse response = new JSONResponse();
-		response.setData(ret);
+		response.setData(ret ? "Iniciado" : "Pausado");
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}

@@ -4,9 +4,9 @@ import org.quartz.SchedulerException;
 
 public interface PremecJobService {
 
-	void startStopEnvioFormularioSapJob() throws SchedulerException;
+	String startStopEnvioFormularioSapJob() throws SchedulerException;
 
-	void startStopReporteDiarioJob() throws SchedulerException;
+	String startStopReporteDiarioJob() throws SchedulerException;
 
 	boolean isEnvioFormularioSapJobRunning() throws SchedulerException;
 

@@ -70,6 +70,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	private String businessPartnerUrl;
 	private String actividadUrl;
 
+	private Gson gson = new Gson();
+	
 	private MailSenderSMTPService mailService;
 
 	@PostConstruct
@@ -90,9 +92,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				.getLoggedRestTemplate();
 
 		// Se agrega validacion para levantar las actividades que no sean de taller.
-
 		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and Closed eq 'tNO'";
 
+		// Obtengo las actividades 
 		ResponseEntity<String> responseActividades = null;
 		try {
 			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
@@ -111,7 +113,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			throw e;
 		}
 
-		Gson gson = new Gson();
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
 		List<ActividadReporteDTO> actividades = new ArrayList<>();
@@ -155,6 +156,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Numero
 				ardto.setNumero(activityCode.toString());
 
+				// Tipo de actividad
+				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
+				ardto.setTipoActividad(tipoActividad);
+				
 				// Asignado Por
 				String asignadoPor = "";
 				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
@@ -225,7 +230,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Es taller
 				Boolean esTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
 				ardto.setEsTaller(esTaller);
-				
+
 				// Direccion
 				String direccion = "";
 
@@ -242,17 +247,19 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 									});
 						} catch (RestClientException rce) {
 							rce.printStackTrace();
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+							throw new Exception(
+									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
 						}
 						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 						if (locationjson.getAsJsonArray("value").size() == 1) {
 							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
 									.getAsString();
 						} else {
-							throw new Exception("No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+							throw new Exception(
+									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
 						}
 					}
-				} 
+				}
 				ardto.setDireccion(direccion);
 
 				// Hs Maquina
@@ -267,7 +274,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				}
 
 				// Con cargo
-				ardto.setConCargo(FieldUtils.getBoolean(fromJson, FieldUtils.U_CON_CARGO, true).toString());
+				ardto.setConCargo(FieldUtils.getBoolean(fromJson, FieldUtils.U_CON_CARGO, true));
 
 				// Detalle
 				ardto.setDetalle(FieldUtils.getString(servicejson, FieldUtils.SUBJECT, false));
@@ -354,7 +361,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 				if (!esTaller) {
 					ardto.setValoracionResultado(FieldUtils.getString(fromJson, FieldUtils.U_VALORACION, true));
-					ardto.setValoracionNombreSuperior(FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
+					ardto.setValoracionNombreSuperior(
+							FieldUtils.getString(fromJson, FieldUtils.U_NOMBRE_SUPERVISOR, true));
 					ardto.setValoracionDNISuperior(FieldUtils.getString(fromJson, FieldUtils.U_DNI_SUPERVISOR, true));
 
 					String valoracion = FieldUtils.getString(fromJson, FieldUtils.U_VALORACION_COMENT, false);
@@ -414,16 +422,20 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@SuppressWarnings("unchecked")
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
+		// Armo el rest template logueado con credenciales de sap
 		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
 				.getLoggedRestTemplate();
 
+		// Obtengo el usuario sap del usuario logueado
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
+
 		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = sdfinput.parse(fecha);
 		String currentDate = sdfoutput.format(parse);
 		String fechaActividad = "'" + currentDate + "'";
 
+		// Inicializo la lista de actividades
 		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
 
 		ResponseEntity<String> responseActividades = null;
@@ -444,25 +456,34 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			throw e;
 		}
 
-		Gson gson = new Gson();
-		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
+		// Parseo la respuesta a un json
+		JsonObject jsonResponse = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
-		JsonArray asJsonArray = array.getAsJsonArray("value");
-		for (JsonElement element : asJsonArray) {
+		// Pido el campo value que contiene el array de actividades
+		JsonArray actividadesJsonArray = jsonResponse.getAsJsonArray("value");
+		
+		// Por cada actividad
+		for (JsonElement element : actividadesJsonArray) {
 
 			Long activityCode = null;
 
 			try {
 
-				LinkedTreeMap<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
+				// Convierto la actividad en un mapa
+				Map<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
 						LinkedTreeMap.class);
 
+				// Inicializo la actividad
 				ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
 
 				// Activity Code
 				activityCode = FieldUtils.getActivityCode(fromJson, username);
 				atdto.setIdActividad(activityCode);
 
+				// Tipo de actividad
+				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
+				atdto.setTipoActividad(tipoActividad);
+				
 				// Actividad de Taller o Cliente
 				atdto.setActividadTaller(FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true));
 
@@ -487,6 +508,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Id del Empleado Responsable
 				Long handledByEmployeeId = FieldUtils.getLong(fromJson, FieldUtils.HANDLED_BY_EMPLOYEE, false);
 
+				// Empleado
 				String empleado = "";
 				if (handledByEmployeeId != null) {
 					ResponseEntity<String> responseEmployee = null;
@@ -552,9 +574,11 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
 				}
 
-				LinkedTreeMap<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
+				// Convierto el service call en un mapa
+				Map<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
 						LinkedTreeMap.class);
 
+				// Asignado por
 				String asignadoPor = "";
 				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
 				if (asignadoPorId != null) {
@@ -595,6 +619,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Nro Fabricante
 				atdto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
 
+				// Busco las horas maquina
 				List<LinkedTreeMap<String, Object>> serviceCallActivities = (List<LinkedTreeMap<String, Object>>) servicejson
 						.get("ServiceCallActivities");
 				for (LinkedTreeMap<String, Object> x : serviceCallActivities) {
@@ -624,6 +649,16 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	}
 
+	/**
+	 * Obtiene las actividades asignadas usuario por parametro en la fecha indicada
+	 * en estado Pendiente que no este cerrado.
+	 * 
+	 * @param restTemplate
+	 * @param usuarioSAP
+	 * @param fechaActividad
+	 * @return
+	 * @throws Exception
+	 */
 	private ResponseEntity<String> obtenerActividadesPorUsuarioYFecha(RestTemplate restTemplate, String usuarioSAP,
 			String fechaActividad) throws Exception {
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
@@ -635,7 +670,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					});
 		} catch (RestClientException rce) {
 			rce.printStackTrace();
-			throw new Exception("Error al obtener las actividades del empleado " + usuarioSAP + " para el dia "
+			throw new Exception("Error al conectar son SAP: Error al obtener las actividades del empleado " + usuarioSAP + " para el dia "
 					+ fechaActividad + " - " + actividadUrl, rce);
 		}
 		return responseActividades;

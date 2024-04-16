@@ -40,6 +40,9 @@ public class PremecJobServiceImpl implements PremecJobService {
 	@Value("${cron.reporteDiario}")
 	private String cronReporteDiario;
 
+	@Value("${cron.inicar}")
+	private boolean iniciar;
+
 	private static Scheduler scheduler;
 
 	private ActividadEPService actividadEPService;
@@ -84,25 +87,30 @@ public class PremecJobServiceImpl implements PremecJobService {
 			LOGGER.debug("Job Reporte Diario creado");
 
 			scheduler.start();
-//			scheduler.pauseAll();
+			if (!iniciar)
+				scheduler.pauseAll();
 		}
 	}
 
-	public void startStopEnvioFormularioSapJob() throws SchedulerException {
-		startStopJob(ENVIO_FORMULARIO_SAP_JOB_KEY);
+	public String startStopEnvioFormularioSapJob() throws SchedulerException {
+		return startStopJob(ENVIO_FORMULARIO_SAP_JOB_KEY);
 	}
 
 	@Override
-	public void startStopReporteDiarioJob() throws SchedulerException {
-		startStopJob(REPORTE_DIARIO_JOB_KEY);
+	public String startStopReporteDiarioJob() throws SchedulerException {
+		return startStopJob(REPORTE_DIARIO_JOB_KEY);
 	}
 
-	private void startStopJob(JobKey jobkey) throws SchedulerException {
+	private String startStopJob(JobKey jobkey) throws SchedulerException {
+		String ret = "";
 		if (isJobRunning(jobkey)) {
 			scheduler.pauseJob(jobkey);
+			ret = "Pausado";
 		} else {
 			scheduler.resumeJob(jobkey);
+			ret = "Iniciado";
 		}
+		return ret;
 	}
 
 	@Override
@@ -148,6 +156,10 @@ public class PremecJobServiceImpl implements PremecJobService {
 
 	public void setCronReporteDiario(String cronReporteDiario) {
 		this.cronReporteDiario = cronReporteDiario;
+	}
+
+	public void setIniciar(boolean iniciar) {
+		this.iniciar = iniciar;
 	}
 
 }

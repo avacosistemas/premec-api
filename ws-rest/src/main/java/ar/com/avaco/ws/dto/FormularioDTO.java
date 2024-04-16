@@ -23,6 +23,8 @@ public class FormularioDTO {
 
 	private Boolean actividadTaller;
 
+	private String tipoActividad;
+
 	public Long getIdActividad() {
 		return idActividad;
 	}
@@ -141,6 +143,14 @@ public class FormularioDTO {
 
 	public void setActividadTaller(Boolean actividadTaller) {
 		this.actividadTaller = actividadTaller;
+	}
+
+	public String getTipoActividad() {
+		return tipoActividad;
+	}
+
+	public void setTipoActividad(String tipoActividad) {
+		this.tipoActividad = tipoActividad;
 	}
 
 }

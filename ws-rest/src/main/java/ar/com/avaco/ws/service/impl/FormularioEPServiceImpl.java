@@ -36,6 +36,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
+import ar.com.avaco.entities.cliente.TipoActividad;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
@@ -120,7 +121,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					String formularioId = split[1];
 					LOGGER.debug("##### Enviando formulario " + formularioId);
 					activityCode = formularioDTO.getIdActividad();
+
+					// Se envia el formulario a sap
 					enviarFormulario(formularioDTO, userId);
+
 					LOGGER.debug("##### Formulario " + formularioId + " enviado");
 					file.delete();
 					LOGGER.debug("Archivo borrado luego del envio");
@@ -153,9 +157,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	@Override
-	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws ParentObjectIdNotFoundException, Exception {
+	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP)
+			throws ParentObjectIdNotFoundException, Exception {
+
+		// Obtengo la actividad
 		Long idActividad = formulario.getIdActividad();
 
+		// Obtengo el rest template logueado usando credenciales de SAP
 		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
 				.getLoggedRestTemplate();
 		LOGGER.debug("Actividad: " + idActividad + " - RestTemplate Generado");
@@ -168,6 +176,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		Map<String, Object> serviceCallMap = obtenerServiceCallSap(formulario, idActividad, parentObjectId,
 				serviceCallActivitiesJson);
+
 		enviarHsMaquinaSap(idActividad, restTemplate, parentObjectId, serviceCallMap);
 
 		ActividadPatch ap = generarActividadPatch(formulario);
@@ -175,11 +184,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
 		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
 		enviarAttachmentsSap(idActividad, ap, attachmentMap, restTemplate);
-		
+
 		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
 		enviarActividadSap(idActividad, ap, restTemplate);
-
-		
 
 	}
 
@@ -188,8 +195,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 		String actividadUrl = urlSAP + "/Activities({id})".replace("{id}", idActividad.toString());
 		try {
-			restTemplate.exchange(actividadUrl, HttpMethod.PATCH, httpEntity,
-					Object.class);
+			restTemplate.exchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
 		} catch (RestClientException rce) {
 			throw new Exception(
 					"Actividad: " + idActividad + " - Error al intentar actualizar la actividad. URL " + actividadUrl,
@@ -209,8 +215,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		try {
 			restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
 		} catch (RestClientException rce) {
-			throw new Exception("Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call. URL "
-					+ scUrl, rce);
+			throw new Exception(
+					"Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call. URL " + scUrl,
+					rce);
 		}
 		LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
 	}
@@ -375,36 +382,41 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Estado Finalizado
 		ap.setU_Estado("Finalizada");
 
-		// Checks formateados
-		JsonParser jsonParser = new JsonParser();
-		JsonArray jsonArray = (JsonArray) jsonParser.parse(tareas);
+		// Si el tipo de actividad es Reparación (R) o Checklist (C)
+		if (formulario.getTipoActividad().equals(TipoActividad.REPARACION.getCodigo())
+				|| formulario.getTipoActividad().equals(TipoActividad.CHECKLIST.getCodigo())) {
 
-		Map<String, List<String>> map = new HashMap<>();
+			// Checks formateados
+			JsonParser jsonParser = new JsonParser();
+			JsonArray jsonArray = (JsonArray) jsonParser.parse(tareas);
 
-		jsonArray.forEach(x -> {
-			JsonObject item = x.getAsJsonObject();
-			if (!item.get("estado").getAsString().equals("No aplica")) {
-				List<String> list = map.get(item.get("titulo").toString());
-				if (list == null) {
-					list = new ArrayList<String>();
+			Map<String, List<String>> map = new HashMap<>();
+
+			jsonArray.forEach(x -> {
+				JsonObject item = x.getAsJsonObject();
+				if (!item.get("estado").getAsString().equals("No aplica")) {
+					List<String> list = map.get(item.get("titulo").toString());
+					if (list == null) {
+						list = new ArrayList<String>();
+					}
+					list.add(item.get("nombre") + " - " + item.get("estado") + " - " + item.get("observaciones"));
+					map.put(item.get("titulo").toString(), list);
 				}
-				list.add(item.get("nombre") + " - " + item.get("estado") + " - " + item.get("observaciones"));
-				map.put(item.get("titulo").toString(), list);
-			}
-		});
-
-		StringBuilder sb = new StringBuilder();
-		map.keySet().forEach(x -> {
-			sb.append(" --- " + x + " ---");
-			sb.append(System.lineSeparator());
-			List<String> list = map.get(x);
-			list.forEach(y -> {
-				sb.append(y);
-				sb.append(System.lineSeparator());
 			});
-		});
 
-		ap.setU_Tareas_Real(sb.toString());
+			StringBuilder sb = new StringBuilder();
+			map.keySet().forEach(x -> {
+				sb.append(" --- " + x + " ---");
+				sb.append(System.lineSeparator());
+				List<String> list = map.get(x);
+				list.forEach(y -> {
+					sb.append(y);
+					sb.append(System.lineSeparator());
+				});
+			});
+
+			ap.setU_Tareas_Real(sb.toString());
+		}
 		return ap;
 	}
 

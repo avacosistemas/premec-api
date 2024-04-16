@@ -1,5 +1,7 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.gson.internal.LinkedTreeMap;
@@ -36,15 +38,16 @@ public class FieldUtils {
 	public static final String U_VALORACION_COMENT = "U_ValoracionComent";
 	public static final String CUSTOMER_CODE = "CustomerCode";
 	public static final String CONTACT_CODE = "ContactCode";
+	public static final String TIPO_ACTIVIDAD = "U_T_Tarea";
 
-	public static void validarRequerido(LinkedTreeMap<String, Object> fromJson, String key) throws Exception {
+	public static void validarRequerido(Map<String, Object> fromJson, String key) throws Exception {
 		Object object = fromJson.get(key);
 		if (object == null || StringUtils.isBlank(object.toString())) {
 			throw new Exception("El campo " + key + " no contiene valores");
 		}
 	}
 
-	public static Boolean getBoolean(LinkedTreeMap<String, Object> fromJson, String key, boolean required)
+	public static Boolean getBoolean(Map<String, Object> fromJson, String key, boolean required)
 			throws Exception {
 
 		if (required)
@@ -56,7 +59,7 @@ public class FieldUtils {
 		return fromJson.get(key).toString().toUpperCase().contains("Y");
 	}
 
-	public static Long getActivityCode(LinkedTreeMap<String, Object> fromJson, String user) throws Exception {
+	public static Long getActivityCode(Map<String, Object> fromJson, String user) throws Exception {
 		Object object = fromJson.get(FieldUtils.ACTIVITY_CODE);
 		if (object == null) {
 			throw new Exception(
@@ -95,7 +98,7 @@ public class FieldUtils {
 		return value;
 	}
 
-	public static Long getLong(LinkedTreeMap<String, Object> fromJson, String key, boolean required) throws Exception {
+	public static Long getLong(Map<String, Object> fromJson, String key, boolean required) throws Exception {
 
 		if (required)
 			validarRequerido(fromJson, key);
@@ -117,7 +120,7 @@ public class FieldUtils {
 		return value;
 	}
 
-	public static String getString(LinkedTreeMap<String, Object> fromJson, String key, boolean required)
+	public static String getString(Map<String, Object> fromJson, String key, boolean required)
 			throws Exception {
 
 		if (required)
@@ -135,7 +138,7 @@ public class FieldUtils {
 		return value;
 	}
 
-	public static String getString(LinkedTreeMap<String, Object> fromJson, String key, boolean required, int from,
+	public static String getString(Map<String, Object> fromJson, String key, boolean required, int from,
 			int to) throws Exception {
 
 		if (required)

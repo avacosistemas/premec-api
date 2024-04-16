@@ -49,5 +49,17 @@ public class ItemCheckDTO {
 	public void setTitulo(String titulo) {
 		this.titulo = titulo;
 	}
+	
+	public boolean isOK() {
+		return this.estado.equals("Ok");
+	}
+
+	public boolean isNoOK() {
+		return this.estado.equals("No Ok");
+	}
+	
+	public boolean isNA() {
+		return this.estado.equals("NA");
+	}
 
 }

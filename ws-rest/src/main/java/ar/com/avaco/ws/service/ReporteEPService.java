@@ -9,10 +9,20 @@ import ar.com.avaco.ws.dto.ActividadReporteDTO;
 
 public interface ReporteEPService {
 
-	public void enviarReporte(ActividadReporteDTO eldto) throws MalformedURLException, DocumentException, IOException;
+	void enviarReporte(ActividadReporteDTO eldto) throws MalformedURLException, DocumentException, IOException;
 
-	public void generarReporte(ActividadReporteDTO eldto) throws DocumentException, IOException;
+	void generarReporteReparaciones(ActividadReporteDTO eldto) throws DocumentException, IOException;
 
-	public void generarReporteTest();
+	void generarReporteTestReparaciones();
+
+	void generarReporteChecklist(ActividadReporteDTO eldto) throws DocumentException, IOException;
+
+	void generarReporteTestChecklist();
+
+	void generarReporteTestMantenimiento();
+
+	void generarReporteTestPiezas();
+
+	void generarReporteMantenimientoPiezas(ActividadReporteDTO eldto) throws DocumentException, IOException;
 
 }
