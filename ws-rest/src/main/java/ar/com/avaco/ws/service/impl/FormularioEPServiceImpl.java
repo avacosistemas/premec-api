@@ -36,7 +36,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
-import ar.com.avaco.entities.cliente.TipoActividad;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
@@ -383,8 +382,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setU_Estado("Finalizada");
 
 		// Si el tipo de actividad es Reparación (R) o Checklist (C)
-		if (formulario.getTipoActividad().equals(TipoActividad.REPARACION.getCodigo())
-				|| formulario.getTipoActividad().equals(TipoActividad.CHECKLIST.getCodigo())) {
+		if (formulario.getTipoActividad().equals("R") || formulario.getTipoActividad().equals("C")) {
 
 			// Checks formateados
 			JsonParser jsonParser = new JsonParser();
