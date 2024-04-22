@@ -303,9 +303,9 @@ public class InformeBuilderChecklist extends InformeBuilder {
 			cellContentNombre.setPhrase(new Phrase(next.getNombre(), fontHeaderTable));
 			tablechecklist.addCell(cellContentNombre);
 
-			tablechecklist.addCell(getCeldaCheck(check, next.isOK()));
+			tablechecklist.addCell(getCeldaCheck(check, next.isOk()));
 			tablechecklist.addCell(getCeldaCheck(check, next.isNoOK()));
-			tablechecklist.addCell(getCeldaCheck(check, next.isNA()));
+			tablechecklist.addCell(getCeldaCheck(check, next.isNa()));
 
 			PdfPCell cellContentObservaciones = getPDFPCellBordeCompleto();
 			cellContentObservaciones.setPhrase(new Phrase(next.getObservaciones(), fontHeaderTable));
@@ -318,9 +318,9 @@ public class InformeBuilderChecklist extends InformeBuilder {
 				cellContentNombre.setPhrase(new Phrase(next.getNombre(), fontHeaderTable));
 				tablechecklist.addCell(cellContentNombre);
 
-				tablechecklist.addCell(getCeldaCheck(check, next.isOK()));
+				tablechecklist.addCell(getCeldaCheck(check, next.isOk()));
 				tablechecklist.addCell(getCeldaCheck(check, next.isNoOK()));
-				tablechecklist.addCell(getCeldaCheck(check, next.isNA()));
+				tablechecklist.addCell(getCeldaCheck(check, next.isNa()));
 
 				cellContentObservaciones.setPhrase(new Phrase(next.getObservaciones(), fontHeaderTable));
 				tablechecklist.addCell(cellContentObservaciones);

@@ -2,10 +2,14 @@ package ar.com.avaco.ws.dto;
 
 public class ItemCheckDTO {
 
-	String titulo;
-	String nombre;
-	String estado;
-	String observaciones;
+	private String titulo;
+	private String nombre;
+	private String estado;
+	private String observaciones;
+
+	private transient boolean ok;
+	private transient boolean noOK;
+	private transient boolean na;
 
 	public ItemCheckDTO() {
 	}
@@ -49,17 +53,17 @@ public class ItemCheckDTO {
 	public void setTitulo(String titulo) {
 		this.titulo = titulo;
 	}
-	
-	public boolean isOK() {
+
+	public boolean isOk() {
 		return this.estado.equals("Ok");
+	}
+
+	public boolean isNa() {
+		return this.estado.equals("NA");
 	}
 
 	public boolean isNoOK() {
 		return this.estado.equals("No Ok");
-	}
-	
-	public boolean isNA() {
-		return this.estado.equals("NA");
 	}
 
 }

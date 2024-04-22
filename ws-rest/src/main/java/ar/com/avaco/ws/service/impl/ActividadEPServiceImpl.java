@@ -31,6 +31,7 @@ import com.google.gson.internal.LinkedTreeMap;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
+import ar.com.avaco.entities.cliente.TipoActividad;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
@@ -132,7 +133,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 				ardto.setIdActividad(activityCode.longValue());
 
-				LOGGER.debug("Procesando Actividad " + activityCode.longValue());
+				LOGGER.debug("--------- Procesando Actividad " + activityCode.longValue());
 
 				Long parentId = FieldUtils.getLong(fromJson, FieldUtils.PARENT_OBJECT_ID, true);
 
@@ -156,9 +157,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Numero
 				ardto.setNumero(activityCode.toString());
 
+				// Es taller
+				Boolean esTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
+				ardto.setEsTaller(esTaller);
+				
 				// Tipo de actividad
 				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
 				ardto.setTipoActividad(tipoActividad);
+				
+				// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser de reparación 22/4/24
+				if (!esTaller) {
+					ardto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
+				}
 				
 				// Asignado Por
 				String asignadoPor = "";
@@ -226,10 +236,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 				// Nro Fabricante
 				ardto.setNroFabricante(FieldUtils.getString(servicejson, FieldUtils.MANUFACTURER_SERIAL_NUM, false));
-
-				// Es taller
-				Boolean esTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
-				ardto.setEsTaller(esTaller);
 
 				// Direccion
 				String direccion = "";
@@ -480,12 +486,17 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				activityCode = FieldUtils.getActivityCode(fromJson, username);
 				atdto.setIdActividad(activityCode);
 
+				// Actividad de Taller o Cliente
+				atdto.setActividadTaller(FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true));
+
 				// Tipo de actividad
 				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
 				atdto.setTipoActividad(tipoActividad);
-				
-				// Actividad de Taller o Cliente
-				atdto.setActividadTaller(FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true));
+
+				if (!atdto.getActividadTaller()) {
+					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser de reparación 22/4/24
+					atdto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
+				}
 
 				// Prioridad
 				atdto.setPrioridad(FieldUtils.getString(fromJson, FieldUtils.PRIORITY, false));

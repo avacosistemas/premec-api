@@ -75,6 +75,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private MailSenderSMTPService mailService;
 
+	@Value("${json.delete.after.send}")
+	private boolean deleteFileAfterSend;
+
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
 
 	@Override
@@ -125,7 +128,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					enviarFormulario(formularioDTO, userId);
 
 					LOGGER.debug("##### Formulario " + formularioId + " enviado");
-					file.delete();
+					
+					if (deleteFileAfterSend)
+						file.delete();
+					else 
+						FileUtils.moveFileToDirectory(file, new File(jsonPathRevision), true);
+					
 					LOGGER.debug("Archivo borrado luego del envio");
 				} catch (ParentObjectIdNotFoundException e) {
 					e.printStackTrace();
@@ -478,5 +486,5 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	public void setMailService(MailSenderSMTPService mailService) {
 		this.mailService = mailService;
 	}
-
+	
 }

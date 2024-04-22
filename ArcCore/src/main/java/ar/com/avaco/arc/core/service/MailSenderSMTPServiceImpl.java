@@ -9,6 +9,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -21,6 +22,12 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 	private Logger logger = Logger.getLogger(this.getClass());
 
 	private MailSender mailSender;
+
+	@Value("${email.test}")
+	private boolean test;
+
+	@Value("${email.enabled}")
+	private boolean enabled;
 
 	/**
 	 * @param mailSender
@@ -83,6 +90,11 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 			if (bccTo != null) {
 				helper.setBcc(bccTo);
 			}
+
+			if (test) {
+				asunto = "[TEST] - " + asunto;
+			}
+
 			helper.setSubject(asunto);
 			for (String body : msg) {
 				sbText.append(body + "\n<br>");
@@ -93,7 +105,8 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 					helper.addAttachment(archivo.getName(), archivo);
 				}
 			}
-			mail.send(mimeMessage);
+			if (enabled)
+				mail.send(mimeMessage);
 		} catch (MessagingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -109,6 +122,14 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 		String[] arrayBcc = { bccTo };
 		sendMail(from, arrayTo, arrayBcc, subject, messages, archivos);
 
+	}
+
+	public void setTest(boolean test) {
+		this.test = test;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
 	}
 
 }
