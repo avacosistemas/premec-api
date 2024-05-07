@@ -19,6 +19,7 @@ import javax.annotation.Resource;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,7 @@ import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.ws.dto.ActividadPatch;
+import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.dto.FotoDTO;
 import ar.com.avaco.ws.service.FormularioEPService;
@@ -73,11 +75,19 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Value("${json.path.revision}")
 	private String jsonPathRevision;
 
+	@Value("${json.path.finalizado}")
+	private String jsonPathFinalizado;
+	
+	@Value("${json.path.cerradas}")
+	private String jsonPathCerradas;
+
 	private MailSenderSMTPService mailService;
 
 	@Value("${json.delete.after.send}")
 	private boolean deleteFileAfterSend;
 
+	private Gson gson = new Gson();
+	
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
 
 	@Override
@@ -121,20 +131,27 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					String[] split = fileName.split("\\.")[0].split("-");
 					String userId = split[3];
 					String formularioId = split[1];
-					LOGGER.debug("##### Enviando formulario " + formularioId);
 					activityCode = formularioDTO.getIdActividad();
 
-					// Se envia el formulario a sap
-					enviarFormulario(formularioDTO, userId);
-
-					LOGGER.debug("##### Formulario " + formularioId + " enviado");
+					if (isActividadAbierta(activityCode) ) {
+						LOGGER.debug("##### Enviando formulario " + formularioId);
+						// Se envia el formulario a sap
+						enviarFormulario(formularioDTO, userId);
+						LOGGER.debug("##### Formulario " + formularioId + " enviado");
+						
+						if (deleteFileAfterSend) {
+							file.delete();
+							LOGGER.debug("Archivo borrado luego del envio");
+						} else { 
+							FileUtils.moveFileToDirectory(file, new File(jsonPathFinalizado), true);
+						}
+					} else {
+						FileUtils.moveFileToDirectory(file, new File(jsonPathCerradas), true);
+						String subject = "Se mueve la actividad " + activityCode + " a la carpeta de cerradas";
+						String body = "Tomar las acciones necesarias y solicitar mover la actividad a la carpeta de pendientes";
+						mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+					}
 					
-					if (deleteFileAfterSend)
-						file.delete();
-					else 
-						FileUtils.moveFileToDirectory(file, new File(jsonPathRevision), true);
-					
-					LOGGER.debug("Archivo borrado luego del envio");
 				} catch (ParentObjectIdNotFoundException e) {
 					e.printStackTrace();
 					String subject = "Error al enviar actividad " + activityCode + " a SAP";
@@ -161,6 +178,39 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			}
 		}
 
+	}
+
+	private boolean isActividadAbierta(Long activityCode) throws Exception {
+
+		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
+				.getLoggedRestTemplate();
+
+		String actividadUrl = urlSAP + "/Activities?$filter=Closed eq 'tNO' and ActivityCode eq " + activityCode;
+
+		ResponseEntity<String> responseActividades = null;
+		try {
+			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (Exception e) {
+			e.printStackTrace();
+			String subject = "Error al obtener actividad " + actividadUrl + " para determinar si esta abierta previo al envio a SAP ";
+			StringBuilder body = new StringBuilder();
+			body.append("URL " + actividadUrl);
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+			throw e;
+		}
+
+		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
+
+		JsonArray jsonElement = array.getAsJsonArray("value");
+		
+		return  jsonElement.size() > 0;
+		
 	}
 
 	@Override
@@ -376,8 +426,6 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			// DNI Supervisor
 			ap.setU_DniSupervisor(formulario.getDniSupervisor().toString());
 		}
-
-		Gson gson = new Gson();
 
 		// Tareas
 		String tareas = gson.toJson(formulario.getCheckList());
