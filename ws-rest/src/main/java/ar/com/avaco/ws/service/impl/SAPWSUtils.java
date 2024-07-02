@@ -4,8 +4,6 @@ import org.apache.log4j.Logger;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -13,6 +11,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
+import ar.com.avaco.factory.RestTemplatePremec;
+import ar.com.avaco.factory.SapBusinessException;
 
 public class SAPWSUtils {
 
@@ -21,52 +21,47 @@ public class SAPWSUtils {
 	private static final String ACTIVITIES_SELECT_PARENT_OBJECT_ID = "/Activities({id})?$select=ParentObjectId";
 	private static final String SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES = "/ServiceCalls({id})?$select=ServiceCallActivities";
 
-	private RestTemplate restTemplate;
+	private RestTemplatePremec restTemplate;
 
 	private Gson gson;
 
 	private String urlSAP;
 
-	public SAPWSUtils(RestTemplate restTemplate, String urlSAP) {
+	public SAPWSUtils(RestTemplatePremec restTemplate, String urlSAP) {
 		this.restTemplate = restTemplate;
 		this.urlSAP = urlSAP;
 		this.gson = new Gson();
 	}
 
-	public Long getParentObjectId(Long idActividad) throws ParentObjectIdNotFoundException {
+	public Long getParentObjectId(Long idActividad) throws ParentObjectIdNotFoundException, SapBusinessException {
 		LOGGER.debug("Obteniendo ParentObjectId (ServiceCallID) de la actividad " + idActividad);
 		String url = urlSAP + ACTIVITIES_SELECT_PARENT_OBJECT_ID;
 		url = url.replace("{id}", idActividad.toString());
 		LOGGER.debug(url);
 		ResponseEntity<String> responseParentObjectId = null;
-		try {
-			responseParentObjectId = restTemplate.exchange(url, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-		} catch (RestClientException rce) {
-			throw new ParentObjectIdNotFoundException("Actividad: " + idActividad + " - No se pudo obtener el parentObjectId . URL " + url, rce);
-		}
-		JsonElement jsonElement = gson.fromJson(responseParentObjectId.getBody(), JsonObject.class).get("ParentObjectId");
+		responseParentObjectId = restTemplate.doExchange(url, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		JsonElement jsonElement = gson.fromJson(responseParentObjectId.getBody(), JsonObject.class)
+				.get("ParentObjectId");
 		if (jsonElement == null || jsonElement.isJsonNull()) {
-			throw new ParentObjectIdNotFoundException("Actividad: " + idActividad + " - No se pudo obtener el parentObjectId . URL " + url);
+			throw new ParentObjectIdNotFoundException(
+					"Actividad: " + idActividad + " - No se pudo obtener el parentObjectId . URL " + url);
 		}
 		return jsonElement.getAsLong();
 	}
 
-	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws Exception {
+	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws SapBusinessException  {
 		LOGGER.debug("Actividad: " + idActividad + " - Obteniendo ServiceCall Activities");
 		String serviceCallActivitiesUrl = urlSAP + SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES;
 		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{id}", parentObjectId.toString());
 		LOGGER.debug(urlSAP);
 
 		ResponseEntity<String> serviceCallActivities = null;
-		try {
-			serviceCallActivities = restTemplate.exchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+			serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
-		} catch (RestClientException rce) {
-			throw new Exception("Actividad: " + idActividad + " - No se pudo obtener las service call activities", rce);
-		}
 
 		LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Obtenidas");
 

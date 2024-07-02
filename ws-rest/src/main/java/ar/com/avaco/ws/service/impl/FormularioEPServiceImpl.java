@@ -24,7 +24,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,8 +38,9 @@ import com.google.gson.JsonParser;
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.factory.RestTemplatePremec;
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.ActividadPatch;
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.dto.FotoDTO;
 import ar.com.avaco.ws.service.FormularioEPService;
@@ -77,7 +77,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	@Value("${json.path.finalizado}")
 	private String jsonPathFinalizado;
-	
+
 	@Value("${json.path.cerradas}")
 	private String jsonPathCerradas;
 
@@ -87,7 +87,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private boolean deleteFileAfterSend;
 
 	private Gson gson = new Gson();
-	
+
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
 
 	@Override
@@ -133,16 +133,16 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					String formularioId = split[1];
 					activityCode = formularioDTO.getIdActividad();
 
-					if (isActividadAbierta(activityCode) ) {
+					if (isActividadAbierta(activityCode)) {
 						LOGGER.debug("##### Enviando formulario " + formularioId);
 						// Se envia el formulario a sap
 						enviarFormulario(formularioDTO, userId);
 						LOGGER.debug("##### Formulario " + formularioId + " enviado");
-						
+
 						if (deleteFileAfterSend) {
 							file.delete();
 							LOGGER.debug("Archivo borrado luego del envio");
-						} else { 
+						} else {
 							FileUtils.moveFileToDirectory(file, new File(jsonPathFinalizado), true);
 						}
 					} else {
@@ -151,7 +151,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 						String body = "Tomar las acciones necesarias y solicitar mover la actividad a la carpeta de pendientes";
 						mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
 					}
-					
+
 				} catch (ParentObjectIdNotFoundException e) {
 					e.printStackTrace();
 					String subject = "Error al enviar actividad " + activityCode + " a SAP";
@@ -194,7 +194,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					});
 		} catch (Exception e) {
 			e.printStackTrace();
-			String subject = "Error al obtener actividad " + actividadUrl + " para determinar si esta abierta previo al envio a SAP ";
+			String subject = "Error al obtener actividad " + actividadUrl
+					+ " para determinar si esta abierta previo al envio a SAP ";
 			StringBuilder body = new StringBuilder();
 			body.append("URL " + actividadUrl);
 			body.append("Error: " + e.getMessage() + "<br>");
@@ -208,75 +209,180 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
 		JsonArray jsonElement = array.getAsJsonArray("value");
-		
-		return  jsonElement.size() > 0;
-		
+
+		return jsonElement.size() > 0;
+
 	}
 
 	@Override
-	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP)
-			throws ParentObjectIdNotFoundException, Exception {
+	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
 
 		// Obtengo la actividad
 		Long idActividad = formulario.getIdActividad();
 
 		// Obtengo el rest template logueado usando credenciales de SAP
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
-				.getLoggedRestTemplate();
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 		LOGGER.debug("Actividad: " + idActividad + " - RestTemplate Generado");
 
 		SAPWSUtils sapUtils = new SAPWSUtils(restTemplate, urlSAP);
 
-		Long parentObjectId = sapUtils.getParentObjectId(idActividad);
+		Long parentObjectId;
+		try {
+			parentObjectId = sapUtils.getParentObjectId(idActividad);
+		} catch (ParentObjectIdNotFoundException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
+					+ " - No se pudo obtener el parentObjectId en el json";
+			StringBuilder body = new StringBuilder();
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(error, body.toString(), null);
+			throw new Exception(error);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
+					+ " - No se pudo obtener el parentObjectId desde sap";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
 
-		JsonArray serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
+		JsonArray serviceCallActivitiesJson;
+		try {
+			serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
+					+ " - No se pudo obtener las service call activities con parent object id " + parentObjectId;
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
 
-		Map<String, Object> serviceCallMap = obtenerServiceCallSap(formulario, idActividad, parentObjectId,
-				serviceCallActivitiesJson);
+		Map<String, Object> serviceCallMap;
+		try {
+			serviceCallMap = obtenerServiceCallSap(formulario, idActividad, parentObjectId, serviceCallActivitiesJson);
+		} catch (Exception e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] " + e.getMessage();
+			StringBuilder body = new StringBuilder();
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(error, body.toString(), null);
+			throw new Exception(error);
+		}
 
-		enviarHsMaquinaSap(idActividad, restTemplate, parentObjectId, serviceCallMap);
+		try {
+			enviarHsMaquinaSap(idActividad, restTemplate, parentObjectId, serviceCallMap);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
+					+ " - No se pudo enviar las hs maq por service call.";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
 
 		ActividadPatch ap = generarActividadPatch(formulario);
 
-		Map<String, Object> attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
+		Map<String, Object> attachmentMap;
+		try {
+			attachmentMap = generarAttachmentMap(formulario, usuarioSAP);
+		} catch (Exception e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] No se pudo generar attachment map " + e.getMessage();
+			StringBuilder body = new StringBuilder();
+			body.append("Error: " + e.getMessage() + "<br>");
+			if (e.getCause() != null) {
+				body.append("Causa: " + e.getCause().toString() + "<br>");
+			}
+			mailService.sendMail(error, body.toString(), null);
+			throw new Exception(error);
+		}
 		LOGGER.debug("Actividad: " + idActividad + " - Attachment Map Generado");
-		enviarAttachmentsSap(idActividad, ap, attachmentMap, restTemplate);
+
+		try {
+			enviarAttachmentsSap(idActividad, ap, attachmentMap, restTemplate);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO]  Actividad: " + idActividad + " - Error al intentar subir attachments";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
 
 		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
-		enviarActividadSap(idActividad, ap, restTemplate);
+		try {
+			enviarActividadSap(idActividad, ap, restTemplate);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
+					+ " - Error al intentar actualizar la actividad";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
 
 	}
 
-	private void enviarActividadSap(Long idActividad, ActividadPatch ap, RestTemplate restTemplate) throws Exception {
+	private void enviarActividadSap(Long idActividad, ActividadPatch ap, RestTemplatePremec restTemplate)
+			throws SapBusinessException {
 		LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 		String actividadUrl = urlSAP + "/Activities({id})".replace("{id}", idActividad.toString());
-		try {
-			restTemplate.exchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
-		} catch (RestClientException rce) {
-			throw new Exception(
-					"Actividad: " + idActividad + " - Error al intentar actualizar la actividad. URL " + actividadUrl,
-					rce);
-		}
+		restTemplate.doExchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
 		LOGGER.debug("Actividad Actualizada");
 	}
 
-	private void enviarHsMaquinaSap(Long idActividad, RestTemplate restTemplate, Long parentObjectId,
-			Map<String, Object> serviceCallMap) throws Exception {
+	private void enviarHsMaquinaSap(Long idActividad, RestTemplatePremec restTemplate, Long parentObjectId,
+			Map<String, Object> serviceCallMap) throws SapBusinessException {
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		LOGGER.debug(serviceCallUrl);
 
 		String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
 		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
-		try {
-			restTemplate.exchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
-		} catch (RestClientException rce) {
-			throw new Exception(
-					"Actividad: " + idActividad + " - No se pudo enviar las hs maq por service call. URL " + scUrl,
-					rce);
-		}
-		LOGGER.debug("Actividad: " + idActividad + " - Hs Maquina a la service call enviadas");
+		restTemplate.doExchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
 	}
 
 	private Map<String, Object> obtenerServiceCallSap(FormularioDTO formulario, Long idActividad, Long parentObjectId,
@@ -310,54 +416,14 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap,
-			RestTemplate restTemplate) throws Exception {
-//		String actividadAttachmentUrl = urlSAP + "/Activities({idActividad})?$select=AttachmentEntry";
-//		actividadAttachmentUrl = actividadAttachmentUrl.replace("{idActividad}", idActividad.toString());
-//
-//		ResponseEntity<String> attCountResult = null;
-//		try {
-//			attCountResult = restTemplate.exchange(actividadAttachmentUrl, HttpMethod.GET, null,
-//					new ParameterizedTypeReference<String>() {
-//					});
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			String subject = "Error al obtener attachments previo al envio del formulario de la actividad "
-//					+ idActividad;
-//			StringBuilder body = new StringBuilder();
-//			body.append("No se puso consultar el attachmentEntry de la actividad " + idActividad + ". URL: "
-//					+ actividadAttachmentUrl);
-//			body.append("Error: " + e.getMessage() + "<br>");
-//			if (e.getCause() != null) {
-//				body.append("Causa: " + e.getCause().toString() + "<br>");
-//			}
-//			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-//			throw e;
-//		}
-//
-//		Gson gson = new Gson();
-//		JsonObject array = gson.fromJson(attCountResult.getBody(), JsonObject.class);
-//
-//		if (array.get("AttachmentEntry") != null && !array.get("AttachmentEntry").isJsonNull()) {
-//			String subject = "Error: La actividad " + idActividad + " ya tiene attachments. Revisar errores previos."
-//					+ "<br>";
-//			StringBuilder body = new StringBuilder();
-//			body.append("Error: La actividad " + idActividad
-//					+ " ya tiene attachments. Revisar errores previos. Tal vez sea necesario borrar los attachments para que vuelvan a subir las fotos sin duplicarse.");
-//			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-//			throw new Exception("La actividad " + idActividad + " ya tiene attachments. Revisar errores previos.");
-//		}
+			RestTemplatePremec restTemplate) throws SapBusinessException {
 
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 
 		String attachmentUrl = urlSAP + "/Attachments2";
 		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
 		ResponseEntity<Object> attachmentRespose = null;
-		try {
-			attachmentRespose = restTemplate.exchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
-		} catch (RestClientException rce) {
-			throw new Exception(
-					"Actividad: " + idActividad + " - Error al intentar subir attachments. URL " + attachmentUrl, rce);
-		}
+		attachmentRespose = restTemplate.doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
 		Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
 		String attchEntry = (object.toString().split("="))[1];
 
@@ -534,5 +600,5 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	public void setMailService(MailSenderSMTPService mailService) {
 		this.mailService = mailService;
 	}
-	
+
 }

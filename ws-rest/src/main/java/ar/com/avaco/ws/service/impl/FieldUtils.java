@@ -39,6 +39,7 @@ public class FieldUtils {
 	public static final String CUSTOMER_CODE = "CustomerCode";
 	public static final String CONTACT_CODE = "ContactCode";
 	public static final String TIPO_ACTIVIDAD = "U_T_Tarea";
+	public static final String U_ESTADO = "U_Estado";
 
 	public static void validarRequerido(Map<String, Object> fromJson, String key) throws Exception {
 		Object object = fromJson.get(key);

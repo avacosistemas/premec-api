@@ -4,6 +4,7 @@ import java.util.List;
 
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 
 public interface ActividadEPService {
 
@@ -12,4 +13,6 @@ public interface ActividadEPService {
 	List<ActividadReporteDTO> getActividadesReporte() throws Exception;
 
 	void marcarEnviado(Long idActividad) throws Exception;
+
+	List<RegistroMonitorDTO> getActividadesMonitor() throws Exception;
 }

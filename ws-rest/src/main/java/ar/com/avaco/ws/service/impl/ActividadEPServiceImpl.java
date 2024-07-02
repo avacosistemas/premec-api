@@ -15,11 +15,10 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -28,14 +27,18 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.internal.LinkedTreeMap;
+import com.ibm.icu.util.Calendar;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.entities.cliente.TipoActividad;
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.factory.RestTemplatePremec;
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
+import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 import ar.com.avaco.ws.dto.RepuestoDTO;
 import ar.com.avaco.ws.service.ActividadEPService;
 
@@ -55,15 +58,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Value("${dbSAP}")
 	private String dbSAP;
 
-	@Value("${email.from}")
-	private String from;
-
-	@Value("${email.errores}")
-	private String toErrores;
-
-	@Value("${email.errores.cc}")
-	private String toErroresCC;
-
 	private String employeeUrl;
 	private String locationsUrl;
 	private String serviceCallUrl;
@@ -72,7 +66,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	private String actividadUrl;
 
 	private Gson gson = new Gson();
-	
+
 	private MailSenderSMTPService mailService;
 
 	@PostConstruct
@@ -89,63 +83,91 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
-				.getLoggedRestTemplate();
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		// Se agrega validacion para levantar las actividades que no sean de taller.
 		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and Closed eq 'tNO'";
 
-		// Obtengo las actividades 
+		// Obtengo las actividades
 		ResponseEntity<String> responseActividades = null;
 		try {
-			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+			responseActividades = restTemplate.doExchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
-		} catch (Exception e) {
+		} catch (SapBusinessException e) {
 			e.printStackTrace();
-			String subject = "Error al obtener actividades para envio de reportes";
-			StringBuilder body = new StringBuilder();
-			body.append("URL " + actividadUrl);
-			body.append("Error: " + e.getMessage() + "<br>");
-			if (e.getCause() != null) {
-				body.append("Causa: " + e.getCause().toString() + "<br>");
+			String error = "Error al obtener actividades para envio de reportes";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("URL: " + actividadUrl + "<br>");
+				body.append("Codigo Error: " + e.getErrorCode() + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
 			}
-			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-			throw e;
+			throw new Exception(error);
 		}
 
+		// Creo el jsonobject
 		JsonObject array = gson.fromJson(responseActividades.getBody(), JsonObject.class);
 
+		// Inicializo el listado de actividades donde voy a ir agregando las actividades
+		// a enviar el reporte
 		List<ActividadReporteDTO> actividades = new ArrayList<>();
 
+		// Obtengo el campo value donde esta el array de actividades
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 
 		LOGGER.debug("Iniciando proceso de envio de reporte");
 
+		// Itero por cada actividad del jsonarray
 		for (JsonElement element : asJsonArray) {
+
+			// Genero el dto de actividadreporte
+			ActividadReporteDTO ardto = new ActividadReporteDTO();
+
+			// Convierto la actividad en un mapa
 			LinkedTreeMap<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
 					LinkedTreeMap.class);
 
+			// Obtengo Activity Code
 			Double activityCode = (Double) fromJson.get(FieldUtils.ACTIVITY_CODE);
-			ActividadReporteDTO ardto = new ActividadReporteDTO();
 
 			try {
 
-				ardto.setIdActividad(activityCode.longValue());
-
 				LOGGER.debug("--------- Procesando Actividad " + activityCode.longValue());
 
+				ardto.setIdActividad(activityCode.longValue());
+
+				// Obtengo el parent id que uso para obtener la service call
 				Long parentId = FieldUtils.getLong(fromJson, FieldUtils.PARENT_OBJECT_ID, true);
 
+				// Armo la url de la service call
 				String surl = serviceCallUrl.replace("{id}", parentId.toString());
+
 				ResponseEntity<String> responseServiceCall = null;
 				try {
-					responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
+					responseServiceCall = restTemplate.doExchange(surl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
-				} catch (RestClientException rce) {
-					rce.printStackTrace();
-					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
+				} catch (SapBusinessException e) {
+					e.printStackTrace();
+					String error = "[REPORTE] No se pudo obtener el service call con id " + parentId;
+					if (e.hasToSendMail()) {
+						StringBuilder body = new StringBuilder("Servicecall: " + parentId + "<br>");
+						body.append("Actividad: " + ardto.getIdActividad() + "<br>");
+						body.append("URL: " + surl + "<br>");
+						body.append("Codigo Error: " + e.getErrorCode() + "<br>");
+						body.append("Error: " + e.getMessage() + "<br>");
+						if (e.getCause() != null) {
+							body.append("Causa: " + e.getCause().toString() + "<br>");
+						}
+						mailService.sendMail(error, body.toString(), null);
+					}
+					throw new Exception(error);
 				}
 
 				LinkedTreeMap<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
@@ -160,16 +182,17 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Es taller
 				Boolean esTaller = FieldUtils.getBoolean(fromJson, FieldUtils.U_TALLER, true);
 				ardto.setEsTaller(esTaller);
-				
+
 				// Tipo de actividad
 				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
 				ardto.setTipoActividad(tipoActividad);
-				
-				// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser de reparación 22/4/24
+
+				// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
+				// de reparación 22/4/24
 				if (!esTaller) {
 					ardto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
 				}
-				
+
 				// Asignado Por
 				String asignadoPor = "";
 				Long asignadoPorId = FieldUtils.getLong(servicejson, FieldUtils.RESPONSE_ASSIGNEE, false);
@@ -177,12 +200,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseUser = null;
 					String uurl = userUrl.replace("{id}", asignadoPorId.toString());
 					try {
-						responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+						responseUser = restTemplate.doExchange(uurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
-					} catch (RestClientException rce) {
-						rce.printStackTrace();
-						throw new Exception("No se pudo obtener el empleado con id " + asignadoPorId + ". URL " + uurl);
+					} catch (SapBusinessException e) {
+						e.printStackTrace();
+						String error = "[REPORTE] No se pudo obtener el empleado con id " + asignadoPorId;
+						if (e.hasToSendMail()) {
+							StringBuilder body = new StringBuilder("Empleado id: " + asignadoPorId + "<br>");
+							body.append("URL: " + uurl + "<br>");
+							body.append("Codigo Error: " + e.getErrorCode());
+							body.append("Error: " + e.getMessage() + "<br>");
+							if (e.getCause() != null) {
+								body.append("Causa: " + e.getCause().toString() + "<br>");
+							}
+							mailService.sendMail(error, body.toString(), null);
+						}
+						throw new Exception(error);
 					}
 					JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
 					asignadoPor = userjson.get("UserName").toString();
@@ -201,13 +235,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseEmployee = null;
 					String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
 					try {
-						responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
+						responseEmployee = restTemplate.doExchange(eurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
-					} catch (RestClientException rce) {
-						rce.printStackTrace();
-						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl,
-								rce);
+					} catch (SapBusinessException e) {
+						e.printStackTrace();
+						String error = "[REPORTE] Error al obtener el employee " + handledByEmployeeId;
+						if (e.hasToSendMail()) {
+							StringBuilder body = new StringBuilder("Empleado id: " + asignadoPorId + "<br>");
+							body.append("URL: " + eurl + "<br>");
+							body.append("Codigo Error: " + e.getErrorCode());
+							body.append("Error: " + e.getMessage() + "<br>");
+							if (e.getCause() != null) {
+								body.append("Causa: " + e.getCause().toString() + "<br>");
+							}
+							mailService.sendMail(error, body.toString(), null);
+						}
+						throw new Exception(error);
 					}
 					JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
 					String fn = employeejson.get(FieldUtils.FIRST_NAME).getAsString();
@@ -248,21 +292,31 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						String lurl = locationsUrl.replace("{id}", locationId.toString());
 						ResponseEntity<String> responseLocation = null;
 						try {
-							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+							responseLocation = restTemplate.doExchange(lurl, HttpMethod.GET, null,
 									new ParameterizedTypeReference<String>() {
 									});
-						} catch (RestClientException rce) {
-							rce.printStackTrace();
-							throw new Exception(
-									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						} catch (SapBusinessException e) {
+							e.printStackTrace();
+							String error = "[REPORTE] No se pudo obtener la location con id " + locationId;
+							if (e.hasToSendMail()) {
+								StringBuilder body = new StringBuilder("Empleado id: " + asignadoPorId + "<br>");
+								body.append("URL: " + lurl + "<br>");
+								body.append("Codigo Error: " + e.getErrorCode());
+								body.append("Error: " + e.getMessage() + "<br>");
+								if (e.getCause() != null) {
+									body.append("Causa: " + e.getCause().toString() + "<br>");
+								}
+								mailService.sendMail(error, body.toString(), null);
+							}
+							throw new Exception(error);
 						}
 						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 						if (locationjson.getAsJsonArray("value").size() == 1) {
 							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
 									.getAsString();
 						} else {
-							throw new Exception(
-									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+							throw new Exception("No se pudo obtener la location con id " + locationId
+									+ " despues de la ejecución en SAP. URL: " + lurl);
 						}
 					}
 				}
@@ -321,7 +375,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 				} catch (Exception e) {
 					e.printStackTrace();
-					throw new Exception("Problemas al procesar los checks de la actividad " + activityCode.longValue(),
+					throw new Exception(
+							"[REPORTE] Problemas al procesar los checks de la actividad " + activityCode.longValue(),
 							e);
 				}
 
@@ -357,7 +412,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				} catch (Exception e) {
 					e.printStackTrace();
 					throw new Exception(
-							"Problemas al procesar los repuestos de la actividad " + activityCode.longValue(), e);
+							"[REPORTE] Problemas al procesar los repuestos de la actividad " + activityCode.longValue(),
+							e);
 				}
 
 				ardto.setFechaInicioOperario(FieldUtils.getString(fromJson, FieldUtils.START_DATE, true));
@@ -382,13 +438,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ResponseEntity<String> responseBusinessPartner = null;
 				String bpurl = businessPartnerUrl.replace("{id}", customerCode);
 				try {
-					responseBusinessPartner = restTemplate.exchange(bpurl, HttpMethod.GET, null,
+					responseBusinessPartner = restTemplate.doExchange(bpurl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
-				} catch (RestClientException rce) {
-					rce.printStackTrace();
-					throw new Exception("Error al obtener el business partner para reporte" + activityCode.longValue(),
-							rce.getCause());
+				} catch (SapBusinessException e) {
+					e.printStackTrace();
+					String error = "[REPORTE] Error al obtener el business partner " + customerCode;
+					if (e.hasToSendMail()) {
+						StringBuilder body = new StringBuilder("Empleado id: " + asignadoPorId + "<br>");
+						body.append("URL: " + bpurl + "<br>");
+						body.append("Codigo Error: " + e.getErrorCode());
+						body.append("Error: " + e.getMessage() + "<br>");
+						if (e.getCause() != null) {
+							body.append("Causa: " + e.getCause().toString() + "<br>");
+						}
+						mailService.sendMail(error, body.toString(), null);
+					}
+					throw new Exception(error);
 				}
 
 				JsonObject responseBPjson = gson.fromJson(responseBusinessPartner.getBody(), JsonObject.class);
@@ -411,14 +477,17 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ardto.setEmail(email);
 				actividades.add(ardto);
 			} catch (Exception e) {
+				// Cualquier exception que haya la catcheo para poder continuar con el siguiente
+				// sin cortar el proceso
 				e.printStackTrace();
-				String subject = "Error al obtener actividad " + activityCode.longValue() + " para envio de reporte";
+				String subject = "[REPORTE] Error al obtener actividad " + activityCode.longValue()
+						+ " para envio de reporte";
 				StringBuilder body = new StringBuilder();
 				body.append("Error: " + e.getMessage() + "<br>");
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
-				mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+				mailService.sendMail(subject, body.toString(), null);
 			}
 		}
 		return actividades;
@@ -429,8 +498,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
 		// Armo el rest template logueado con credenciales de sap
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
-				.getLoggedRestTemplate();
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		// Obtengo el usuario sap del usuario logueado
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
@@ -446,20 +515,29 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		ResponseEntity<String> responseActividades = null;
 
+		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
+				+ fechaActividad + " and U_Estado eq 'Pendiente' and Closed eq 'tNO'";
 		try {
-			responseActividades = obtenerActividadesPorUsuarioYFecha(restTemplate, usuarioSAP, fechaActividad);
-		} catch (Exception e) {
+			responseActividades = restTemplate.doExchange(actividadUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (SapBusinessException e) {
 			e.printStackTrace();
-			String subject = "Error al obtener actividades del usuario " + username + " para la fecha " + currentDate;
-			StringBuilder body = new StringBuilder();
-			body.append("Fecha: " + currentDate + "<br>");
-			body.append("Usuario: " + username + "<br>");
-			body.append("Error: " + e.getMessage() + "<br>");
-			if (e.getCause() != null) {
-				body.append("Causa: " + e.getCause().toString() + "<br>");
+			String error = "[TARJETA] Error al obtener actividades del usuario " + username + " para la fecha "
+					+ currentDate;
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Fecha: " + currentDate + "<br>");
+				body.append("URL: " + actividadUrl + "<br>");
+				body.append("Usuario: " + username + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
 			}
-			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-			throw e;
+			throw new Exception(error);
 		}
 
 		// Parseo la respuesta a un json
@@ -467,7 +545,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		// Pido el campo value que contiene el array de actividades
 		JsonArray actividadesJsonArray = jsonResponse.getAsJsonArray("value");
-		
+
 		// Por cada actividad
 		for (JsonElement element : actividadesJsonArray) {
 
@@ -476,8 +554,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			try {
 
 				// Convierto la actividad en un mapa
-				Map<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(),
-						LinkedTreeMap.class);
+				Map<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
 
 				// Inicializo la actividad
 				ActividadTarjetaDTO atdto = new ActividadTarjetaDTO();
@@ -494,7 +571,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				atdto.setTipoActividad(tipoActividad);
 
 				if (!atdto.getActividadTaller()) {
-					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser de reparación 22/4/24
+					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
+					// de reparación 22/4/24
 					atdto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
 				}
 
@@ -525,13 +603,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseEmployee = null;
 					String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
 					try {
-						responseEmployee = restTemplate.exchange(eurl, HttpMethod.GET, null,
+						responseEmployee = restTemplate.doExchange(eurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
-					} catch (RestClientException rce) {
-						rce.printStackTrace();
-						throw new Exception("Error al obtener el employee " + handledByEmployeeId + ". URL: " + eurl,
-								rce);
+					} catch (SapBusinessException e) {
+						e.printStackTrace();
+						String error = "[TARJETA] Error al obtener el employee " + handledByEmployeeId;
+						if (e.hasToSendMail()) {
+							StringBuilder body = new StringBuilder();
+							body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+							body.append("URL: " + eurl + "<br>");
+							body.append("Error: " + e.getMessage() + "<br>");
+							if (e.getCause() != null) {
+								body.append("Causa: " + e.getCause().toString() + "<br>");
+							}
+							mailService.sendMail(error, body.toString(), null);
+						}
+						throw new Exception(error);
 					}
 					JsonObject employeejson = gson.fromJson(responseEmployee.getBody(), JsonObject.class);
 					String fn = employeejson.get(FieldUtils.FIRST_NAME).getAsString();
@@ -552,14 +640,25 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						String lurl = locationsUrl.replace("{id}", locationId.toString());
 						ResponseEntity<String> responseLocation = null;
 						try {
-							responseLocation = restTemplate.exchange(lurl, HttpMethod.GET, null,
+							responseLocation = restTemplate.doExchange(lurl, HttpMethod.GET, null,
 									new ParameterizedTypeReference<String>() {
 									});
-						} catch (RestClientException rce) {
-							rce.printStackTrace();
-							throw new Exception(
-									"No se pudo obtener la location con id " + locationId + ". URL: " + lurl);
+						} catch (SapBusinessException e) {
+							e.printStackTrace();
+							String error = "[TARJETA] No se pudo obtener la location con id " + locationId;
+							if (e.hasToSendMail()) {
+								StringBuilder body = new StringBuilder();
+								body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+								body.append("URL: " + lurl + "<br>");
+								body.append("Error: " + e.getMessage() + "<br>");
+								if (e.getCause() != null) {
+									body.append("Causa: " + e.getCause().toString() + "<br>");
+								}
+								mailService.sendMail(error, body.toString(), null);
+							}
+							throw new Exception(error);
 						}
+
 						JsonObject locationjson = gson.fromJson(responseLocation.getBody(), JsonObject.class);
 						if (locationjson.getAsJsonArray("value").size() == 1) {
 							direccion = locationjson.getAsJsonArray("value").get(0).getAsJsonObject().get("Name")
@@ -577,17 +676,27 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				String surl = serviceCallUrl.replace("{id}", parentId.toString());
 				ResponseEntity<String> responseServiceCall = null;
 				try {
-					responseServiceCall = restTemplate.exchange(surl, HttpMethod.GET, null,
+					responseServiceCall = restTemplate.doExchange(surl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
-				} catch (RestClientException rce) {
-					rce.printStackTrace();
-					throw new Exception("No se pudo obtener el service call con id " + parentId + ". URL " + surl);
+				} catch (SapBusinessException e) {
+					e.printStackTrace();
+					String error = "[TARJETA] No se pudo obtener el service call con id " + parentId;
+					if (e.hasToSendMail()) {
+						StringBuilder body = new StringBuilder();
+						body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+						body.append("URL: " + surl + "<br>");
+						body.append("Error: " + e.getMessage() + "<br>");
+						if (e.getCause() != null) {
+							body.append("Causa: " + e.getCause().toString() + "<br>");
+						}
+						mailService.sendMail(error, body.toString(), null);
+					}
+					throw new Exception(error);
 				}
 
 				// Convierto el service call en un mapa
-				Map<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(),
-						LinkedTreeMap.class);
+				Map<String, Object> servicejson = gson.fromJson(responseServiceCall.getBody(), LinkedTreeMap.class);
 
 				// Asignado por
 				String asignadoPor = "";
@@ -596,12 +705,23 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseUser = null;
 					String uurl = userUrl.replace("{id}", asignadoPorId.toString());
 					try {
-						responseUser = restTemplate.exchange(uurl, HttpMethod.GET, null,
+						responseUser = restTemplate.doExchange(uurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
-					} catch (RestClientException rce) {
-						rce.printStackTrace();
-						throw new Exception("No se pudo obtener el empleado con id " + asignadoPorId + ". URL " + uurl);
+					} catch (SapBusinessException e) {
+						e.printStackTrace();
+						String error = "[TARJETA] No se pudo obtener el empleado con id  " + asignadoPorId;
+						if (e.hasToSendMail()) {
+							StringBuilder body = new StringBuilder();
+							body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+							body.append("URL: " + uurl + "<br>");
+							body.append("Error: " + e.getMessage() + "<br>");
+							if (e.getCause() != null) {
+								body.append("Causa: " + e.getCause().toString() + "<br>");
+							}
+							mailService.sendMail(error, body.toString(), null);
+						}
+						throw new Exception(error);
 					}
 					JsonObject userjson = gson.fromJson(responseUser.getBody(), JsonObject.class);
 					asignadoPor = userjson.get("UserName").toString();
@@ -643,8 +763,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				actividades.add(atdto);
 			} catch (Exception e) {
 				e.printStackTrace();
-				String subject = "Error al obtener actividad " + activityCode.longValue() + " del usuario " + username
-						+ " para la fecha " + currentDate;
+				String subject = "[TARJETA] Error al obtener actividad " + activityCode.longValue() + " del usuario "
+						+ username + " para la fecha " + currentDate;
 				StringBuilder body = new StringBuilder("Actividad: " + activityCode.toString() + "<br>");
 				body.append("Fecha: " + currentDate + "<br>");
 				body.append("Usuario: " + username + "<br>");
@@ -652,7 +772,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
-				mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
+				mailService.sendMail(subject, body.toString(), null);
 			}
 		}
 
@@ -660,55 +780,151 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	}
 
-	/**
-	 * Obtiene las actividades asignadas usuario por parametro en la fecha indicada
-	 * en estado Pendiente que no este cerrado.
-	 * 
-	 * @param restTemplate
-	 * @param usuarioSAP
-	 * @param fechaActividad
-	 * @return
-	 * @throws Exception
-	 */
-	private ResponseEntity<String> obtenerActividadesPorUsuarioYFecha(RestTemplate restTemplate, String usuarioSAP,
-			String fechaActividad) throws Exception {
-		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
-				+ fechaActividad + " and U_Estado eq 'Pendiente' and Closed eq 'tNO'";
-		ResponseEntity<String> responseActividades = null;
-		try {
-			responseActividades = restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-		} catch (RestClientException rce) {
-			rce.printStackTrace();
-			throw new Exception("Error al conectar son SAP: Error al obtener las actividades del empleado " + usuarioSAP + " para el dia "
-					+ fechaActividad + " - " + actividadUrl, rce);
-		}
-		return responseActividades;
-	}
-
 	@Override
 	public void marcarEnviado(Long idActividad) throws Exception {
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
-				.getLoggedRestTemplate();
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
 		String url = actividadUrl.replace("{id}", idActividad.toString());
 		try {
-			restTemplate.exchange(url, HttpMethod.PATCH, httpEntity, Object.class);
-		} catch (RestClientException rce) {
-			rce.printStackTrace();
-			String subject = "Error al actualizar actividad " + idActividad + " para marcarla como enviada";
-			StringBuilder body = new StringBuilder("Actividad: " + idActividad + "<br>");
-			body.append("Error: " + rce.getMessage() + "<br>");
-			if (rce.getCause() != null) {
-				body.append("Causa: " + rce.getCause().toString() + "<br>");
+			restTemplate.doExchange(url, HttpMethod.PATCH, httpEntity, Object.class);
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[MARCAR ENVIADO] Error al actualizar actividad " + idActividad
+					+ " para marcarla como enviada";
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("URL: " + url + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
 			}
-			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
-			throw rce;
+			throw new Exception(error);
 		}
+	}
+
+	@Override
+	public List<RegistroMonitorDTO> getActividadesMonitor() throws Exception {
+
+		// Armo el rest template logueado con credenciales de sap
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+
+		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
+		Date parse = Calendar.getInstance().getTime();
+		String currentDate = sdfoutput.format(parse);
+		String fechaActividad = "'" + currentDate + "'";
+
+		// Inicializo la lista de actividades
+		List<RegistroMonitorDTO> actividades = new ArrayList<>();
+
+		ResponseEntity<String> responseActividades = null;
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Prefer", "odata.maxpagesize=0");
+
+		HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+		
+		String actividadUrl = urlSAP + "/$crossjoin(Activities,EmployeesInfo,ServiceCalls)"
+				+ "?$expand=Activities($select=ActivityCode,HandledByEmployee,StartDate,U_Estado,ActivityTime,Details),"
+				+ "EmployeesInfo($select=EmployeeID,LastName, FirstName),"
+				+ "ServiceCalls($select=ServiceCallID,CustomerName)"
+				+ "&$filter=Activities/HandledByEmployee eq EmployeesInfo/EmployeeID "
+				+ "and Activities/ParentObjectId eq ServiceCalls/ServiceCallID "
+				+ "and HandledByEmployee ne null and StartDate eq " + fechaActividad;
+		
+		try {
+			responseActividades = restTemplate.doExchange(actividadUrl, HttpMethod.GET, requestEntity,
+					new ParameterizedTypeReference<String>() {
+					});
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[MONITOR] Error al obtener actividades para el monitor para la fecha "
+					+ currentDate;
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Fecha: " + currentDate + "<br>");
+				body.append("URL: " + actividadUrl + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
+		}
+
+		// Parseo la respuesta a un json
+		JsonObject jsonResponse = gson.fromJson(responseActividades.getBody(), JsonObject.class);
+
+		// Pido el campo value que contiene el array de actividades
+		JsonArray actividadesJsonArray = jsonResponse.getAsJsonArray("value");
+
+		// Por cada actividad
+		for (JsonElement element : actividadesJsonArray) {
+
+			Long activityCode = null;
+
+			try {
+
+				// Convierto la actividad en un mapa
+				Map<String, Object> fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
+
+				Map<String, Object> actividad = (Map<String, Object>) fromJson.get("Activities");
+				Map<String, Object> empleado = (Map<String, Object>) fromJson.get("EmployeesInfo");
+				Map<String, Object> serviceCalls = (Map<String, Object>) fromJson.get("ServiceCalls");
+				
+				activityCode = FieldUtils.getLong(actividad, FieldUtils.ACTIVITY_CODE, true);
+				
+				// Inicializo la actividad
+				RegistroMonitorDTO atdto = new RegistroMonitorDTO();
+
+				// Numero igual activity code
+				atdto.setNumero(activityCode.toString());
+
+				// Fecha
+				atdto.setFecha(FieldUtils.getString(actividad, FieldUtils.START_DATE, true, 0, 10));
+
+				// U_Estado
+				atdto.setEstado(FieldUtils.getString(actividad, FieldUtils.U_ESTADO, true));
+				
+				// Hora
+				atdto.setHora(FieldUtils.getString(actividad, FieldUtils.ACTIVITY_TIME, false));
+
+				// Tareas a realizar
+				atdto.setTareasARealizar(FieldUtils.getString(actividad, FieldUtils.DETAILS, false));
+
+				// Empleado
+				String nombre = FieldUtils.getString(empleado, FieldUtils.FIRST_NAME, true);
+				String apellido = FieldUtils.getString(empleado, FieldUtils.LAST_NAME, true);
+				atdto.setEmpleado(nombre + " " + apellido);
+				
+				// Cliente
+				atdto.setCliente(FieldUtils.getString(serviceCalls, FieldUtils.CUSTOMER_NAME, true));
+
+				actividades.add(atdto);
+			} catch (Exception e) {
+				e.printStackTrace();
+				String subject = "[MONITOR] Error al obtener actividad " + activityCode.longValue() + " para la fecha " + currentDate;
+				StringBuilder body = new StringBuilder("Actividad: " + activityCode.toString() + "<br>");
+				body.append("Fecha: " + currentDate + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(subject, body.toString(), null);
+			}
+		}
+
+		return actividades;
+
 	}
 
 	@Resource(name = "usuarioService")

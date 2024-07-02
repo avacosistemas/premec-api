@@ -17,8 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -26,8 +24,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.internal.LinkedTreeMap;
 
+import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
+import ar.com.avaco.factory.RestTemplatePremec;
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.RepuestoDepositoDTO;
 import ar.com.avaco.ws.service.RepuestoEPService;
 
@@ -35,8 +36,6 @@ import ar.com.avaco.ws.service.RepuestoEPService;
 public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 	private static final Logger LOGGER = Logger.getLogger(RepuestoEPServiceImpl.class);
-
-	private UsuarioService usuarioService;
 
 	@Value("${urlSAP}")
 	private String urlSAP;
@@ -47,36 +46,48 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 	@Value("${dbSAP}")
 	private String dbSAP;
 
+	private UsuarioService usuarioService;
+
+	private MailSenderSMTPService mailService;
+
 	@Override
 	public List<RepuestoDepositoDTO> getRepuestos(String username) throws Exception {
 
-		RestTemplate restTemplate = RestTemplateFactory.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP)
-				.getLoggedRestTemplate();
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
 
 		String deposito = usuarioService.getDeposito(username);
 
-		String repuestosUrl = urlSAP
-				+ "/$crossjoin(Items,Items/ItemWarehouseInfoCollection)?$expand=Items"
+		String repuestosUrl = urlSAP + "/$crossjoin(Items,Items/ItemWarehouseInfoCollection)?$expand=Items"
 				+ "($select=ItemCode,ItemName),Items/ItemWarehouseInfoCollection"
-				+ "($select=WarehouseCode,InStock)&$filter=Items/ItemCode eq " 
+				+ "($select=WarehouseCode,InStock)&$filter=Items/ItemCode eq "
 				+ "Items/ItemWarehouseInfoCollection/ItemCode and Items/ItemWarehouseInfoCollection/WarehouseCode eq '"
 				+ deposito + "' and Items/ItemWarehouseInfoCollection/InStock gt 0";
 
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Prefer", "odata.maxpagesize=0");
 
-		HttpEntity requestEntity = new HttpEntity<>(headers);
-		
+		HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+
 		ResponseEntity<String> responseRepuestos = null;
 		try {
-			responseRepuestos = restTemplate.exchange(repuestosUrl, HttpMethod.GET, requestEntity,
+			responseRepuestos = restTemplate.doExchange(repuestosUrl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
-		} catch (RestClientException rce) {
-			LOGGER.error("Error al obtener los repuestos del usuario " + username);
-			LOGGER.error(repuestosUrl);
-			LOGGER.error(rce.getMessage());
-			throw rce;
+		} catch (SapBusinessException e) {
+			e.printStackTrace();
+			String error = "[REPUESTOS] Error al obtener repuestos del usuario " + username;
+			if (e.hasToSendMail()) {
+				StringBuilder body = new StringBuilder();
+				body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+				body.append("Usuario: " + username + "<br>");
+				body.append("Error: " + e.getMessage() + "<br>");
+				if (e.getCause() != null) {
+					body.append("Causa: " + e.getCause().toString() + "<br>");
+				}
+				mailService.sendMail(error, body.toString(), null);
+			}
+			throw new Exception(error);
 		}
 
 		Gson gson = new Gson();
@@ -88,50 +99,57 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 		for (JsonElement element : asJsonArray) {
 			LinkedTreeMap fromJson = gson.fromJson(element.getAsJsonObject().toString(), LinkedTreeMap.class);
-
 			RepuestoDepositoDTO ardto = generarRepuesto(fromJson);
-
 			repuestos.add(ardto);
 		}
 
 		if (!repuestos.isEmpty()) {
-		
+
 			String seriadosUrl = generarUrlConsultaSeriado(repuestos);
-			
+
 			ResponseEntity<String> responseRepuestosSeriados = null;
 			try {
-				responseRepuestosSeriados = restTemplate.exchange(seriadosUrl, HttpMethod.GET, null,
+				responseRepuestosSeriados = restTemplate.doExchange(seriadosUrl, HttpMethod.GET, null,
 						new ParameterizedTypeReference<String>() {
 						});
-			} catch (RestClientException rce) {
-				LOGGER.error("Error al obtener los repuestos del usuario " + username);
-				LOGGER.error(repuestosUrl);
-				LOGGER.error(rce.getMessage());
-				throw rce;
+			} catch (SapBusinessException e) {
+				e.printStackTrace();
+				String error = "[REPUESTOS] Error al obtener los seriados de repuestos del usuario " + username;
+				if (e.hasToSendMail()) {
+					StringBuilder body = new StringBuilder();
+					body.append("ErrorCode: " + e.getErrorCode() + "<br>");
+					body.append("Usuario: " + username + "<br>");
+					body.append("Error: " + e.getMessage() + "<br>");
+					if (e.getCause() != null) {
+						body.append("Causa: " + e.getCause().toString() + "<br>");
+					}
+					mailService.sendMail(error, body.toString(), null);
+				}
+				throw new Exception(error);
 			}
-	
+
 			actualizarSeriadoRepuestos(repuestos, responseRepuestosSeriados);
-			
+
 		}
 		return repuestos;
 	}
 
 	private void actualizarSeriadoRepuestos(List<RepuestoDepositoDTO> repuestos,
 			ResponseEntity<String> responseRepuestosSeriados) {
-		Gson gson = new Gson(); 
+		Gson gson = new Gson();
 
 		JsonObject array = gson.fromJson(responseRepuestosSeriados.getBody(), JsonObject.class);
 		JsonArray asJsonArray = array.getAsJsonArray("value");
 
 		Map<String, Boolean> seriados = new HashMap<String, Boolean>();
-		
+
 		for (JsonElement element : asJsonArray) {
 			String itemCode = element.getAsJsonObject().get("ItemCode").toString();
 			String itemSerialNumber = element.getAsJsonObject().get("ManageSerialNumbers").toString();
 			seriados.put(itemCode, itemSerialNumber.contains("tYES"));
 		}
-		
-		for (int i = 0; i< repuestos.size(); i++) {
+
+		for (int i = 0; i < repuestos.size(); i++) {
 			RepuestoDepositoDTO dto = repuestos.get(i);
 			Boolean seriado = seriados.get("\"" + dto.getItemCode() + "\"");
 			boolean ser = seriado == null ? false : seriado.booleanValue();
@@ -142,14 +160,14 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 	private String generarUrlConsultaSeriado(List<RepuestoDepositoDTO> repuestos) {
 		List<String> codes = repuestos.stream().map(RepuestoDepositoDTO::getItemCode).collect(Collectors.toList());
-		
-		for (int i = 0; i< codes.size(); i++) {
+
+		for (int i = 0; i < codes.size(); i++) {
 			String string = "ItemCode eq '" + codes.get(i) + "'";
 			codes.set(i, string);
 		}
-		
+
 		String join = StringUtils.join(codes, " or ");
-		
+
 		String seriadosUrl = urlSAP + "/Items?$select=ItemCode,ManageSerialNumbers&$filter=" + join;
 		return seriadosUrl;
 	}
@@ -174,5 +192,10 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 	@Resource(name = "usuarioService")
 	public void setUsuarioService(UsuarioService usuarioService) {
 		this.usuarioService = usuarioService;
+	}
+
+	@Resource(name = "mailSenderSMTPService")
+	public void setMailService(MailSenderSMTPService mailService) {
+		this.mailService = mailService;
 	}
 }

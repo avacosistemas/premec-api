@@ -11,21 +11,17 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.http.impl.client.HttpClients;
-import org.apache.log4j.Logger;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import ar.com.avaco.model.PostLoginSAPDTO;
 import ar.com.avaco.model.ResponseLoginSAPDTO;
 
 public class RestTemplateFactory {
-
-	private static final Logger LOGGER = Logger.getLogger(RestTemplateFactory.class);
 
 	private static RestTemplateFactory instance;
 
@@ -33,7 +29,7 @@ public class RestTemplateFactory {
 	private String user;
 	private String pass;
 	private String db;
-	
+
 	private RestTemplateFactory(String urlSAP, String user, String pass, String db) {
 		this.urlSAP = urlSAP;
 		this.user = user;
@@ -48,7 +44,7 @@ public class RestTemplateFactory {
 		return instance;
 	}
 
-	public RestTemplate getLoggedRestTemplate() throws Exception {
+	public RestTemplatePremec getLoggedRestTemplate() throws SapBusinessException, Exception {
 
 		ClassLoader classLoader = getClass().getClassLoader();
 		// Cargar el archivo de certificado
@@ -80,7 +76,7 @@ public class RestTemplateFactory {
 		httpRequestFactory.setHttpClient(HttpClients.custom().setSSLContext(sslContext).build());
 
 		// Crear un objeto RestTemplate que use la fábrica de solicitudes HTTP
-		RestTemplate restTemplate = new RestTemplate(httpRequestFactory);
+		RestTemplatePremec restTemplate = new RestTemplatePremec(httpRequestFactory);
 
 		restTemplate.setErrorHandler(new SapResponseErrorHandler());
 
@@ -107,9 +103,7 @@ public class RestTemplateFactory {
 			restTemplate.setDefaultUriVariables(headers);
 			return restTemplate;
 		} catch (RestClientException rce) {
-			LOGGER.error("Error al ejecutar login");
-			LOGGER.error(rce.getMessage());
-			throw rce;
+			throw new SapBusinessException(rce);
 		}
 
 	}

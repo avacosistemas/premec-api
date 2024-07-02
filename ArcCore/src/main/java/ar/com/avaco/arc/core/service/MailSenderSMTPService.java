@@ -32,4 +32,6 @@ public interface MailSenderSMTPService {
 	public void sendMail(String from, String[] to, String[] bccTo, String asunto, List<String> msg,
 			List<File> archivos);
 
+	void sendMail(String subject, String msg, List<File> archivos);
+
 }

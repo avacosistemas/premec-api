@@ -29,6 +29,15 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 	@Value("${email.enabled}")
 	private boolean enabled;
 
+	@Value("${email.from}")
+	private String from;
+
+	@Value("${email.errores}")
+	private String toErrores;
+
+	@Value("${email.errores.cc}")
+	private String toErroresCC;
+
 	/**
 	 * @param mailSender
 	 */
@@ -124,12 +133,14 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 
 	}
 
-	public void setTest(boolean test) {
-		this.test = test;
-	}
-
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
+	@Override
+	public void sendMail(String subject, String msg, List<File> archivos) {
+		List<String> messages = new ArrayList<String>();
+		messages.add(msg);
+		String[] arrayTo = { toErrores };
+		String[] arrayBcc = { toErroresCC };
+		sendMail(from, arrayTo, arrayBcc, subject, messages, archivos);
+		
 	}
 
 }

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ar.com.avaco.arc.sec.domain.Usuario;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ActividadEPService;
 
@@ -23,6 +24,22 @@ public class ActividadRestController {
 
 	private ActividadEPService actividadedService;
 
+	@RequestMapping(value = "/monitor", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> getMonitor() {
+		JSONResponse response = new JSONResponse();
+		List<RegistroMonitorDTO> actividades;
+		try {
+			actividades = this.actividadedService.getActividadesMonitor();
+			response.setData(actividades);
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
 	@RequestMapping(value = "/actividades", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> getActividadesTarjeta(String fecha) {
 		JSONResponse response = new JSONResponse();
