@@ -20,6 +20,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -58,6 +59,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Value("${dbSAP}")
 	private String dbSAP;
 
+	@Value("${monitor.palabras.filtro}")
+	private String palabrasFiltroMonitor;
+	
 	private String employeeUrl;
 	private String locationsUrl;
 	private String serviceCallUrl;
@@ -69,6 +73,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	private MailSenderSMTPService mailService;
 
+	private List<String> exclusiones;
+
 	@PostConstruct
 	public void onInit() {
 		this.actividadUrl = urlSAP + "/Activities({id})";
@@ -77,6 +83,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		this.serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		this.userUrl = urlSAP + "/Users({id})";
 		this.businessPartnerUrl = urlSAP + "/BusinessPartners('{id}')";
+		
+		String[] split = palabrasFiltroMonitor.split(",");
+		for (int i = 0; i <= split.length -1; i++) { split[i] = split[i].toUpperCase().trim(); }
+		exclusiones = Lists.newArrayList(split);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -909,7 +919,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				// Cliente
 				atdto.setCliente(FieldUtils.getString(serviceCalls, FieldUtils.CUSTOMER_NAME, true));
 
-				actividades.add(atdto);
+				if (!exclusiones.contains(atdto.getTareasARealizar().toUpperCase().trim())) {
+					actividades.add(atdto);
+				}
+				
 			} catch (Exception e) {
 				e.printStackTrace();
 				String subject = "[MONITOR] Error al obtener actividad " + activityCode.longValue() + " para la fecha " + currentDate;
