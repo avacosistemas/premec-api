@@ -1,16 +1,20 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -61,6 +65,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	@Value("${monitor.palabras.filtro}")
 	private String palabrasFiltroMonitor;
+	
+	@Value("${monitor.maxpagesize}")
+	private String maxpagesize;
 	
 	private String employeeUrl;
 	private String locationsUrl;
@@ -820,7 +827,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	}
 
 	@Override
-	public List<RegistroMonitorDTO> getActividadesMonitor() throws Exception {
+	public List<RegistroMonitorDTO> getActividadesMonitor(String skip) throws Exception {
 
 		// Armo el rest template logueado con credenciales de sap
 		RestTemplatePremec restTemplate = RestTemplateFactory
@@ -837,7 +844,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		ResponseEntity<String> responseActividades = null;
 
 		HttpHeaders headers = new HttpHeaders();
-		headers.set("Prefer", "odata.maxpagesize=0");
+		headers.set("Prefer", "odata.maxpagesize=" + this.maxpagesize);
 
 		HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
 		
@@ -847,7 +854,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				+ "ServiceCalls($select=ServiceCallID,CustomerName)"
 				+ "&$filter=Activities/HandledByEmployee eq EmployeesInfo/EmployeeID "
 				+ "and Activities/ParentObjectId eq ServiceCalls/ServiceCallID "
-				+ "and HandledByEmployee ne null and StartDate eq " + fechaActividad;
+				+ "and HandledByEmployee ne null and StartDate eq " + fechaActividad
+				+ " &$orderby=EmployeesInfo/FirstName,EmployeesInfo/LastName,Activities/ActivityCode";
+		
+		if (StringUtils.isNotBlank(skip)) {
+			actividadUrl += " &$skip=" + skip; 
+		}
 		
 		try {
 			responseActividades = restTemplate.doExchange(actividadUrl, HttpMethod.GET, requestEntity,
@@ -877,6 +889,18 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		// Pido el campo value que contiene el array de actividades
 		JsonArray actividadesJsonArray = jsonResponse.getAsJsonArray("value");
 
+		JsonElement jsonElement = jsonResponse.get("odata.nextLink");
+		if (jsonElement != null && !jsonElement.isJsonNull()) {
+			String nl = jsonElement.getAsString();
+			String[] split = nl.split("\\$");
+			Optional<String> findAny = Arrays.asList(split).stream().filter(x->x.contains("skip=")).findAny();
+			if (findAny.isPresent()) {
+				skip = findAny.get().split("=")[1];
+			}
+		} else {
+			skip = "";
+		}
+		
 		// Por cada actividad
 		for (JsonElement element : actividadesJsonArray) {
 
@@ -918,6 +942,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				
 				// Cliente
 				atdto.setCliente(FieldUtils.getString(serviceCalls, FieldUtils.CUSTOMER_NAME, true));
+
+				atdto.setSkip(skip);
 
 				if (!exclusiones.contains(atdto.getTareasARealizar().toUpperCase().trim())) {
 					actividades.add(atdto);

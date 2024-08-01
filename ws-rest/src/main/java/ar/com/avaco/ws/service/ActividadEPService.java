@@ -14,5 +14,5 @@ public interface ActividadEPService {
 
 	void marcarEnviado(Long idActividad) throws Exception;
 
-	List<RegistroMonitorDTO> getActividadesMonitor() throws Exception;
+	List<RegistroMonitorDTO> getActividadesMonitor(String skip) throws Exception;
 }

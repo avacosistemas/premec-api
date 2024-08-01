@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
@@ -25,11 +26,11 @@ public class ActividadRestController {
 	private ActividadEPService actividadedService;
 
 	@RequestMapping(value = "/monitor", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> getMonitor() {
+	public ResponseEntity<JSONResponse> getMonitor(@RequestParam String skip) {
 		JSONResponse response = new JSONResponse();
 		List<RegistroMonitorDTO> actividades;
 		try {
-			actividades = this.actividadedService.getActividadesMonitor();
+			actividades = this.actividadedService.getActividadesMonitor(skip);
 			response.setData(actividades);
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {

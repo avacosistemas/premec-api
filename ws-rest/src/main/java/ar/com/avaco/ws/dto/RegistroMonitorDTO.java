@@ -9,6 +9,7 @@ public class RegistroMonitorDTO {
 	private String estado;
 	private String fecha;
 	private String hora;
+	private String skip;
 
 	public String getEmpleado() {
 		return empleado;
@@ -64,6 +65,14 @@ public class RegistroMonitorDTO {
 
 	public void setNumero(String numero) {
 		this.numero = numero;
+	}
+
+	public String getSkip() {
+		return skip;
+	}
+
+	public void setSkip(String skip) {
+		this.skip = skip;
 	}
 
 }
