@@ -9,4 +9,6 @@ public interface FormularioEPService {
 	void grabarFormulario(FormularioDTO formularioDTO, String usuariosap) throws Exception;
 
 	void enviarFormulariosFromFiles() throws Exception;
+
+	void quitarArchivoColaEnvio(long actividadId) throws Exception;
 }

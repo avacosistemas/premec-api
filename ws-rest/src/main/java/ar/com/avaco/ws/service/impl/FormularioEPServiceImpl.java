@@ -1,6 +1,7 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +18,7 @@ import java.util.Map;
 import javax.annotation.Resource;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -85,6 +87,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	@Value("${json.delete.after.send}")
 	private boolean deleteFileAfterSend;
+
+	@Value("${json.quitar.cola.envio}")
+	private String jsonPathQuitado;
+
+	@Value("${enviroment.url}")
+	private String enviromentURL;
 
 	private Gson gson = new Gson();
 
@@ -172,6 +180,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					if (e.getCause() != null) {
 						body.append("Causa: " + e.getCause().toString() + "<br>");
 					}
+					body.append(generarUrlQuitarColaEnvio(activityCode) + "<br>");
 					mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
 				}
 
@@ -197,11 +206,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			String subject = "Error al obtener actividad " + actividadUrl
 					+ " para determinar si esta abierta previo al envio a SAP ";
 			StringBuilder body = new StringBuilder();
-			body.append("URL " + actividadUrl);
+			body.append("URL " + actividadUrl + "<br>");
 			body.append("Error: " + e.getMessage() + "<br>");
+			body.append(generarUrlQuitarColaEnvio(activityCode) + "<br>");
 			if (e.getCause() != null) {
 				body.append("Causa: " + e.getCause().toString() + "<br>");
 			}
+			body.append(generarUrlQuitarColaEnvio(activityCode) + "<br>");
 			mailService.sendMail(from, toErrores, toErroresCC, subject, body.toString(), null);
 			throw e;
 		}
@@ -212,6 +223,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		return jsonElement.size() > 0;
 
+	}
+
+	private Object generarUrlQuitarColaEnvio(Long activityCode) {
+		String msj = "Si desea quitar la actividad de la cola de envíos, haga click ";
+		msj = msj + "<a href='{enviroment}/quitarArchivoColaEnvio?actividadId={activityCode}' target='_blank'>aquí</a>"
+				.replace("{enviroment}", enviromentURL).replace("{activityCode}", activityCode.toString());
+		return msj;
 	}
 
 	@Override
@@ -239,6 +257,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			if (e.getCause() != null) {
 				body.append("Causa: " + e.getCause().toString() + "<br>");
 			}
+			body.append(generarUrlQuitarColaEnvio(formulario.getIdActividad()) + "<br>");
 			mailService.sendMail(error, body.toString(), null);
 			throw new Exception(error);
 		} catch (SapBusinessException e) {
@@ -252,6 +271,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
+				body.append(generarUrlQuitarColaEnvio(formulario.getIdActividad()) + "<br>");
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
@@ -271,6 +291,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
+				body.append(generarUrlQuitarColaEnvio(formulario.getIdActividad()) + "<br>");
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
@@ -287,6 +308,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			if (e.getCause() != null) {
 				body.append("Causa: " + e.getCause().toString() + "<br>");
 			}
+			body.append(generarUrlQuitarColaEnvio(idActividad) + "<br>");
 			mailService.sendMail(error, body.toString(), null);
 			throw new Exception(error);
 		}
@@ -304,6 +326,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
+				body.append(generarUrlQuitarColaEnvio(idActividad) + "<br>");
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
@@ -322,6 +345,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			if (e.getCause() != null) {
 				body.append("Causa: " + e.getCause().toString() + "<br>");
 			}
+			body.append(generarUrlQuitarColaEnvio(formulario.getIdActividad()) + "<br>");
 			mailService.sendMail(error, body.toString(), null);
 			throw new Exception(error);
 		}
@@ -339,6 +363,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
+				body.append(generarUrlQuitarColaEnvio(idActividad) + "<br>");
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
@@ -358,6 +383,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (e.getCause() != null) {
 					body.append("Causa: " + e.getCause().toString() + "<br>");
 				}
+				body.append(generarUrlQuitarColaEnvio(idActividad) + "<br>");
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
@@ -594,6 +620,29 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		attachmentMap.put("Attachments2_Lines", archivos.toArray());
 		return attachmentMap;
+	}
+
+	@Override
+	public void quitarArchivoColaEnvio(long actividadId) throws Exception {
+
+		LOGGER.debug("Quitando archivo de actividad " + actividadId + " de cola de envios.");
+		File folder = new File(jsonPath);
+		WildcardFileFilter wildcardFileFilter = new WildcardFileFilter("actividad-" + actividadId + "*.txt");
+		String[] list = folder.list(wildcardFileFilter);
+		if (list == null || list.length != 1) {
+			throw new Exception(
+					"No se encontro archivo de actividad " + actividadId + " para quitar de cola de envios");
+		}
+
+		File file = new File(jsonPath + "\\" + list[0]);
+
+		if (file.exists()) {
+			try {
+				FileUtils.moveFileToDirectory(file, new File(jsonPathQuitado), true);
+			} catch (IOException e) {
+				throw new Exception(e);
+			}
+		}
 	}
 
 	@Resource(name = "mailSenderSMTPService")

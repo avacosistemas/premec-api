@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
@@ -51,6 +52,21 @@ public class FormularioRestController {
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 
+	@RequestMapping(value = "/quitarArchivoColaEnvio", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> quitarArchivoColaEnvio(@RequestParam long actividadId) {
+		JSONResponse response = new JSONResponse();
+		try {
+			this.formularioEPService.quitarArchivoColaEnvio(actividadId);
+			response.setData("Archivo de actividad " + actividadId + " quitado de cola de envios con exito");
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
 	@Resource(name = "formularioEPService")
 	public void setService(FormularioEPService service) {
 		this.formularioEPService = service;
