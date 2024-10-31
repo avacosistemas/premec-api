@@ -40,14 +40,14 @@ public class ActividadRestController {
 	}
 	
 	@RequestMapping(value = "/actividadesPorServiceCall", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> getServicios(@RequestParam String encoded) {
+	public ResponseEntity<JSONResponse> getServicios(@RequestParam String serviceCallId) {
 		JSONResponse response = new JSONResponse();
 		try {
 			Base64.Decoder decoder = Base64.getDecoder();
-			byte[] decodedBytes = decoder.decode(encoded);
+			byte[] decodedBytes = decoder.decode(serviceCallId);
 	        String decodedString = new String(decodedBytes);
-	        Long serviceCallId = Long.parseLong(decodedString);
-			RegistroInformeServicioDTO actividadesServiceCall = this.actividadedService.getActividadesServiceCall(serviceCallId);
+	        Long scId = Long.parseLong(decodedString);
+			RegistroInformeServicioDTO actividadesServiceCall = this.actividadedService.getActividadesServiceCall(scId);
 			response.setData(actividadesServiceCall);
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {
