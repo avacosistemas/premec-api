@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -95,6 +97,7 @@ public class InformeBuilderReparaciones extends InformeBuilder {
 			document.close();
 		}
 		JSONResponse response = new JSONResponse();
+		response.setData(Files.readAllBytes(Paths.get(super.path)));
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}

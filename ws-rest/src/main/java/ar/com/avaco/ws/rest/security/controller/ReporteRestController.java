@@ -1,5 +1,6 @@
 package ar.com.avaco.ws.rest.security.controller;
 
+import java.io.File;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -42,6 +43,13 @@ public class ReporteRestController {
 		JSONResponse response = new JSONResponse();
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/descargarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> descargarReporte(Long idActividad) throws Exception {
+		ActividadReporteDTO actividadReporte = this.actividadedEPService.getActividadReporte(idActividad);
+		ResponseEntity<JSONResponse> generarReporte = this.reporteEPService.generarReporte(actividadReporte);
+		return generarReporte;
 	}
 
 	@RequestMapping(value = "/generarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)

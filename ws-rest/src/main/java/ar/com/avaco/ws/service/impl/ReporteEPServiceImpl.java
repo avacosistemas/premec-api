@@ -1,5 +1,6 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.Map;
 import javax.annotation.Resource;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.itextpdf.text.DocumentException;
@@ -17,6 +19,7 @@ import com.itextpdf.text.DocumentException;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.dto.RepuestoDTO;
+import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.rest.reporte.InformeBuilder;
 import ar.com.avaco.ws.rest.reporte.InformeBuilderChecklist;
 import ar.com.avaco.ws.rest.reporte.InformeBuilderPiezasRepararMantenimientoMaquinaria;
@@ -58,7 +61,13 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 
 	@Override
 	public void enviarReporte(ActividadReporteDTO eldto) throws MalformedURLException, DocumentException, IOException {
+		generarReporte(eldto);
+		reporteService.sendMail(eldto.getEmail(), eldto.getIdActividad().toString());
+	}
 
+	@Override
+	public ResponseEntity<JSONResponse> generarReporte(ActividadReporteDTO eldto)
+			throws FileNotFoundException, DocumentException, IOException {
 		InformeBuilder ib = null;
 
 		switch (eldto.getTipoActividad()) {
@@ -78,9 +87,7 @@ public class ReporteEPServiceImpl implements ReporteEPService {
 			break;
 		}
 
-		ib.generarReporte();
-
-		reporteService.sendMail(eldto.getEmail(), eldto.getIdActividad().toString());
+		return ib.generarReporte();
 	}
 
 	@Override

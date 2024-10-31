@@ -1,13 +1,16 @@
 package ar.com.avaco.ws.rest.controller;
 
+import java.util.Base64;
 import java.util.List;
 
 import javax.annotation.Resource;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ar.com.avaco.arc.sec.domain.Usuario;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ActividadEPService;
@@ -25,6 +29,35 @@ public class ActividadRestController {
 
 	private ActividadEPService actividadedService;
 
+	@RequestMapping(value = "/encodearServiceCall", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> encodearServiceCall(@RequestParam Long serviceCallId) {
+		JSONResponse response = new JSONResponse();
+		Base64.Encoder encoder = Base64.getEncoder();
+		String encodedString = encoder.encodeToString(serviceCallId.toString().getBytes());
+		response.setData(encodedString);
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = "/actividadesPorServiceCall", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> getServicios(@RequestParam String encoded) {
+		JSONResponse response = new JSONResponse();
+		try {
+			Base64.Decoder decoder = Base64.getDecoder();
+			byte[] decodedBytes = decoder.decode(encoded);
+	        String decodedString = new String(decodedBytes);
+	        Long serviceCallId = Long.parseLong(decodedString);
+			RegistroInformeServicioDTO actividadesServiceCall = this.actividadedService.getActividadesServiceCall(serviceCallId);
+			response.setData(actividadesServiceCall);
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
 	@RequestMapping(value = "/monitor", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> getMonitor(@RequestParam String skip) {
 		JSONResponse response = new JSONResponse();
