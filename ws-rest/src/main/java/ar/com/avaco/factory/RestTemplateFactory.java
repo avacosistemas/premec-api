@@ -23,28 +23,32 @@ import ar.com.avaco.model.ResponseLoginSAPDTO;
 
 public class RestTemplateFactory {
 
-	private static RestTemplateFactory instance;
-
 	private String urlSAP;
 	private String user;
 	private String pass;
 	private String db;
 
-	private RestTemplateFactory(String urlSAP, String user, String pass, String db) {
+	public RestTemplateFactory(String urlSAP, String user, String pass, String db) {
 		this.urlSAP = urlSAP;
 		this.user = user;
 		this.pass = pass;
 		this.db = db;
 	}
 
-	public static RestTemplateFactory getInstance(String urlSAP, String user, String pass, String db) {
-		if (instance == null) {
-			instance = new RestTemplateFactory(urlSAP, user, pass, db);
+	public RestTemplatePremec get() {
+		int count = 1;
+		RestTemplatePremec rtp = null;
+		while (count <= 3 && rtp == null) {
+			try {
+				rtp = getLoggedRestTemplate();
+			} catch (Exception e) {
+				count++;
+			}
 		}
-		return instance;
+		return rtp;
 	}
-
-	public RestTemplatePremec getLoggedRestTemplate() throws SapBusinessException, Exception {
+	
+	private RestTemplatePremec getLoggedRestTemplate() throws SapBusinessException, Exception {
 
 		ClassLoader classLoader = getClass().getClassLoader();
 		// Cargar el archivo de certificado

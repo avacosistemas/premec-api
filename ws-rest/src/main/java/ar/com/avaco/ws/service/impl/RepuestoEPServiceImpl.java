@@ -50,11 +50,12 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 	private MailSenderSMTPService mailService;
 
+	private RestTemplatePremec restTemplate;
+
 	@Override
 	public List<RepuestoDepositoDTO> getRepuestos(String username) throws Exception {
 
-		RestTemplatePremec restTemplate = RestTemplateFactory
-				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
 
 		String deposito = usuarioService.getDeposito(username);
 
