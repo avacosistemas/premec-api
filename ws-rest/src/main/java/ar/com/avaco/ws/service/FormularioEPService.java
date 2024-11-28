@@ -1,5 +1,6 @@
 package ar.com.avaco.ws.service;
 
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.FormularioDTO;
 
 public interface FormularioEPService {
@@ -11,4 +12,6 @@ public interface FormularioEPService {
 	void enviarFormulariosFromFiles() throws Exception;
 
 	void quitarArchivoColaEnvio(long actividadId) throws Exception;
+
+	void validarHorasMaquina(Long parentObjectId, int horasMaquina) throws Exception;
 }

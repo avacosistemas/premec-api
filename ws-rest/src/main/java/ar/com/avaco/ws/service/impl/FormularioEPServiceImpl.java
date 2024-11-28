@@ -1,13 +1,16 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -19,6 +22,7 @@ import javax.annotation.Resource;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -42,6 +46,7 @@ import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
+import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.dto.FotoDTO;
@@ -387,6 +392,74 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				mailService.sendMail(error, body.toString(), null);
 			}
 			throw new Exception(error);
+		}
+
+		validarHorasMaquina(parentObjectId, Integer.parseInt(formulario.getHorasMaquina()));
+
+	}
+
+	@Override
+	public void validarHorasMaquina(Long parentObjectId, int horasMaquina) throws Exception {
+
+		RestTemplatePremec restTemplate = RestTemplateFactory
+				.getInstance(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).getLoggedRestTemplate();
+		
+		String query = urlSAP + "/$crossjoin(ServiceCalls,ServiceContracts)?"
+				+ "$expand=ServiceContracts($select=U_Hs_Contratadas)&"
+				+ "$filter=ServiceCalls/ContractID eq ServiceContracts/ContractID "
+				+ "and ServiceCalls/ServiceCallID eq {serviceCallId}";
+
+		query = query.replace("{serviceCallId}", parentObjectId.toString());
+
+		ResponseEntity<String> contractHours = restTemplate.doExchange(query, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		int maxmensual = ((com.google.gson.JsonObject) gson.fromJson(contractHours.getBody(),
+				JsonObject.class)).get("value").getAsJsonArray().get(0).getAsJsonObject().get("ServiceContracts").getAsJsonObject().get("U_Hs_Contratadas").getAsInt();
+
+		String actividadAnterior = "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)?"
+				+ "$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq),"
+				+ "Activities($select=ActivityCode,StartDate)&"
+				+ "$filter=ServiceCalls/ServiceCallActivities/ActivityCode eq Activities/ActivityCode "
+				+ "and ServiceCalls/ServiceCallID eq {serviceCallId}&"
+				+ "$orderby=ServiceCalls/ServiceCallActivities/ActivityCode desc&$top=1&$skip=1";
+
+		LOGGER.debug("ServiceCall: " + parentObjectId + " - Obteniendo Actividad previa");
+		String serviceCallActivitiesUrl = urlSAP + actividadAnterior;
+		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{serviceCallId}", parentObjectId.toString());
+		LOGGER.debug(urlSAP);
+
+		ResponseEntity<String> serviceCallActivities = null;
+		serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		LOGGER.debug("ServiceCall: " + parentObjectId + " - Actividad previa obtenida");
+
+		JsonElement jsonElement = ((com.google.gson.JsonObject) gson.fromJson(serviceCallActivities.getBody(),
+				JsonObject.class)).get("value").getAsJsonArray().get(0);
+
+		int hsMaqAnterior = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities").getAsJsonObject()
+				.get("U_U_HsMaq").getAsInt();
+
+		String fecha = jsonElement.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate").getAsString();
+
+		Date fechaAnterior = DateUtils.toDate(fecha, "yyyy-MM-dd");
+		Date fechaActual = DateUtils.getFechaYHoraActual();
+
+		LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
+		LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
+
+		double diasDouble = new Long(Duration.between(date1, date2).toDays()).doubleValue();
+		double horasDouble = new Long(horasMaquina - hsMaqAnterior);
+
+		double promedio = horasDouble / diasDouble;
+
+		double promedioMax = new Double(maxmensual / 30);
+
+		if (promedio > promedioMax) {
+			//enviarNotificacionIrregularidadHoras();
 		}
 
 	}
