@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -14,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.apache.commons.io.FileUtils;
@@ -41,6 +43,7 @@ import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
+import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.dto.FotoDTO;
@@ -241,7 +244,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
 
 		this.sapUtils = new SAPWSUtils(restTemplate, urlSAP);
-		
+
 		// Obtengo la actividad
 		Long idActividad = formulario.getIdActividad();
 
@@ -270,6 +273,108 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		// Actualizo la actividad
 		updateActividadSap(idActividad, ap);
 
+		// Valido las horas maquina actuales contra las ultimas
+		validarHorasMaquina(idActividad, Integer.parseInt(formulario.getHorasMaquina()));
+
+	}
+
+	@Override
+	public void validarHorasMaquina(Long serviceCallId, int horasMaquina) throws Exception {
+
+		if (this.restTemplate == null) {
+			this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		}
+
+		String query = urlSAP + "/$crossjoin(ServiceCalls,ServiceContracts)?"
+				+ "$expand=ServiceContracts($select=U_Hs_Contratadas)&"
+				+ "$filter=ServiceCalls/ContractID eq ServiceContracts/ContractID "
+				+ "and ServiceCalls/ServiceCallID eq {serviceCallId}";
+
+		query = query.replace("{serviceCallId}", serviceCallId.toString());
+
+		ResponseEntity<String> contractHours = restTemplate.doExchange(query, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		int maxmensual = ((com.google.gson.JsonObject) gson.fromJson(contractHours.getBody(), JsonObject.class))
+				.get("value").getAsJsonArray().get(0).getAsJsonObject().get("ServiceContracts").getAsJsonObject()
+				.get("U_Hs_Contratadas").getAsInt();
+
+		String actividadAnterior = "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)?"
+				+ "$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq),"
+				+ "Activities($select=ActivityCode,StartDate)&"
+				+ "$filter=ServiceCalls/ServiceCallActivities/ActivityCode eq Activities/ActivityCode "
+				+ "and ServiceCalls/ServiceCallID eq {serviceCallId}&"
+				+ "$orderby=ServiceCalls/ServiceCallActivities/ActivityCode desc&$top=1&$skip=1";
+
+		LOGGER.debug("ServiceCall: " + serviceCallId + " - Obteniendo Actividad previa");
+		String serviceCallActivitiesUrl = urlSAP + actividadAnterior;
+		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{serviceCallId}", serviceCallId.toString());
+		LOGGER.debug(urlSAP);
+
+		ResponseEntity<String> serviceCallActivities = null;
+		serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		LOGGER.debug("ServiceCall: " + serviceCallId + " - Actividad previa obtenida");
+
+		JsonElement jsonElement = ((com.google.gson.JsonObject) gson.fromJson(serviceCallActivities.getBody(),
+				JsonObject.class)).get("value").getAsJsonArray().get(0);
+
+		int hsMaqAnterior = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities").getAsJsonObject()
+				.get("U_U_HsMaq").getAsInt();
+
+		String fecha = jsonElement.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate").getAsString();
+
+		Date fechaAnterior = DateUtils.toDate(fecha, "yyyy-MM-dd");
+		Date fechaActual = DateUtils.getFechaYHoraActual();
+
+		LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
+		LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
+
+		double diasDouble = Math.abs(new Long(Duration.between(date1, date2).toDays()).doubleValue());
+		double horasDouble = new Long(horasMaquina - hsMaqAnterior);
+
+		if (horasDouble < 0) {
+			notificarReseteoHoras(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior, horasMaquina);
+		} else {
+
+			double promedio = horasDouble / diasDouble;
+
+			double promedioMax = new Double(maxmensual) / (double) 30;
+
+			if (promedio > promedioMax) {
+				notificarHorasMaquinaSuperadas(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior, horasMaquina);
+			}
+		}
+
+	}
+
+	private void notificarHorasMaquinaSuperadas(Long serviceCallId, Date fechaAnterior, Date fechaActual,
+			Integer hsMaqAnterior, Integer horasMaquina) {
+		String subject = "Horas Maquina Superadas - ServiceCall " + serviceCallId + "<br>";
+		String body = "Se ha detectado una posible superacion de horas maquinas mensual. <br>";
+		body += "Fecha Actividad Anterior: {fechaultimaactividad} <br>".replace("{fechaultimaactividad}",
+				DateUtils.toString(fechaAnterior, "dd/MM/yyyy"));
+		body += "Horas Maquina Anterior: {horasanterior} <br>".replace("{horasanterior}", hsMaqAnterior.toString());
+		body += "Fecha Actividad Actual: {fechaactual} <br>".replace("{fechaactual}",
+				DateUtils.toString(fechaActual, "dd/MM/yyyy"));
+		body += "Horas Maquina Actual: {horasactual} <br>".replace("{horasactual}", horasMaquina.toString());
+		mailService.sendMail(from, from, subject, body, null);
+	}
+
+	private void notificarReseteoHoras(Long serviceCallId, Date fechaAnterior, Date fechaActual, Integer hsMaqAnterior,
+			Integer horasMaquina) {
+		String subject = "Horas Maquina Reseteadas - ServiceCall " + serviceCallId + "<br>";
+		String body = "Se ha detectado una posible reset de horas maquinas. <br>";
+		body += "Fecha Actividad Anterior: {fechaultimaactividad} <br>".replace("{fechaultimaactividad}",
+				DateUtils.toString(fechaAnterior, "dd/MM/yyyy"));
+		body += "Horas Maquina Anterior: {horasanterior} <br>".replace("{horasanterior}", hsMaqAnterior.toString());
+		body += "Fecha Actividad Actual: {fechaactual} <br>".replace("{fechaactual}",
+				DateUtils.toString(fechaActual, "dd/MM/yyyy"));
+		body += "Horas Maquina Actual: {horasactual} <br>".replace("{horasactual}", horasMaquina.toString());
+		mailService.sendMail(from, from, subject, body, null);
 	}
 
 	private void updateActividadSap(Long idActividad, ActividadPatch ap) throws Exception {
@@ -306,7 +411,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			String attachmentUrl = urlSAP + "/Attachments2";
 			HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
 			ResponseEntity<Object> attachmentRespose = null;
-			attachmentRespose = this.restTemplate.doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach, Object.class);
+			attachmentRespose = this.restTemplate.doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach,
+					Object.class);
 			Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
 			String attchEntry = (object.toString().split("="))[1];
 

@@ -66,7 +66,23 @@ public class FormularioRestController {
 		}
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
-	
+
+	@RequestMapping(value = "/validarHorasMaquina", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> validarHorasMaquina(@RequestParam long serviceCallId,
+			@RequestParam int horasMaquina) {
+		JSONResponse response = new JSONResponse();
+		try {
+			this.formularioEPService.validarHorasMaquina(serviceCallId, horasMaquina);
+			response.setData("Archivo de actividad " + serviceCallId + " quitado de cola de envios con exito");
+			response.setStatus(JSONResponse.OK);
+		} catch (Exception e) {
+			response.setStatus(JSONResponse.ERROR);
+			response.setData(e.getLocalizedMessage());
+			e.printStackTrace();
+		}
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+
 	@Resource(name = "formularioEPService")
 	public void setService(FormularioEPService service) {
 		this.formularioEPService = service;
