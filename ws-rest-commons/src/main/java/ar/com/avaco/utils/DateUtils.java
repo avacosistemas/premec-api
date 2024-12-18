@@ -63,5 +63,14 @@ public class DateUtils {
 		Calendar cal = Calendar.getInstance();
 		return cal.getTime();
 	}
+	
+	public static Date setearHoraCero(Date fecha) {
+		Calendar anteriorCal = Calendar.getInstance();
+		anteriorCal.setTime(fecha);
+		anteriorCal.set(Calendar.HOUR, 0);
+		anteriorCal.set(Calendar.MINUTE, 0);
+		anteriorCal.set(Calendar.SECOND, 0);
+		return anteriorCal.getTime();
+	}
 
 }

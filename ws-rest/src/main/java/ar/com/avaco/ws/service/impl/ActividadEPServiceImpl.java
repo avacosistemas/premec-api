@@ -1,10 +1,16 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +36,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.internal.LinkedTreeMap;
+import com.ibm.icu.math.BigDecimal;
 import com.ibm.icu.util.Calendar;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
@@ -42,6 +49,7 @@ import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
+import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
 import ar.com.avaco.ws.dto.RegistroInformeActividadDTO;
 import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
@@ -86,7 +94,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	private RestTemplatePremec restTemplate;
 
-
 	@PostConstruct
 	public void onInit() {
 		this.actividadUrl = urlSAP + "/Activities({id})";
@@ -110,7 +117,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		// Se agrega validacion para levantar las actividades que no sean de taller.
 		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and Closed eq 'tNO'";
 
@@ -160,7 +167,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public ActividadReporteDTO getActividadReporte(Long actividadId) throws Exception {
 
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		String actividadUrl = this.actividadUrl.replace("{id}", actividadId.toString());
 
 		ResponseEntity<String> responseActividades = null;
@@ -561,7 +568,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		// Obtengo el usuario sap del usuario logueado
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
 
@@ -843,9 +850,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	@Override
 	public void marcarEnviado(Long idActividad) throws Exception {
-		
+
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
@@ -874,7 +881,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public List<RegistroMonitorDTO> getActividadesMonitor(String skip) throws Exception {
 
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = Calendar.getInstance().getTime();
 		String currentDate = sdfoutput.format(parse);
@@ -968,7 +975,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				atdto.setFecha(FieldUtils.getString(actividad, FieldUtils.START_DATE, true, 0, 10));
 
 				// U_Estado
-				atdto.setEstado(FieldUtils.getString(actividad, FieldUtils.U_ESTADO, true));
+				atdto.setEstado(FieldUtils.getString(actividad, FieldUtils.U_ESTADO, false));
 
 				// Hora
 				atdto.setHora(FieldUtils.getString(actividad, FieldUtils.ACTIVITY_TIME, false));
@@ -1012,7 +1019,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	public RegistroInformeServicioDTO getActividadesServiceCall(Long serviceCallId) throws Exception {
 
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
 		RegistroInformeServicioDTO dto = new RegistroInformeServicioDTO();
 
 		// Armo la url de la service call
@@ -1114,6 +1121,217 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		return dto;
 	}
+
+	@Override
+	public List<RegistroHorasMaquinaDTO> getHorasMaquinaReporte(String internalSerialNum) throws SapBusinessException {
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+
+		// Url para obtener las service calls en base al internalserialnum
+		String url = this.urlSAP
+				+ "/$crossjoin(ServiceCalls,ServiceContracts)?$expand=ServiceContracts($select=U_Hs_Contratadas,ContractID),"
+				+ "ServiceCalls($select=ServiceCallID)&$filter=ServiceCalls/InternalSerialNum eq '{internalSerialNum}' "
+				+ "and ServiceCalls/ContractID eq ServiceContracts/ContractID and ServiceContracts/Status eq 'scs_Approved'";
+		url = url.replace("{internalSerialNum}", internalSerialNum);
+
+		ResponseEntity<String> responseServiceCalls = this.restTemplate.doExchange(url, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		// Obtengo el campo value donde esta el array de service calls
+		JsonArray serviceCallIdsArray = gson.fromJson(responseServiceCalls.getBody(), JsonObject.class)
+				.getAsJsonArray("value");
+
+		LOGGER.debug("Iniciando proceso de envio de reporte");
+
+		// Inicializo el listado de registros
+		List<RegistroHorasMaquinaDTO> registros = new ArrayList<>();
+
+		// Itero por cada servicecall
+		for (JsonElement serviceCall : serviceCallIdsArray) {
+
+			// Obtengo la id de service call
+			Long scId = serviceCall.getAsJsonObject().get("ServiceCalls").getAsJsonObject().get("ServiceCallID")
+					.getAsLong();
+			Long contractId = serviceCall.getAsJsonObject().get("ServiceContracts").getAsJsonObject().get("ContractID")
+					.getAsLong();
+			Long horasContratadas = serviceCall.getAsJsonObject().get("ServiceContracts").getAsJsonObject()
+					.get("U_Hs_Contratadas").getAsLong();
+
+			// Obtengo el listado de actividades por cada service call donde vienen las
+			// horas y fecha
+
+			String url2 = this.urlSAP + "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)"
+					+ "?$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq,LineNum),"
+					+ "Activities($select=ActivityCode,StartDate,StartTime)&$filter=ServiceCalls/ServiceCallActivities/ActivityCode "
+					+ "eq Activities/ActivityCode and ServiceCalls/ServiceCallID eq {serviceCallId} and (Activities/HandledBy eq null or Activities/HandledBy not eq 17)";
+
+			url2 = url2.replace("{serviceCallId}", scId.toString());
+
+			ResponseEntity<String> responseActividades = this.restTemplate.doExchange(url2, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+
+			JsonArray arctividadesArray = gson.fromJson(responseActividades.getBody(), JsonObject.class)
+					.getAsJsonArray("value");
+
+			// Por cada actividad obtengo horas maquina, fecha y actividad id
+			for (JsonElement actividad : arctividadesArray) {
+
+				Integer lineNum = actividad.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("LineNum").getAsInt();
+
+				Integer activitiyCode = actividad.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("ActivityCode").getAsInt();
+
+				JsonElement jsonElementHsMaq = actividad.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("U_U_HsMaq");
+
+				Double hsMaq = 0D;
+				if (!jsonElementHsMaq.isJsonNull()) {
+					hsMaq = jsonElementHsMaq.getAsDouble();
+				} else if (lineNum != 0) {
+					hsMaq = null;
+				}
+
+				String fechaString = actividad.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate")
+						.getAsString();
+
+				String horaString = actividad.getAsJsonObject().get("Activities").getAsJsonObject().get("StartTime")
+						.getAsString();
+
+				Date fecha = DateUtils.toDate(fechaString + " " + horaString, "yyyy-MM-dd hh:mm:ss");
+
+				// Armo el registro para su posterior proceso
+				RegistroHorasMaquinaDTO dto = new RegistroHorasMaquinaDTO();
+				dto.setFecha(fecha);
+				dto.setHorasMaquina(hsMaq);
+				dto.setIdActividad(activitiyCode.longValue());
+				dto.setServiceCallId(scId);
+
+				dto.setContractId(contractId);
+				dto.setHorasContratadas(horasContratadas.intValue());
+
+				registros.add(dto);
+
+			}
+		}
+
+		RegistroHorasMaquinaDTO anterior = null;
+
+		anterior = null;
+
+		registros.sort((o1, o2) -> o1.getFecha().compareTo(o2.getFecha()));
+
+		Iterator<RegistroHorasMaquinaDTO> iter = registros.iterator();
+
+		RegistroHorasMaquinaDTO primero = null; 
+		RegistroHorasMaquinaDTO ultimo = null;  
+		
+		// Por cada actividad
+		while (iter.hasNext()) {
+
+			RegistroHorasMaquinaDTO registro = iter.next();
+
+			Double horasMaquinaActual = registro.getHorasMaquina();
+
+			// Si es el primer registro
+			if (anterior == null) {
+				if (horasMaquinaActual == null || horasMaquinaActual == 0) {
+					registro.setPromedio(0D);
+				}
+				// Seteo como anterior el actual
+				anterior = registro;
+				primero = registro;
+				ultimo = registro;
+			} else {
+
+				Date fechaAnterior  = DateUtils.setearHoraCero(anterior.getFecha());
+				Date fechaActual= DateUtils.setearHoraCero(registro.getFecha());
+
+				LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
+				LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
+
+				double diasDouble = new Double(Duration.between(date2, date1).toDays());
+
+				Double horasMaquinaAnterior = anterior.getHorasMaquina();
+
+				// Si tengo valores de horas maquina anterior y actual puedo calcular el
+				// promedio
+				if (horasMaquinaActual != null && horasMaquinaAnterior != null) {
+
+					// Si las hora maquina anterior son inferiores o iguales, puedo calcular promedio
+					if (horasMaquinaAnterior <= horasMaquinaActual) {
+
+						double horasDouble = horasMaquinaActual - horasMaquinaAnterior;
+
+						Double promedio = horasDouble / diasDouble;
+
+						Double promedioMax = new Double(registro.getHorasContratadas()) / (double) 30;
+
+						// Si el promedio es factible lo calculo 
+						if (Double.isFinite(promedio)) {
+							registro.setPromedio(new BigDecimal(promedio.toString()).setScale(2, 1).doubleValue());
+							// Si el promedio supera el promedio mensual, alerto
+							if (promedio > promedioMax) {
+								registro.setPromedioString("Posible Superación Hs. Promedio Max: " + new BigDecimal(promedioMax.toString()).setScale(2, 1).doubleValue());
+							}
+						}
+
+						anterior = registro;
+						ultimo = registro;
+
+					} else {
+						registro.setPromedio(0D);
+						registro.setPromedioString("Posible Reseteo");
+					}
+				} else {
+					registro.setPromedio(0D);
+					registro.setPromedioString("Revisar Hs Anteriores VS Actuales");
+				}
+			}
+
+		}
+
+		List<RegistroHorasMaquinaDTO> ret = new ArrayList<>();
+		if (primero != null && primero.getHorasMaquina() != null && ultimo != null && ultimo.getHorasMaquina() != null) {
+		
+			RegistroHorasMaquinaDTO promedioGeneral = new RegistroHorasMaquinaDTO();
+			
+			Date fechaAnterior  = DateUtils.setearHoraCero(primero.getFecha());
+			Date fechaActual= DateUtils.setearHoraCero(ultimo.getFecha());
+	
+			LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
+			LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
+	
+			double horasDouble = ultimo.getHorasMaquina() - primero.getHorasMaquina();
+	
+			double mesesDouble = new Double(Duration.between(date2, date1).toDays());
+			
+			// Si no hay más de 1 mes de diferencia no hay promedio general
+			if (mesesDouble <= 1) {
+				promedioGeneral.setPromedio(horasDouble);
+				promedioGeneral.setPromedioString("No ha pasado más de 1 mes entre las actividades.");
+			} else {
+				Double promedio = (horasDouble / mesesDouble) * 30;
+				promedioGeneral.setPromedio(new BigDecimal(promedio.toString()).setScale(2, 1).doubleValue());
+				
+				Double promedioMax = new Double(ultimo.getHorasContratadas());
+				
+				if (promedio > promedioMax) {
+					promedioGeneral.setPromedioString("Posible Superación Hs. Máquina Mensual");
+				}
+				
+			}
+			ret.add(promedioGeneral);
+		}
+		ret.addAll(registros);
+		
+		return ret;
+
+	}
+
+	
 
 	@Resource(name = "usuarioService")
 	public void setUsuarioService(UsuarioService usuarioService) {

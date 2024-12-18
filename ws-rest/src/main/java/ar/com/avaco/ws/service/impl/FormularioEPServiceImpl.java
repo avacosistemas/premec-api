@@ -106,6 +106,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private RestTemplatePremec restTemplate;
 
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
+	
+	private static final String ACTIVITIES_SELECT_PARENT_OBJECT_ID = "/Activities({id})?$select=ParentObjectId";
+	private static final String SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES = "/ServiceCalls({id})?$select=ServiceCallActivities";
+	
 
 	@Override
 	public void grabarFormulario(FormularioDTO formularioDTO, String usuariosap) throws Exception {
@@ -200,6 +204,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private boolean isActividadAbierta(Long activityCode) throws Exception {
 
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+
 		String actividadUrl = urlSAP + "/Activities?$filter=Closed eq 'tNO' and ActivityCode eq " + activityCode;
 
 		ResponseEntity<String> responseActividades = null;
@@ -274,16 +280,14 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		updateActividadSap(idActividad, ap);
 
 		// Valido las horas maquina actuales contra las ultimas
-		validarHorasMaquina(idActividad, Integer.parseInt(formulario.getHorasMaquina()));
+		validarHorasMaquina(serviceCallId, Integer.parseInt(formulario.getHorasMaquina()));
 
 	}
 
 	@Override
 	public void validarHorasMaquina(Long serviceCallId, int horasMaquina) throws Exception {
 
-		if (this.restTemplate == null) {
-			this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		}
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
 
 		String query = urlSAP + "/$crossjoin(ServiceCalls,ServiceContracts)?"
 				+ "$expand=ServiceContracts($select=U_Hs_Contratadas)&"
@@ -296,56 +300,83 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				new ParameterizedTypeReference<String>() {
 				});
 
-		int maxmensual = ((com.google.gson.JsonObject) gson.fromJson(contractHours.getBody(), JsonObject.class))
-				.get("value").getAsJsonArray().get(0).getAsJsonObject().get("ServiceContracts").getAsJsonObject()
-				.get("U_Hs_Contratadas").getAsInt();
+		JsonElement jsonElementResp = ((com.google.gson.JsonObject) gson.fromJson(contractHours.getBody(),
+				JsonObject.class)).get("value");
 
-		String actividadAnterior = "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)?"
-				+ "$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq),"
-				+ "Activities($select=ActivityCode,StartDate)&"
-				+ "$filter=ServiceCalls/ServiceCallActivities/ActivityCode eq Activities/ActivityCode "
-				+ "and ServiceCalls/ServiceCallID eq {serviceCallId}&"
-				+ "$orderby=ServiceCalls/ServiceCallActivities/ActivityCode desc&$top=1&$skip=1";
+		if (jsonElementResp != null && !jsonElementResp.isJsonNull() && jsonElementResp.isJsonArray()
+				&& jsonElementResp.getAsJsonArray().size() == 1) {
 
-		LOGGER.debug("ServiceCall: " + serviceCallId + " - Obteniendo Actividad previa");
-		String serviceCallActivitiesUrl = urlSAP + actividadAnterior;
-		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{serviceCallId}", serviceCallId.toString());
-		LOGGER.debug(urlSAP);
+			int maxmensual = jsonElementResp.getAsJsonArray().get(0).getAsJsonObject().get("ServiceContracts")
+					.getAsJsonObject().get("U_Hs_Contratadas").getAsInt();
 
-		ResponseEntity<String> serviceCallActivities = null;
-		serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
-				new ParameterizedTypeReference<String>() {
-				});
+			String actividadAnterior = "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)?"
+					+ "$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq,LineNum),"
+					+ "Activities($select=ActivityCode,StartDate)&"
+					+ "$filter=ServiceCalls/ServiceCallActivities/ActivityCode eq Activities/ActivityCode "
+					+ "and ServiceCalls/ServiceCallID eq {serviceCallId}&"
+					+ "$orderby=ServiceCalls/ServiceCallActivities/ActivityCode desc&$top=1&$skip=1";
 
-		LOGGER.debug("ServiceCall: " + serviceCallId + " - Actividad previa obtenida");
+			LOGGER.debug("ServiceCall: " + serviceCallId + " - Obteniendo Actividad previa");
+			String serviceCallActivitiesUrl = urlSAP + actividadAnterior;
+			serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{serviceCallId}", serviceCallId.toString());
+			LOGGER.debug(urlSAP);
 
-		JsonElement jsonElement = ((com.google.gson.JsonObject) gson.fromJson(serviceCallActivities.getBody(),
-				JsonObject.class)).get("value").getAsJsonArray().get(0);
+			ResponseEntity<String> serviceCallActivities = null;
+			serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
 
-		int hsMaqAnterior = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities").getAsJsonObject()
-				.get("U_U_HsMaq").getAsInt();
+			LOGGER.debug("ServiceCall: " + serviceCallId + " - Actividad previa obtenida");
 
-		String fecha = jsonElement.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate").getAsString();
+			JsonElement jsonElementResp2 = ((com.google.gson.JsonObject) gson.fromJson(serviceCallActivities.getBody(),
+					JsonObject.class)).get("value");
 
-		Date fechaAnterior = DateUtils.toDate(fecha, "yyyy-MM-dd");
-		Date fechaActual = DateUtils.getFechaYHoraActual();
+			if (jsonElementResp2 != null && !jsonElementResp2.isJsonNull() && jsonElementResp2.isJsonArray()
+					&& jsonElementResp2.getAsJsonArray().size() == 1) {
 
-		LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
-		LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
+				JsonElement jsonElement = jsonElementResp2.getAsJsonArray().get(0);
 
-		double diasDouble = Math.abs(new Long(Duration.between(date1, date2).toDays()).doubleValue());
-		double horasDouble = new Long(horasMaquina - hsMaqAnterior);
+				int lineNum = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("LineNum").getAsInt();
+				
+				int activityCodeAnterior = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("ActivityCode").getAsInt();
+				
+				JsonElement jsonElementHsMaq = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
+						.getAsJsonObject().get("U_U_HsMaq");
+				
+				int hsMaqAnterior = 0;
+				if (!jsonElementHsMaq.isJsonNull()) {
+					hsMaqAnterior = jsonElementHsMaq.getAsInt();
+				} else if (lineNum != 0) {
+					throw new Exception("La actividad " + activityCodeAnterior + " no tiene horas maquina cargadas y no es la primera de la servicecall " + serviceCallId);
+				}
 
-		if (horasDouble < 0) {
-			notificarReseteoHoras(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior, horasMaquina);
-		} else {
+				String fecha = jsonElement.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate")
+						.getAsString();
 
-			double promedio = horasDouble / diasDouble;
+				Date fechaAnterior = DateUtils.toDate(fecha, "yyyy-MM-dd");
+				Date fechaActual = DateUtils.getFechaYHoraActual();
 
-			double promedioMax = new Double(maxmensual) / (double) 30;
+				LocalDateTime date1 = LocalDateTime.ofInstant(fechaActual.toInstant(), ZoneId.systemDefault());
+				LocalDateTime date2 = LocalDateTime.ofInstant(fechaAnterior.toInstant(), ZoneId.systemDefault());
 
-			if (promedio > promedioMax) {
-				notificarHorasMaquinaSuperadas(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior, horasMaquina);
+				double diasDouble = Math.abs(new Long(Duration.between(date1, date2).toDays()).doubleValue());
+				double horasDouble = new Long(horasMaquina - hsMaqAnterior);
+
+				if (horasDouble < 0) {
+					notificarReseteoHoras(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior, horasMaquina);
+				} else {
+
+					double promedio = horasDouble / diasDouble;
+
+					double promedioMax = new Double(maxmensual) / (double) 30;
+
+					if (promedio > promedioMax) {
+						notificarHorasMaquinaSuperadas(serviceCallId, fechaAnterior, fechaActual, hsMaqAnterior,
+								horasMaquina);
+					}
+				}
 			}
 		}
 
@@ -378,6 +409,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private void updateActividadSap(Long idActividad, ActividadPatch ap) throws Exception {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
 		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
@@ -405,6 +439,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap)
 			throws Exception {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 
@@ -551,9 +588,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private JsonArray getServiceCallActivities(FormularioDTO formulario, Long idActividad, Long parentObjectId)
 			throws Exception {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
 		JsonArray serviceCallActivitiesJson;
 		try {
-			serviceCallActivitiesJson = sapUtils.getServiceCallActivities(idActividad, parentObjectId);
+			serviceCallActivitiesJson = this.getServiceCallActivities(idActividad, parentObjectId);
 		} catch (SapBusinessException e) {
 			e.printStackTrace();
 			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
@@ -574,9 +614,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private Long getServiceCallId(Long idActividad, SAPWSUtils sapUtils) throws Exception {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
 		Long parentObjectId;
 		try {
-			parentObjectId = sapUtils.getParentObjectId(idActividad);
+			parentObjectId = this.getParentObjectId(idActividad);
 		} catch (ParentObjectIdNotFoundException e) {
 			e.printStackTrace();
 			String error = "[ENVIARFORMULARIO] Actividad: " + idActividad
@@ -610,6 +653,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarHsMaquinaSap(Long idActividad, Long parentObjectId, Map<String, Object> serviceCallMap)
 			throws SapBusinessException {
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		LOGGER.debug(serviceCallUrl);
@@ -781,6 +825,48 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		}
 	}
 
+	public Long getParentObjectId(Long idActividad) throws ParentObjectIdNotFoundException, SapBusinessException {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
+		LOGGER.debug("Obteniendo ParentObjectId (ServiceCallID) de la actividad " + idActividad);
+		String url = urlSAP + ACTIVITIES_SELECT_PARENT_OBJECT_ID;
+		url = url.replace("{id}", idActividad.toString());
+		LOGGER.debug(url);
+		ResponseEntity<String> responseParentObjectId = null;
+		responseParentObjectId = restTemplate.doExchange(url, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+
+		JsonElement jsonElement = gson.fromJson(responseParentObjectId.getBody(), JsonObject.class)
+				.get("ParentObjectId");
+		if (jsonElement == null || jsonElement.isJsonNull()) {
+			throw new ParentObjectIdNotFoundException(
+					"Actividad: " + idActividad + " - No se pudo obtener el parentObjectId . URL " + url);
+		}
+		return jsonElement.getAsLong();
+	}
+
+	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws SapBusinessException  {
+		
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		
+		LOGGER.debug("Actividad: " + idActividad + " - Obteniendo ServiceCall Activities");
+		String serviceCallActivitiesUrl = urlSAP + SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES;
+		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{id}", parentObjectId.toString());
+		LOGGER.debug(urlSAP);
+
+		ResponseEntity<String> serviceCallActivities = null;
+			serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+					new ParameterizedTypeReference<String>() {
+					});
+
+		LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Obtenidas");
+
+		return gson.fromJson(serviceCallActivities.getBody(), JsonObject.class).get("ServiceCallActivities")
+				.getAsJsonArray();
+	}
+	
 	@Resource(name = "mailSenderSMTPService")
 	public void setMailService(MailSenderSMTPService mailService) {
 		this.mailService = mailService;
