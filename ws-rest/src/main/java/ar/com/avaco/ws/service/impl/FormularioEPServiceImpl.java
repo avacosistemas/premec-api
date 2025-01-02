@@ -313,7 +313,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 					+ "$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq,LineNum),"
 					+ "Activities($select=ActivityCode,StartDate)&"
 					+ "$filter=ServiceCalls/ServiceCallActivities/ActivityCode eq Activities/ActivityCode "
-					+ "and ServiceCalls/ServiceCallID eq {serviceCallId}&"
+					+ "and ServiceCalls/ServiceCallID eq {serviceCallId} and (Activities/HandledBy eq null or Activities/HandledBy not eq 17 or Activities/HandledBy not eq 29) &"
 					+ "$orderby=ServiceCalls/ServiceCallActivities/ActivityCode desc&$top=1&$skip=1";
 
 			LOGGER.debug("ServiceCall: " + serviceCallId + " - Obteniendo Actividad previa");

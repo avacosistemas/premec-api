@@ -1159,12 +1159,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					.get("U_Hs_Contratadas").getAsLong();
 
 			// Obtengo el listado de actividades por cada service call donde vienen las
-			// horas y fecha
+			// horas y fecha. Se excluyen actividades que sean de servicios o agranda. ids 17 y 29
 
 			String url2 = this.urlSAP + "/$crossjoin(ServiceCalls/ServiceCallActivities,Activities)"
 					+ "?$expand=ServiceCalls/ServiceCallActivities($select=ActivityCode,U_U_HsMaq,LineNum),"
 					+ "Activities($select=ActivityCode,StartDate,StartTime)&$filter=ServiceCalls/ServiceCallActivities/ActivityCode "
-					+ "eq Activities/ActivityCode and ServiceCalls/ServiceCallID eq {serviceCallId} and (Activities/HandledBy eq null or Activities/HandledBy not eq 17)";
+					+ "eq Activities/ActivityCode and ServiceCalls/ServiceCallID eq {serviceCallId} and (Activities/HandledBy eq null or (Activities/HandledBy not eq 17 and Activities/HandledBy not eq 29))";
 
 			url2 = url2.replace("{serviceCallId}", scId.toString());
 
