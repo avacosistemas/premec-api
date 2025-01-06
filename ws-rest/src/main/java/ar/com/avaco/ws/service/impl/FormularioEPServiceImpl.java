@@ -349,7 +349,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 				if (!jsonElementHsMaq.isJsonNull()) {
 					hsMaqAnterior = jsonElementHsMaq.getAsInt();
 				} else if (lineNum != 0) {
-					throw new Exception("La actividad " + activityCodeAnterior + " no tiene horas maquina cargadas y no es la primera de la servicecall " + serviceCallId);
+					return;
+					// FIXME ajustar validaciones
+//					throw new Exception("La actividad " + activityCodeAnterior + " no tiene horas maquina cargadas y no es la primera de la servicecall " + serviceCallId);
 				}
 
 				String fecha = jsonElement.getAsJsonObject().get("Activities").getAsJsonObject().get("StartDate")
