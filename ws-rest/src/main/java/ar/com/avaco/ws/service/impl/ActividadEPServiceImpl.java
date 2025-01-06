@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.persistence.EnumType;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -264,7 +265,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
 			// de reparación 22/4/24
 			if (!esTaller) {
-				ardto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
+				ardto.setTipoActividad(TipoActividad.R.toString());
 			}
 
 			// Asignado Por
@@ -638,10 +639,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
 				atdto.setTipoActividad(tipoActividad);
 
+				TipoActividad ta = TipoActividad.valueOf(tipoActividad);
+				
 				if (!atdto.getActividadTaller()) {
 					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
 					// de reparación 22/4/24
-					atdto.setTipoActividad(TipoActividad.REPARACION.getCodigo());
+					atdto.setTipoActividad(TipoActividad.R.toString());
 				}
 
 				// Prioridad

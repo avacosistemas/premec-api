@@ -2,19 +2,25 @@ package ar.com.avaco.entities.cliente;
 
 public enum TipoActividad {
 
-	REPARACION("R"),
-	CHECKLIST("C"),
-	PIEZAS_A_REPARAR("P"),
-	MANTENIMIENTO_MAQUINARIA("M");
+	R("Reparación"), C("Checklist"), P("Piezas a Reparar"), M("Mantenimiento Maquinaria"),
+	EE("Entrega Maquina Electrica"), EC("Entrega Maquina Combustion"), EP("Entrega Plataforma");
 
-	private String codigo;
+	private String nombre;
 
-	TipoActividad(String codigo) {
-		this.codigo = codigo;
+	TipoActividad(String nombre) {
+		this.nombre = nombre;
 	}
 
-	public String getCodigo() {
-		return codigo;
+	public String getNombre() {
+		return nombre;
 	}
+
+//	REPARACION("R"),
+//	CHECKLIST("C"),
+//	PIEZAS_A_REPARAR("P"),
+//	MANTENIMIENTO_MAQUINARIA("M"),
+//	ENTREGA_MAQUINA_ELECTRICA("EE"),
+//	ENTREGA_MAQUINA_COMBUSTION("EC"),
+//	ENTREGA_PLATAFORMA("EP")
 
 }
