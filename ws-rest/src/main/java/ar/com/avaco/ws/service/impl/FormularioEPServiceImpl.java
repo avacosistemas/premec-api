@@ -106,10 +106,9 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private RestTemplatePremec restTemplate;
 
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
-	
+
 	private static final String ACTIVITIES_SELECT_PARENT_OBJECT_ID = "/Activities({id})?$select=ParentObjectId";
 	private static final String SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES = "/ServiceCalls({id})?$select=ServiceCallActivities";
-	
 
 	@Override
 	public void grabarFormulario(FormularioDTO formularioDTO, String usuariosap) throws Exception {
@@ -204,7 +203,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private boolean isActividadAbierta(Long activityCode) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
 
 		String actividadUrl = urlSAP + "/Activities?$filter=Closed eq 'tNO' and ActivityCode eq " + activityCode;
 
@@ -247,7 +247,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Override
 	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
 
 		this.sapUtils = new SAPWSUtils(restTemplate, urlSAP);
 
@@ -287,7 +288,17 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Override
 	public void validarHorasMaquina(Long serviceCallId, int horasMaquina) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
+		// Obtengo el internal serial num de la service call para usarlo como filtro en
+		// la proxima consulta
+		String serialNumQuery = urlSAP + "/ServiceCalls({serviceCallId})?$select=InternalSerialNum"
+				.replace("{serviceCallId}", serviceCallId.toString());
+
+		ResponseEntity<String> serialNumReponse = restTemplate.doExchange(serialNumQuery, HttpMethod.GET, null, String.class);
+		
+		String internalSerialNum = serialNumReponse.getBody();
 
 		String query = urlSAP + "/$crossjoin(ServiceCalls,ServiceContracts)?"
 				+ "$expand=ServiceContracts($select=U_Hs_Contratadas)&"
@@ -336,15 +347,15 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 				JsonElement jsonElement = jsonElementResp2.getAsJsonArray().get(0);
 
-				int lineNum = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
-						.getAsJsonObject().get("LineNum").getAsInt();
-				
+				int lineNum = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities").getAsJsonObject()
+						.get("LineNum").getAsInt();
+
 				int activityCodeAnterior = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
 						.getAsJsonObject().get("ActivityCode").getAsInt();
-				
+
 				JsonElement jsonElementHsMaq = jsonElement.getAsJsonObject().get("ServiceCalls/ServiceCallActivities")
 						.getAsJsonObject().get("U_U_HsMaq");
-				
+
 				int hsMaqAnterior = 0;
 				if (!jsonElementHsMaq.isJsonNull()) {
 					hsMaqAnterior = jsonElementHsMaq.getAsInt();
@@ -411,9 +422,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private void updateActividadSap(Long idActividad, ActividadPatch ap) throws Exception {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
@@ -441,9 +453,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap)
 			throws Exception {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 
@@ -590,9 +603,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private JsonArray getServiceCallActivities(FormularioDTO formulario, Long idActividad, Long parentObjectId)
 			throws Exception {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		JsonArray serviceCallActivitiesJson;
 		try {
 			serviceCallActivitiesJson = this.getServiceCallActivities(idActividad, parentObjectId);
@@ -616,9 +630,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private Long getServiceCallId(Long idActividad, SAPWSUtils sapUtils) throws Exception {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		Long parentObjectId;
 		try {
 			parentObjectId = this.getParentObjectId(idActividad);
@@ -655,7 +670,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarHsMaquinaSap(Long idActividad, Long parentObjectId, Map<String, Object> serviceCallMap)
 			throws SapBusinessException {
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		LOGGER.debug(serviceCallUrl);
@@ -828,9 +844,10 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	public Long getParentObjectId(Long idActividad) throws ParentObjectIdNotFoundException, SapBusinessException {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		LOGGER.debug("Obteniendo ParentObjectId (ServiceCallID) de la actividad " + idActividad);
 		String url = urlSAP + ACTIVITIES_SELECT_PARENT_OBJECT_ID;
 		url = url.replace("{id}", idActividad.toString());
@@ -849,26 +866,27 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		return jsonElement.getAsLong();
 	}
 
-	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws SapBusinessException  {
-		
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
-		
+	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws SapBusinessException {
+
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
+				this.restTemplate).get();
+
 		LOGGER.debug("Actividad: " + idActividad + " - Obteniendo ServiceCall Activities");
 		String serviceCallActivitiesUrl = urlSAP + SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES;
 		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{id}", parentObjectId.toString());
 		LOGGER.debug(urlSAP);
 
 		ResponseEntity<String> serviceCallActivities = null;
-			serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
+		serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
 
 		LOGGER.debug("Actividad: " + idActividad + " - ServiceCall Activities Obtenidas");
 
 		return gson.fromJson(serviceCallActivities.getBody(), JsonObject.class).get("ServiceCallActivities")
 				.getAsJsonArray();
 	}
-	
+
 	@Resource(name = "mailSenderSMTPService")
 	public void setMailService(MailSenderSMTPService mailService) {
 		this.mailService = mailService;
