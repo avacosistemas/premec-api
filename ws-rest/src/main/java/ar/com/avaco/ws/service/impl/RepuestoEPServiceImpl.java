@@ -55,7 +55,7 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 	@Override
 	public List<RepuestoDepositoDTO> getRepuestos(String username) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP).get();
+		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP, this.restTemplate).get();
 
 		String deposito = usuarioService.getDeposito(username);
 

@@ -73,7 +73,6 @@ public class FormularioRestController {
 		JSONResponse response = new JSONResponse();
 		try {
 			this.formularioEPService.validarHorasMaquina(serviceCallId, horasMaquina);
-			response.setData("Archivo de actividad " + serviceCallId + " quitado de cola de envios con exito");
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {
 			response.setStatus(JSONResponse.ERROR);

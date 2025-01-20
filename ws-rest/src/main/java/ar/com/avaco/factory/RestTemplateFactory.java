@@ -28,26 +28,37 @@ public class RestTemplateFactory {
 	private String pass;
 	private String db;
 
-	public RestTemplateFactory(String urlSAP, String user, String pass, String db) {
+	private RestTemplatePremec restTemplate;
+
+	public RestTemplateFactory(String urlSAP, String user, String pass, String db, RestTemplatePremec restTemplate) {
 		this.urlSAP = urlSAP;
 		this.user = user;
 		this.pass = pass;
 		this.db = db;
+		this.restTemplate = restTemplate;
 	}
 
 	public RestTemplatePremec get() {
-		int count = 1;
-		RestTemplatePremec rtp = null;
-		while (count <= 3 && rtp == null) {
-			try {
-				rtp = getLoggedRestTemplate();
-			} catch (Exception e) {
-				count++;
+
+		RestTemplatePremec rt = null;
+
+		if (restTemplate != null && restTemplate.isSessionActive()) {
+			rt = this.restTemplate;
+		} else {
+
+			int count = 1;
+			RestTemplatePremec rtp = null;
+			while (count <= 3 && rtp == null) {
+				try {
+					rt = getLoggedRestTemplate();
+				} catch (Exception e) {
+					count++;
+				}
 			}
 		}
-		return rtp;
+		return rt;
 	}
-	
+
 	private RestTemplatePremec getLoggedRestTemplate() throws SapBusinessException, Exception {
 
 		ClassLoader classLoader = getClass().getClassLoader();
@@ -105,6 +116,7 @@ public class RestTemplateFactory {
 			headers.add("Prefer", "odata.maxpagesize=0");
 
 			restTemplate.setDefaultUriVariables(headers);
+			restTemplate.addSessionExpiration(response.getBody().getSessionTimeout().intValue());
 			return restTemplate;
 		} catch (RestClientException rce) {
 			throw new SapBusinessException(rce);
