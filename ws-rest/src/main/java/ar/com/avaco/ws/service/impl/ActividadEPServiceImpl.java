@@ -1,6 +1,5 @@
 package ar.com.avaco.ws.service.impl;
 
-import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -9,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +15,6 @@ import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.persistence.EnumType;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -42,7 +39,7 @@ import com.ibm.icu.util.Calendar;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
-import ar.com.avaco.entities.cliente.TipoActividad;
+import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
@@ -50,6 +47,7 @@ import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
+import ar.com.avaco.ws.dto.Mock;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
 import ar.com.avaco.ws.dto.RegistroInformeActividadDTO;
 import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
@@ -570,6 +568,10 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@SuppressWarnings("unchecked")
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
+		if (username.equals("adminbeto")) {
+			return Mock.mockTarjetas();
+		}
+		
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
 				this.restTemplate).get();
 

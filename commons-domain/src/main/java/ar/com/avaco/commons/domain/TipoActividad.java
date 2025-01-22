@@ -1,4 +1,4 @@
-package ar.com.avaco.entities.cliente;
+package ar.com.avaco.commons.domain;
 
 public enum TipoActividad {
 

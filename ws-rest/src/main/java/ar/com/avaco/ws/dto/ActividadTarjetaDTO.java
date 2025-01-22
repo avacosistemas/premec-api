@@ -1,5 +1,8 @@
 package ar.com.avaco.ws.dto;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ActividadTarjetaDTO {
 
 	private Long idActividad;
@@ -19,11 +22,14 @@ public class ActividadTarjetaDTO {
 	private int horasMaquina;
 	private String tareasARealizar;
 	private Boolean conCargo;
-
 	private Boolean actividadTaller;
-
 	private String tipoActividad;
+	private List<GrupoDTO> grupos = new ArrayList<>();
 
+	public void agregarGrupo(GrupoDTO g) {
+		grupos.add(g);
+	}
+	
 	public Long getIdActividad() {
 		return idActividad;
 	}
@@ -174,6 +180,14 @@ public class ActividadTarjetaDTO {
 
 	public void setTipoActividad(String tipoActividad) {
 		this.tipoActividad = tipoActividad;
+	}
+
+	public List<GrupoDTO> getGrupos() {
+		return grupos;
+	}
+
+	public void setGrupos(List<GrupoDTO> grupos) {
+		this.grupos = grupos;
 	}
 
 }
