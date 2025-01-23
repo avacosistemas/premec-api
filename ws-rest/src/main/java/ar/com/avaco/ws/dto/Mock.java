@@ -22,11 +22,11 @@ public class Mock {
 		actividad1.setFecha("10/10/2025");
 		actividad1.setHora("15:50");
 		actividad1.setHorasMaquina(20);
-		actividad1.setIdActividad(666L);
+		actividad1.setIdActividad(999L);
 		actividad1.setLlamadaID("999");
 		actividad1.setNroFabricante("FAB123");
 		actividad1.setNroSerie("SER123");
-		actividad1.setNumero("888");
+		actividad1.setNumero("999");
 		actividad1.setPrioridad("Alta");
 		actividad1.setTareasARealizar("Cambiar aceite y ajustar tuerca del cerebro");
 		actividad1.setTipoActividad("EE");
@@ -57,7 +57,7 @@ public class Mock {
 		actividad2.setLlamadaID("999");
 		actividad2.setNroFabricante("FAB123");
 		actividad2.setNroSerie("SER123");
-		actividad2.setNumero("888");
+		actividad2.setNumero("666");
 		actividad2.setPrioridad("Alta");
 		actividad2.setTareasARealizar("Cambiar aceite y ajustar tuerca del cerebro");
 		actividad2.setTipoActividad("EE");

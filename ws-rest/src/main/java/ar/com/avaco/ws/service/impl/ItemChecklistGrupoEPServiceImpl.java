@@ -4,6 +4,7 @@ import javax.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 
+import ar.com.avaco.commons.domain.GrupoTipoActividad;
 import ar.com.avaco.commons.domain.ItemChecklistGrupo;
 import ar.com.avaco.commons.service.ItemCheckListGrupoService;
 import ar.com.avaco.ws.dto.ItemChecklistGrupoDTO;
@@ -17,12 +18,24 @@ public class ItemChecklistGrupoEPServiceImpl
 
 	@Override
 	protected ItemChecklistGrupo convertToEntity(ItemChecklistGrupoDTO dto) {
-		return null;
+		GrupoTipoActividad grupo = new GrupoTipoActividad();
+		grupo.setId(dto.getId());
+		ItemChecklistGrupo item = new ItemChecklistGrupo();
+		item.setGrupo(grupo);
+		item.setId(dto.getId());
+		item.setNombre(dto.getNombre());
+		item.setOrden(dto.getOrden());
+		return item;
 	}
 
 	@Override
-	protected ItemChecklistGrupoDTO convertToDto(ItemChecklistGrupo entity) {
-		return null;
+	public ItemChecklistGrupoDTO convertToDto(ItemChecklistGrupo entity) {
+		ItemChecklistGrupoDTO dto = new ItemChecklistGrupoDTO();
+		dto.setId(entity.getId());
+		dto.setIdGrupo(entity.getGrupo().getId());
+		dto.setNombre(entity.getNombre());
+		dto.setOrden(entity.getOrden());
+		return dto;
 	}
 
 	@Override

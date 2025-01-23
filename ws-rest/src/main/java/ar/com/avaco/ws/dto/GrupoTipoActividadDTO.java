@@ -1,5 +1,8 @@
 package ar.com.avaco.ws.dto;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import ar.com.avaco.ws.rest.dto.DTOEntity;
 
 public class GrupoTipoActividadDTO extends DTOEntity<Long> {
@@ -11,6 +14,8 @@ public class GrupoTipoActividadDTO extends DTOEntity<Long> {
 	private String titulo;
 
 	private Integer orden;
+
+	private List<ItemChecklistGrupoDTO> items = new ArrayList<ItemChecklistGrupoDTO>();
 
 	public Long getId() {
 		return id;
@@ -42,6 +47,14 @@ public class GrupoTipoActividadDTO extends DTOEntity<Long> {
 
 	public void setOrden(Integer orden) {
 		this.orden = orden;
+	}
+
+	public List<ItemChecklistGrupoDTO> getItems() {
+		return items;
+	}
+
+	public void setItems(List<ItemChecklistGrupoDTO> items) {
+		this.items = items;
 	}
 
 }

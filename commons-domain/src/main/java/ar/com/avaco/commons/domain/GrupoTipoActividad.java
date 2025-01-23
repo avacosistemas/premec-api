@@ -1,5 +1,8 @@
 package ar.com.avaco.commons.domain;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -7,8 +10,12 @@ import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 
 @Entity
 @Table(name = "GRUPO_TIPO_ACTIVIDAD")
@@ -31,6 +38,10 @@ public class GrupoTipoActividad extends ar.com.avaco.arc.core.domain.Entity<Long
 
 	@Column(name = "ORDEN")
 	private Integer orden;
+
+	@OneToMany(mappedBy = "grupo")
+	@LazyCollection(LazyCollectionOption.FALSE)
+	private Set<ItemChecklistGrupo> items = new HashSet<ItemChecklistGrupo>();
 
 	public Long getId() {
 		return id;
@@ -62,6 +73,14 @@ public class GrupoTipoActividad extends ar.com.avaco.arc.core.domain.Entity<Long
 
 	public void setOrden(Integer orden) {
 		this.orden = orden;
+	}
+
+	public Set<ItemChecklistGrupo> getItems() {
+		return items;
+	}
+
+	public void setItems(Set<ItemChecklistGrupo> items) {
+		this.items = items;
 	}
 
 }
