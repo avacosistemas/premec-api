@@ -40,23 +40,17 @@ public class RestTemplateFactory {
 
 	public RestTemplatePremec get() {
 
-		RestTemplatePremec rt = null;
-
-		if (restTemplate != null && restTemplate.isSessionActive()) {
-			rt = this.restTemplate;
-		} else {
-
+		if (this.restTemplate == null || !this.restTemplate.isSessionActive()) {
 			int count = 1;
-			RestTemplatePremec rtp = null;
-			while (count <= 3 && rtp == null) {
+			while (count <= 3 && this.restTemplate == null) {
 				try {
-					rt = getLoggedRestTemplate();
+					this.restTemplate = getLoggedRestTemplate();
 				} catch (Exception e) {
 					count++;
 				}
 			}
 		}
-		return rt;
+		return this.restTemplate;
 	}
 
 	private RestTemplatePremec getLoggedRestTemplate() throws SapBusinessException, Exception {
