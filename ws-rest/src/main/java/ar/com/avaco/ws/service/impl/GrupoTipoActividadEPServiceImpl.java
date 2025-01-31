@@ -34,7 +34,8 @@ public class GrupoTipoActividadEPServiceImpl
 		dto.setOrden(entity.getOrden());
 		dto.setTipo(entity.getTipo().name());
 		dto.setTitulo(entity.getTitulo());
-
+		dto.setTipoString(entity.getTipo().getNombre());
+		dto.setTituloTipo(entity.getTipo().getNombre() + " - " + entity.getTitulo());
 		entity.getItems().forEach(x -> {
 			ItemChecklistGrupoDTO gdto = new ItemChecklistGrupoDTO();
 			gdto.setId(x.getId());

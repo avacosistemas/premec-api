@@ -144,7 +144,7 @@ public abstract class AbstractDTORestController<RDTO extends DTOEntity<ID>, ID e
        		response.setStatus(JSONResponse.OK);
        		return new ResponseEntity<JSONResponse>(response, HttpStatus.CONFLICT);
         }
-        return new ResponseEntity<JSONResponse>(getResponseOK(null),HttpStatus.OK);
+        return new ResponseEntity<JSONResponse>(getResponseOK(true),HttpStatus.OK);
     }
     
 //	@RequestMapping(value = "/entities/{id}", method = RequestMethod.DELETE)

@@ -39,13 +39,17 @@ import com.ibm.icu.util.Calendar;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
+import ar.com.avaco.commons.domain.GrupoTipoActividad;
 import ar.com.avaco.commons.domain.TipoActividad;
+import ar.com.avaco.commons.service.GrupoTipoActividadService;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.CheckListItemDTO;
+import ar.com.avaco.ws.dto.GrupoDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.dto.Mock;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
@@ -54,6 +58,7 @@ import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 import ar.com.avaco.ws.dto.RepuestoDTO;
 import ar.com.avaco.ws.service.ActividadEPService;
+import ar.com.avaco.ws.service.filter.GrupoTipoActividadFilter;
 
 @Service("actividadService")
 public class ActividadEPServiceImpl implements ActividadEPService {
@@ -93,6 +98,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	private RestTemplatePremec restTemplate;
 
+	private GrupoTipoActividadService grupoTipoActividadService;
+	
 	@PostConstruct
 	public void onInit() {
 		this.actividadUrl = urlSAP + "/Activities({id})";
@@ -262,11 +269,11 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			String tipoActividad = FieldUtils.getString(fromJson, FieldUtils.TIPO_ACTIVIDAD, true);
 			ardto.setTipoActividad(tipoActividad);
 
-			// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
-			// de reparación 22/4/24
-			if (!esTaller) {
-				ardto.setTipoActividad(TipoActividad.R.toString());
-			}
+//			// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
+//			// de reparación 22/4/24
+//			if (!esTaller) {
+//				ardto.setTipoActividad(TipoActividad.R.toString());
+//			}
 
 			// Asignado Por
 			String asignadoPor = "";
@@ -568,10 +575,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@SuppressWarnings("unchecked")
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
-		if (username.equals("adminbeto")) {
-			return Mock.mockTarjetas();
-		}
-		
 		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
 				this.restTemplate).get();
 
@@ -582,6 +585,8 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = sdfinput.parse(fecha);
 		String currentDate = sdfoutput.format(parse);
+		
+		// Armo el parametro de la actividad
 		String fechaActividad = "'" + currentDate + "'";
 
 		// Inicializo la lista de actividades
@@ -589,6 +594,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 		ResponseEntity<String> responseActividades = null;
 
+		// Url para obtener las actividades de sap en estado pendiente y cerrado false
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
 				+ fechaActividad + " and U_Estado eq 'Pendiente' and Closed eq 'tNO'";
 		try {
@@ -645,12 +651,35 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				atdto.setTipoActividad(tipoActividad);
 
 				TipoActividad ta = TipoActividad.valueOf(tipoActividad);
+
+				// Armo el filtro para obtener listado de checks
+				GrupoTipoActividadFilter gtaf = new GrupoTipoActividadFilter();
+				gtaf.setTipoActividad(ta);
+				gtaf.setAsc(true);
+				gtaf.setIdx("orden");
 				
-				if (!atdto.getActividadTaller()) {
-					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
-					// de reparación 22/4/24
-					atdto.setTipoActividad(TipoActividad.R.toString());
-				}
+				// Inicializo el listado
+				atdto.setGrupos(new ArrayList<>());
+
+				// Obtengo los checks
+				List<GrupoTipoActividad> grupos = grupoTipoActividadService.listFilter(gtaf);
+				
+				// En caso de haber resultados los agrega 
+				grupos.forEach(grupo -> {
+					GrupoDTO grupoDTO = new GrupoDTO(grupo.getTitulo()); 
+					grupo.getItems().forEach(item -> {
+						CheckListItemDTO clidto = new CheckListItemDTO(item.getNombre());
+						grupoDTO.getChecklist().add(clidto);
+					});
+					atdto.getGrupos().add(grupoDTO);
+				});
+				
+				// 31/1/2025 se quita esta regla de negocio. trae problemas con nuevas actividades.
+//				if (!atdto.getActividadTaller()) {
+//					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
+//					// de reparación 22/4/24
+//					atdto.setTipoActividad(TipoActividad.R.toString());
+//				}
 
 				// Prioridad
 				atdto.setPrioridad(FieldUtils.getString(fromJson, FieldUtils.PRIORITY, false));
@@ -1363,4 +1392,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		this.mailService = mailService;
 	}
 
+	@Resource(name = "grupoTipoActividadService")
+	public void setGrupoTipoActividadService(GrupoTipoActividadService grupoTipoActividadService) {
+		this.grupoTipoActividadService = grupoTipoActividadService;
+	}
+	
 }

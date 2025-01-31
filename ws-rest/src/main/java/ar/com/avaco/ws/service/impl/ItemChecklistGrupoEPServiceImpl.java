@@ -19,7 +19,7 @@ public class ItemChecklistGrupoEPServiceImpl
 	@Override
 	protected ItemChecklistGrupo convertToEntity(ItemChecklistGrupoDTO dto) {
 		GrupoTipoActividad grupo = new GrupoTipoActividad();
-		grupo.setId(dto.getId());
+		grupo.setId(dto.getIdGrupo());
 		ItemChecklistGrupo item = new ItemChecklistGrupo();
 		item.setGrupo(grupo);
 		item.setId(dto.getId());

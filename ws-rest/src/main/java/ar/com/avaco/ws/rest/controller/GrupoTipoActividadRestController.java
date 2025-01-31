@@ -4,6 +4,7 @@ import javax.annotation.Resource;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -37,12 +38,12 @@ public class GrupoTipoActividadRestController
 	@RequestMapping(value = "/grupoTipoActividad", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> update(Long id, @RequestBody GrupoTipoActividadDTO dto) throws BusinessException {
 		// TODO Auto-generated method stub
-		return super.update(id, dto);
+		return super.update(dto.getId(), dto);
 	}
 
 	@Override
-	@RequestMapping(value = "/grupoTipoActividad", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> delete(@RequestParam Long id) throws BusinessException {
+	@RequestMapping(value = "/grupoTipoActividad/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> delete(@PathVariable Long id) throws BusinessException {
 		// TODO Auto-generated method stub
 		return super.delete(id);
 	}

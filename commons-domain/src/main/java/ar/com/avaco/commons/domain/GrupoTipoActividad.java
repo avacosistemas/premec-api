@@ -11,6 +11,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -39,8 +40,9 @@ public class GrupoTipoActividad extends ar.com.avaco.arc.core.domain.Entity<Long
 	@Column(name = "ORDEN")
 	private Integer orden;
 
-	@OneToMany(mappedBy = "grupo")
+	@OneToMany(mappedBy = "grupo", orphanRemoval = true)
 	@LazyCollection(LazyCollectionOption.FALSE)
+	@OrderBy("orden")
 	private Set<ItemChecklistGrupo> items = new HashSet<ItemChecklistGrupo>();
 
 	public Long getId() {

@@ -15,6 +15,10 @@ public class GrupoTipoActividadDTO extends DTOEntity<Long> {
 
 	private Integer orden;
 
+	private String tipoString;
+
+	private String tituloTipo;
+
 	private List<ItemChecklistGrupoDTO> items = new ArrayList<ItemChecklistGrupoDTO>();
 
 	public Long getId() {
@@ -55,6 +59,22 @@ public class GrupoTipoActividadDTO extends DTOEntity<Long> {
 
 	public void setItems(List<ItemChecklistGrupoDTO> items) {
 		this.items = items;
+	}
+
+	public String getTipoString() {
+		return tipoString;
+	}
+
+	public void setTipoString(String tipoString) {
+		this.tipoString = tipoString;
+	}
+
+	public String getTituloTipo() {
+		return tituloTipo;
+	}
+
+	public void setTituloTipo(String tituloTipo) {
+		this.tituloTipo = tituloTipo;
 	}
 
 }
