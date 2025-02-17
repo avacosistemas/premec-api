@@ -674,6 +674,20 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					atdto.getGrupos().add(grupoDTO);
 				});
 				
+				switch (ta) {
+				case EC:
+					atdto.setTipoMaquina("Combustión");
+					break;
+				case EP:
+					atdto.setTipoMaquina("Plataforma");
+					break;
+				case EE:
+					atdto.setTipoMaquina("Eléctrica");
+					break;
+				default:
+					break;
+				}
+				
 				// 31/1/2025 se quita esta regla de negocio. trae problemas con nuevas actividades.
 //				if (!atdto.getActividadTaller()) {
 //					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
