@@ -84,6 +84,9 @@ public class RestTemplateFactory {
 		HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
 		httpRequestFactory.setHttpClient(HttpClients.custom().setSSLContext(sslContext).build());
 
+		httpRequestFactory.setConnectionRequestTimeout(5000);
+		httpRequestFactory.setReadTimeout(5000);
+		
 		// Crear un objeto RestTemplate que use la fábrica de solicitudes HTTP
 		RestTemplatePremec restTemplate = new RestTemplatePremec(httpRequestFactory);
 
