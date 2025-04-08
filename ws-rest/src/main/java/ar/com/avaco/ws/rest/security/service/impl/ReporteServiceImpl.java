@@ -24,14 +24,11 @@ public class ReporteServiceImpl implements ReporteService {
 	@Value("${email.cc}")
 	private String emailCC;
 
-	@Value("${email.bodyMail}")
-	private String bodyMail;
-
 	@Autowired
 	private MailSenderSMTPService mailSenderSMTPService;
 
 	@Override
-	public void sendMail(String email, String activityCode) {
+	public void sendMail(String email, String activityCode, String bodyMail, String subject) {
 
 		File file = new File(informePath + "\\" + activityCode + ".pdf");
 
@@ -39,10 +36,10 @@ public class ReporteServiceImpl implements ReporteService {
 		files.add(file);
 
 		if (StringUtils.isBlank(email)) {
-			mailSenderSMTPService.sendMail(emailFrom, emailFrom, "PREMEC SA - INFORME DE SERVICIO TECNICO",
+			mailSenderSMTPService.sendMail(emailFrom, emailFrom, subject,
 					"Cliente sin Correo definido", files);
 		} else {
-			mailSenderSMTPService.sendMail(emailFrom, email, emailCC, "PREMEC SA - INFORME DE SERVICIO TECNICO",
+			mailSenderSMTPService.sendMail(emailFrom, email, emailCC, subject,
 					bodyMail, files);
 		}
 

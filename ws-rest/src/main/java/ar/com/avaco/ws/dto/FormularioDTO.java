@@ -3,6 +3,8 @@ package ar.com.avaco.ws.dto;
 import java.util.ArrayList;
 import java.util.List;
 
+import ar.com.avaco.commons.domain.TipoActividad;
+
 public class FormularioDTO {
 
 	private Long idActividad;
@@ -151,6 +153,11 @@ public class FormularioDTO {
 
 	public void setTipoActividad(String tipoActividad) {
 		this.tipoActividad = tipoActividad;
+	}
+
+	public boolean esEntregaMaquinaria() {
+		return (tipoActividad.equals(TipoActividad.EC.toString()) || tipoActividad.equals(TipoActividad.EE.toString())
+				|| tipoActividad.equals(TipoActividad.EP.toString()));
 	}
 
 }

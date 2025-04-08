@@ -3,6 +3,9 @@ package ar.com.avaco.ws.rest.reporte;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
 import org.springframework.http.ResponseEntity;
 
 import com.itextpdf.text.Document;
@@ -17,6 +20,8 @@ public abstract class InformeBuilder {
 
 	public abstract ResponseEntity<JSONResponse> generarReporte() throws DocumentException, IOException;
 
+	protected NumberFormat nf = DecimalFormat.getInstance();
+	
 	protected ActividadReporteDTO dto;
 	protected final String path;
 	protected Document document = new Document(PageSize.A4);
@@ -26,6 +31,8 @@ public abstract class InformeBuilder {
 		this.dto = eldto;
 		this.path = informePath + "\\" + dto.getIdActividad().toString() + ".pdf";
 		this.writer = PdfWriter.getInstance(document, new FileOutputStream(path));
+		nf.setMaximumFractionDigits(0);
+		nf.setGroupingUsed(false);
 	}
 	
 }

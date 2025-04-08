@@ -41,6 +41,7 @@ public class RestTemplateFactory {
 	public RestTemplatePremec get() {
 
 		if (this.restTemplate == null || !this.restTemplate.isSessionActive()) {
+			this.restTemplate = null;
 			int count = 1;
 			while (count <= 3 && this.restTemplate == null) {
 				try {

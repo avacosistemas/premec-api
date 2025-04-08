@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,13 +30,12 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPCellEvent;
 import com.itextpdf.text.pdf.PdfPTable;
 
-import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
-public class InformeBuilderReparaciones extends InformeBuilder {
+public class InformeBuilderEntrega extends InformeBuilder {
 
 	private static final BaseColor COLOR_GRIS_BORDES = new BaseColor(238, 238, 238);
 
@@ -47,14 +44,11 @@ public class InformeBuilderReparaciones extends InformeBuilder {
 			new BaseColor(27, 26, 57));
 	private final static Font fontText = FontFactory.getFont(FontFactory.HELVETICA, 10, BaseColor.BLACK);
 
-	private NumberFormat nf = DecimalFormat.getInstance();
 	
 	
-	public InformeBuilderReparaciones(ActividadReporteDTO eldto, String informePath)
+	public InformeBuilderEntrega(ActividadReporteDTO eldto, String informePath)
 			throws FileNotFoundException, DocumentException {
 		super(eldto, informePath);
-		nf.setMaximumFractionDigits(0);
-		nf.setGroupingUsed(false);
 	}
 
 	@Override
@@ -70,7 +64,8 @@ public class InformeBuilderReparaciones extends InformeBuilder {
 
 			Paragraph p = new Paragraph();
 			
-			String titulo = "INFORME TÉCNICO";
+			String titulo = "ENTREGA DE MAQUINA";
+			
 			p.add(new Phrase(titulo, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, BaseColor.WHITE)));
 			p.setIndentationLeft(25);
 			document.add(p);
@@ -460,7 +455,8 @@ public class InformeBuilderReparaciones extends InformeBuilder {
 		cell.setUseAscender(true);
 		cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		cell.setBorder(0);
-		cell.setFixedHeight(20);
+		cell.setMinimumHeight(20);
+		cell.setPadding(10);
 		if (!ultimo) {
 			cell.setBorderColorBottom(COLOR_GRIS_BORDES);
 			cell.setBorderWidthBottom(1);
@@ -512,10 +508,10 @@ public class InformeBuilderReparaciones extends InformeBuilder {
 		table.addCell(cell);
 		cell.setPhrase(new Phrase(String.valueOf(dto.getHorasMaquina()), fontText));
 		table.addCell(cell);
-		cell.setPhrase(new Phrase("Con Cargo", fontHeaderTable));
+		cell.setPhrase(new Phrase("", fontHeaderTable));
 		table.addCell(cell);
 //		cell.setPhrase(new Phrase(dto.getConCargo() != null && dto.getConCargo().equals("Y") ? "Si" : "No", fontText));
-		cell.setPhrase(new Phrase(dto.isConCargo() ? "Si" : "No" ));
+		cell.setPhrase(new Phrase(""));
 		table.addCell(cell);
 
 		cell.setPhrase(new Phrase("Detalle", fontHeaderTable));

@@ -25,4 +25,6 @@ public interface ActividadEPService {
 
 	List<RegistroHorasMaquinaDTO> getHorasMaquinaReporte(String internalSerialNum) throws SapBusinessException;
 
+	List<ActividadTarjetaDTO> getActividadesCrossJoin(Long userId) throws SapBusinessException;
+
 }

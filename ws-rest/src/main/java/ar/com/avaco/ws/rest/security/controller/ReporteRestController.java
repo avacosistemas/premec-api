@@ -1,6 +1,5 @@
 package ar.com.avaco.ws.rest.security.controller;
 
-import java.io.File;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -50,67 +49,6 @@ public class ReporteRestController {
 		ActividadReporteDTO actividadReporte = this.actividadedEPService.getActividadReporte(idActividad);
 		ResponseEntity<JSONResponse> generarReporte = this.reporteEPService.generarReporte(actividadReporte);
 		return generarReporte;
-	}
-
-	@RequestMapping(value = "/generarreporte", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> generarReporte() {
-
-		try {
-			List<ActividadReporteDTO> actividadesReporte = this.actividadedEPService.getActividadesReporte();
-			actividadesReporte.forEach(x -> {
-				try {
-					this.reporteEPService.generarReporteReparaciones(x);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			});
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-
-	@RequestMapping(value = "/generarreportetest-reparaciones", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> generarReporteTestReparaciones() {
-
-		this.reporteEPService.generarReporteTestReparaciones();
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-
-	@RequestMapping(value = "/generarreportetest-checklist", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> generarReporteTestChecklist() {
-
-		this.reporteEPService.generarReporteTestChecklist();
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-
-	@RequestMapping(value = "/generarreportetest-piezas", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> generarReporteTestPiezas() {
-
-		this.reporteEPService.generarReporteTestPiezas();
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-
-	@RequestMapping(value = "/generarreportetest-mantenimiento", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> generarReporteTestMantenimiento() {
-
-		this.reporteEPService.generarReporteTestMantenimiento();
-
-		JSONResponse response = new JSONResponse();
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 
 	@RequestMapping(value = "/marcarenviada", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)

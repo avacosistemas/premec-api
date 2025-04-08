@@ -1,5 +1,7 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -26,6 +28,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -43,44 +49,32 @@ import ar.com.avaco.commons.domain.GrupoTipoActividad;
 import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.commons.service.GrupoTipoActividadService;
 import ar.com.avaco.factory.RestTemplateFactory;
-import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.ActividadTarjetaResponseSapDTO;
 import ar.com.avaco.ws.dto.CheckListItemDTO;
 import ar.com.avaco.ws.dto.GrupoDTO;
 import ar.com.avaco.ws.dto.ItemCheckDTO;
-import ar.com.avaco.ws.dto.Mock;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
 import ar.com.avaco.ws.dto.RegistroInformeActividadDTO;
 import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
 import ar.com.avaco.ws.dto.RepuestoDTO;
+import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.ActividadEPService;
 import ar.com.avaco.ws.service.filter.GrupoTipoActividadFilter;
 
 @Service("actividadService")
-public class ActividadEPServiceImpl implements ActividadEPService {
+public class ActividadEPServiceImpl extends AbstractSapService implements ActividadEPService {
 
 	private static final Logger LOGGER = Logger.getLogger(ActividadEPServiceImpl.class);
 
 	private UsuarioService usuarioService;
 
-	@Value("${urlSAP}")
-	private String urlSAP;
-	@Value("${userSAP}")
-	private String userSAP;
-	@Value("${passSAP}")
-	private String passSAP;
-	@Value("${dbSAP}")
-	private String dbSAP;
-
 	@Value("${monitor.palabras.filtro}")
 	private String palabrasFiltroMonitor;
-
-	@Value("${monitor.maxpagesize}")
-	private String maxpagesize;
 
 	private String employeeUrl;
 	private String locationsUrl;
@@ -90,13 +84,9 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	private String actividadUrl;
 	private String actividadesPorServiceCallUrl;
 
-	private Gson gson = new Gson();
-
 	private MailSenderSMTPService mailService;
 
 	private List<String> exclusiones;
-
-	private RestTemplatePremec restTemplate;
 
 	private GrupoTipoActividadService grupoTipoActividadService;
 	
@@ -122,16 +112,13 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public List<ActividadReporteDTO> getActividadesReporte() throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		// Se agrega validacion para levantar las actividades que no sean de taller.
 		String actividadUrl = urlSAP + "/Activities?$filter=U_Estado eq 'Aprobada' and Closed eq 'tNO'";
 
 		// Obtengo las actividades
 		ResponseEntity<String> responseActividades = null;
 		try {
-			responseActividades = this.restTemplate.doExchange(actividadUrl, HttpMethod.GET, null,
+			responseActividades = getRestTemplate().doExchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -173,14 +160,11 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public ActividadReporteDTO getActividadReporte(Long actividadId) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		String actividadUrl = this.actividadUrl.replace("{id}", actividadId.toString());
 
 		ResponseEntity<String> responseActividades = null;
 		try {
-			responseActividades = this.restTemplate.doExchange(actividadUrl, HttpMethod.GET, null,
+			responseActividades = getRestTemplate().doExchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -232,7 +216,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			ResponseEntity<String> responseServiceCall = null;
 			try {
-				responseServiceCall = this.restTemplate.doExchange(surl, HttpMethod.GET, null,
+				responseServiceCall = getRestTemplate().doExchange(surl, HttpMethod.GET, null,
 						new ParameterizedTypeReference<String>() {
 						});
 			} catch (SapBusinessException e) {
@@ -282,7 +266,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ResponseEntity<String> responseUser = null;
 				String uurl = userUrl.replace("{id}", asignadoPorId.toString());
 				try {
-					responseUser = this.restTemplate.doExchange(uurl, HttpMethod.GET, null,
+					responseUser = getRestTemplate().doExchange(uurl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
 				} catch (SapBusinessException e) {
@@ -317,7 +301,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				ResponseEntity<String> responseEmployee = null;
 				String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
 				try {
-					responseEmployee = this.restTemplate.doExchange(eurl, HttpMethod.GET, null,
+					responseEmployee = getRestTemplate().doExchange(eurl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
 				} catch (SapBusinessException e) {
@@ -374,7 +358,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					String lurl = locationsUrl.replace("{id}", locationId.toString());
 					ResponseEntity<String> responseLocation = null;
 					try {
-						responseLocation = this.restTemplate.doExchange(lurl, HttpMethod.GET, null,
+						responseLocation = getRestTemplate().doExchange(lurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
 					} catch (SapBusinessException e) {
@@ -517,7 +501,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 			ResponseEntity<String> responseBusinessPartner = null;
 			String bpurl = businessPartnerUrl.replace("{id}", customerCode);
 			try {
-				responseBusinessPartner = this.restTemplate.doExchange(bpurl, HttpMethod.GET, null,
+				responseBusinessPartner = getRestTemplate().doExchange(bpurl, HttpMethod.GET, null,
 						new ParameterizedTypeReference<String>() {
 						});
 			} catch (SapBusinessException e) {
@@ -575,9 +559,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@SuppressWarnings("unchecked")
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		// Obtengo el usuario sap del usuario logueado
 		String usuarioSAP = usuarioService.getUsuarioSAP(username);
 
@@ -598,7 +579,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		String actividadUrl = urlSAP + "/Activities?$filter=HandledByEmployee eq " + usuarioSAP + " and StartDate eq "
 				+ fechaActividad + " and U_Estado eq 'Pendiente' and Closed eq 'tNO'";
 		try {
-			responseActividades = this.restTemplate.doExchange(actividadUrl, HttpMethod.GET, null,
+			responseActividades = getRestTemplate().doExchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -722,7 +703,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseEmployee = null;
 					String eurl = employeeUrl.replace("{id}", handledByEmployeeId.toString());
 					try {
-						responseEmployee = this.restTemplate.doExchange(eurl, HttpMethod.GET, null,
+						responseEmployee = getRestTemplate().doExchange(eurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
 					} catch (SapBusinessException e) {
@@ -759,7 +740,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 						String lurl = locationsUrl.replace("{id}", locationId.toString());
 						ResponseEntity<String> responseLocation = null;
 						try {
-							responseLocation = this.restTemplate.doExchange(lurl, HttpMethod.GET, null,
+							responseLocation = getRestTemplate().doExchange(lurl, HttpMethod.GET, null,
 									new ParameterizedTypeReference<String>() {
 									});
 						} catch (SapBusinessException e) {
@@ -795,7 +776,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				String surl = serviceCallUrl.replace("{id}", parentId.toString());
 				ResponseEntity<String> responseServiceCall = null;
 				try {
-					responseServiceCall = this.restTemplate.doExchange(surl, HttpMethod.GET, null,
+					responseServiceCall = getRestTemplate().doExchange(surl, HttpMethod.GET, null,
 							new ParameterizedTypeReference<String>() {
 							});
 				} catch (SapBusinessException e) {
@@ -824,7 +805,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 					ResponseEntity<String> responseUser = null;
 					String uurl = userUrl.replace("{id}", asignadoPorId.toString());
 					try {
-						responseUser = this.restTemplate.doExchange(uurl, HttpMethod.GET, null,
+						responseUser = getRestTemplate().doExchange(uurl, HttpMethod.GET, null,
 								new ParameterizedTypeReference<String>() {
 								});
 					} catch (SapBusinessException e) {
@@ -902,15 +883,12 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public void marcarEnviado(Long idActividad) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		Map<String, Object> map = new HashMap<>();
 		map.put("U_Estado", "Enviado");
 		HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(map);
 		String url = actividadUrl.replace("{id}", idActividad.toString());
 		try {
-			this.restTemplate.doExchange(url, HttpMethod.PATCH, httpEntity, Object.class);
+			getRestTemplate().doExchange(url, HttpMethod.PATCH, httpEntity, Object.class);
 		} catch (SapBusinessException e) {
 			e.printStackTrace();
 			String error = "[MARCAR ENVIADO] Error al actualizar actividad " + idActividad
@@ -931,9 +909,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 	@Override
 	public List<RegistroMonitorDTO> getActividadesMonitor(String skip) throws Exception {
-
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
 
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = Calendar.getInstance().getTime();
@@ -964,7 +939,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		}
 
 		try {
-			responseActividades = this.restTemplate.doExchange(actividadUrl, HttpMethod.GET, requestEntity,
+			responseActividades = getRestTemplate().doExchange(actividadUrl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -1071,9 +1046,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public RegistroInformeServicioDTO getActividadesServiceCall(Long serviceCallId) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		RegistroInformeServicioDTO dto = new RegistroInformeServicioDTO();
 
 		// Armo la url de la service call
@@ -1087,7 +1059,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
 		
 		try {
-			responseServiceCall = this.restTemplate.doExchange(surl, HttpMethod.GET, requestEntity,
+			responseServiceCall = getRestTemplate().doExchange(surl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -1119,7 +1091,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 		// Obtengo las actividades
 		ResponseEntity<String> responseActividades = null;
 		try {
-			responseActividades = this.restTemplate.doExchange(actividadUrl, HttpMethod.GET, requestEntity,
+			responseActividades = getRestTemplate().doExchange(actividadUrl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -1185,9 +1157,6 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Override
 	public List<RegistroHorasMaquinaDTO> getHorasMaquinaReporte(String internalSerialNum) throws SapBusinessException {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		// Url para obtener las service calls en base al internalserialnum
 		String url = this.urlSAP
 				+ "/$crossjoin(ServiceCalls,ServiceContracts)?$expand=ServiceContracts($select=U_Hs_Contratadas,ContractID),"
@@ -1195,7 +1164,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 				+ "and ServiceCalls/ContractID eq ServiceContracts/ContractID and ServiceContracts/Status eq 'scs_Approved'";
 		url = url.replace("{internalSerialNum}", internalSerialNum);
 
-		ResponseEntity<String> responseServiceCalls = this.restTemplate.doExchange(url, HttpMethod.GET, null,
+		ResponseEntity<String> responseServiceCalls = getRestTemplate().doExchange(url, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
 				});
 
@@ -1230,7 +1199,7 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 
 			url2 = url2.replace("{serviceCallId}", scId.toString());
 
-			ResponseEntity<String> responseActividades = this.restTemplate.doExchange(url2, HttpMethod.GET, null,
+			ResponseEntity<String> responseActividades = getRestTemplate().doExchange(url2, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 
@@ -1409,6 +1378,44 @@ public class ActividadEPServiceImpl implements ActividadEPService {
 	@Resource(name = "grupoTipoActividadService")
 	public void setGrupoTipoActividadService(GrupoTipoActividadService grupoTipoActividadService) {
 		this.grupoTipoActividadService = grupoTipoActividadService;
+	}
+
+	@Override
+	public List<ActividadTarjetaDTO> getActividadesCrossJoin(Long userId) throws SapBusinessException {
+		
+		String url2 = urlSAP + "/$crossjoin(Activities, EmployeesInfo, ServiceCalls, Users, ServiceCalls/ServiceCallActivities)"
+				+ "?$expand=	Activities($select=ActivityCode, U_Taller, U_T_Tarea, Priority, StartDate, ActivityTime, Details, U_ConCargo, "
+				+ "HandledByEmployee, Location,ParentObjectId), EmployeesInfo($select=LastName,FirstName), ServiceCalls($select=ServiceCallID, "
+				+ "ResponseAssignee, ItemCode, Subject, InternalSerialNum, CustomerName, ManufacturerSerialNum),	"
+				+ "Users($select=UserName), ServiceCalls/ServiceCallActivities($select=ActivityCode, "
+				+ "U_U_HsMaq)&$filter=Activities/HandledByEmployee eq EmployeesInfo/EmployeeID and "
+				+ "Activities/ParentObjectId eq ServiceCalls/ServiceCallID and ServiceCalls/ResponseAssignee eq "
+				+ "Users/InternalKey and Activities/ActivityCode eq ServiceCalls/ServiceCallActivities/ActivityCode and "
+				+ "Activities/HandledByEmployee eq 79 and Activities/Closed eq 'tNO' and Activities/U_Estado eq 'Pendiente' "
+				+ "and Activities/StartDate eq '2025-03-11'";
+
+		TypeReference<List<ActividadTarjetaResponseSapDTO>> jacksonTypeReference = new TypeReference<List<ActividadTarjetaResponseSapDTO>>() {};
+		
+		ResponseEntity<String> responseActividades = getRestTemplate().doExchange(url2, HttpMethod.GET, null,
+				new ParameterizedTypeReference<String>() {
+				});
+		
+		ObjectMapper mapper = new ObjectMapper();
+		
+		JsonArray arctividadesArray = gson.fromJson(responseActividades.getBody(), JsonObject.class)
+				.getAsJsonArray("value");
+		
+		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
+		
+		try {
+			List<ActividadTarjetaResponseSapDTO> list = mapper.readValue(arctividadesArray.toString(), jacksonTypeReference);
+			if (list != null && !list.isEmpty()) list.forEach(x-> actividades.add(x.getActividadTarjetaDTO()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return actividades;
+		
 	}
 	
 }

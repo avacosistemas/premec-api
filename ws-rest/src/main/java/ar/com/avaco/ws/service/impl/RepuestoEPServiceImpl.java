@@ -30,32 +30,20 @@ import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.RepuestoDepositoDTO;
+import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.RepuestoEPService;
 
 @Service("repuestoService")
-public class RepuestoEPServiceImpl implements RepuestoEPService {
+public class RepuestoEPServiceImpl extends AbstractSapService implements RepuestoEPService {
 
 	private static final Logger LOGGER = Logger.getLogger(RepuestoEPServiceImpl.class);
-
-	@Value("${urlSAP}")
-	private String urlSAP;
-	@Value("${userSAP}")
-	private String userSAP;
-	@Value("${passSAP}")
-	private String passSAP;
-	@Value("${dbSAP}")
-	private String dbSAP;
 
 	private UsuarioService usuarioService;
 
 	private MailSenderSMTPService mailService;
 
-	private RestTemplatePremec restTemplate;
-
 	@Override
 	public List<RepuestoDepositoDTO> getRepuestos(String username) throws Exception {
-
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP, this.restTemplate).get();
 
 		String deposito = usuarioService.getDeposito(username);
 
@@ -72,7 +60,7 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 		ResponseEntity<String> responseRepuestos = null;
 		try {
-			responseRepuestos = restTemplate.doExchange(repuestosUrl, HttpMethod.GET, requestEntity,
+			responseRepuestos = getRestTemplate().doExchange(repuestosUrl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (SapBusinessException e) {
@@ -110,7 +98,7 @@ public class RepuestoEPServiceImpl implements RepuestoEPService {
 
 			ResponseEntity<String> responseRepuestosSeriados = null;
 			try {
-				responseRepuestosSeriados = restTemplate.doExchange(seriadosUrl, HttpMethod.GET, null,
+				responseRepuestosSeriados = getRestTemplate().doExchange(seriadosUrl, HttpMethod.GET, null,
 						new ParameterizedTypeReference<String>() {
 						});
 			} catch (SapBusinessException e) {

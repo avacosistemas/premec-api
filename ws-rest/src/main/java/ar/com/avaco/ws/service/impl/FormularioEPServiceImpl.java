@@ -21,6 +21,7 @@ import javax.annotation.Resource;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -32,13 +33,13 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
+import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
@@ -47,31 +48,11 @@ import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadPatch;
 import ar.com.avaco.ws.dto.FormularioDTO;
 import ar.com.avaco.ws.dto.FotoDTO;
+import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.FormularioEPService;
 
 @Service("formularioEPService")
-public class FormularioEPServiceImpl implements FormularioEPService {
-
-	@Value("${urlSAP}")
-	private String urlSAP;
-
-	@Value("${userSAP}")
-	private String userSAP;
-
-	@Value("${passSAP}")
-	private String passSAP;
-
-	@Value("${dbSAP}")
-	private String dbSAP;
-
-	@Value("${email.from}")
-	private String from;
-
-	@Value("${email.errores}")
-	private String toErrores;
-
-	@Value("${email.errores.cc}")
-	private String toErroresCC;
+public class FormularioEPServiceImpl extends AbstractSapService implements FormularioEPService {
 
 	@Value("${informe.path}")
 	private String informePath;
@@ -99,11 +80,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private MailSenderSMTPService mailService;
 
-	private Gson gson = new Gson();
-
 	private SAPWSUtils sapUtils;
-
-	private RestTemplatePremec restTemplate;
 
 	private static final Logger LOGGER = Logger.getLogger(FormularioEPService.class);
 
@@ -203,14 +180,11 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private boolean isActividadAbierta(Long activityCode) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		String actividadUrl = urlSAP + "/Activities?$filter=Closed eq 'tNO' and ActivityCode eq " + activityCode;
 
 		ResponseEntity<String> responseActividades = null;
 		try {
-			responseActividades = this.restTemplate.exchange(actividadUrl, HttpMethod.GET, null,
+			responseActividades = getRestTemplate().exchange(actividadUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 		} catch (Exception e) {
@@ -247,10 +221,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Override
 	public void enviarFormulario(FormularioDTO formulario, String usuarioSAP) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
-		this.sapUtils = new SAPWSUtils(restTemplate, urlSAP);
+		this.sapUtils = new SAPWSUtils(getRestTemplate(), urlSAP);
 
 		// Obtengo la actividad
 		Long idActividad = formulario.getIdActividad();
@@ -288,16 +259,14 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	@Override
 	public void validarHorasMaquina(Long serviceCallId, int horasMaquina) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		// Obtengo el internal serial num de la service call para usarlo como filtro en
 		// la proxima consulta
 		String serialNumQuery = urlSAP + "/ServiceCalls({serviceCallId})?$select=InternalSerialNum"
 				.replace("{serviceCallId}", serviceCallId.toString());
 
-		ResponseEntity<String> serialNumReponse = restTemplate.doExchange(serialNumQuery, HttpMethod.GET, null, String.class);
-		
+		ResponseEntity<String> serialNumReponse = getRestTemplate().doExchange(serialNumQuery, HttpMethod.GET, null,
+				String.class);
+
 		String internalSerialNum = serialNumReponse.getBody();
 
 		String query = urlSAP + "/$crossjoin(ServiceCalls,ServiceContracts)?"
@@ -307,7 +276,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 		query = query.replace("{serviceCallId}", serviceCallId.toString());
 
-		ResponseEntity<String> contractHours = restTemplate.doExchange(query, HttpMethod.GET, null,
+		ResponseEntity<String> contractHours = getRestTemplate().doExchange(query, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
 				});
 
@@ -333,7 +302,7 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 			LOGGER.debug(urlSAP);
 
 			ResponseEntity<String> serviceCallActivities = null;
-			serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+			serviceCallActivities = getRestTemplate().doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
 					new ParameterizedTypeReference<String>() {
 					});
 
@@ -423,15 +392,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void updateActividadSap(Long idActividad, ActividadPatch ap) throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		LOGGER.debug("Actividad: " + idActividad + " - Actividad Patch Generado");
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Actualizando Actividad");
 			HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(ap.getAsMap());
 			String actividadUrl = urlSAP + "/Activities({id})".replace("{id}", idActividad.toString());
-			this.restTemplate.doExchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
+			getRestTemplate().doExchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
 			LOGGER.debug("Actividad Actualizada");
 		} catch (SapBusinessException e) {
 			e.printStackTrace();
@@ -454,16 +420,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private void enviarAttachmentsSap(Long idActividad, ActividadPatch ap, Map<String, Object> attachmentMap)
 			throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		try {
 			LOGGER.debug("Actividad: " + idActividad + " - Enviando Attachments");
 
 			String attachmentUrl = urlSAP + "/Attachments2";
 			HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
 			ResponseEntity<Object> attachmentRespose = null;
-			attachmentRespose = this.restTemplate.doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach,
+			attachmentRespose = getRestTemplate().doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach,
 					Object.class);
 			Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
 			String attchEntry = (object.toString().split("="))[1];
@@ -604,9 +567,6 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	private JsonArray getServiceCallActivities(FormularioDTO formulario, Long idActividad, Long parentObjectId)
 			throws Exception {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		JsonArray serviceCallActivitiesJson;
 		try {
 			serviceCallActivitiesJson = this.getServiceCallActivities(idActividad, parentObjectId);
@@ -630,9 +590,6 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 	}
 
 	private Long getServiceCallId(Long idActividad, SAPWSUtils sapUtils) throws Exception {
-
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
 
 		Long parentObjectId;
 		try {
@@ -670,15 +627,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	private void enviarHsMaquinaSap(Long idActividad, Long parentObjectId, Map<String, Object> serviceCallMap)
 			throws SapBusinessException {
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
 		LOGGER.debug("Actividad: " + idActividad + " - Enviando Hs Maquina a la service call");
 		String serviceCallUrl = urlSAP + "/ServiceCalls({id})";
 		LOGGER.debug(serviceCallUrl);
 
 		String scUrl = serviceCallUrl.replace("{id}", parentObjectId.toString());
 		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(serviceCallMap);
-		this.restTemplate.doExchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
+		getRestTemplate().doExchange(scUrl, HttpMethod.PATCH, httpEntityPatchServiceCall, Object.class);
 	}
 
 	private Map<String, Object> obtenerServiceCallSap(FormularioDTO formulario, Long idActividad, Long parentObjectId,
@@ -784,8 +739,8 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 		ap.setU_Estado("Finalizada");
 
 		// Si el tipo de actividad es Reparación (R) o Checklist (C)
-		if (formulario.getTipoActividad().equals("R") || formulario.getTipoActividad().equals("C")) {
-
+//		if (formulario.getTipoActividad().equals("R") || formulario.getTipoActividad().equals("C")) {
+		if (StringUtils.isNotBlank(tareas)) {
 			// Checks formateados
 			JsonParser jsonParser = new JsonParser();
 			JsonArray jsonArray = (JsonArray) jsonParser.parse(tareas);
@@ -845,15 +800,12 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	public Long getParentObjectId(Long idActividad) throws ParentObjectIdNotFoundException, SapBusinessException {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		LOGGER.debug("Obteniendo ParentObjectId (ServiceCallID) de la actividad " + idActividad);
 		String url = urlSAP + ACTIVITIES_SELECT_PARENT_OBJECT_ID;
 		url = url.replace("{id}", idActividad.toString());
 		LOGGER.debug(url);
 		ResponseEntity<String> responseParentObjectId = null;
-		responseParentObjectId = restTemplate.doExchange(url, HttpMethod.GET, null,
+		responseParentObjectId = getRestTemplate().doExchange(url, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
 				});
 
@@ -868,16 +820,13 @@ public class FormularioEPServiceImpl implements FormularioEPService {
 
 	public JsonArray getServiceCallActivities(Long idActividad, Long parentObjectId) throws SapBusinessException {
 
-		this.restTemplate = new RestTemplateFactory(this.urlSAP, this.userSAP, this.passSAP, this.dbSAP,
-				this.restTemplate).get();
-
 		LOGGER.debug("Actividad: " + idActividad + " - Obteniendo ServiceCall Activities");
 		String serviceCallActivitiesUrl = urlSAP + SERVICE_CALLS_SELECT_SERVICE_CALL_ACTIVITIES;
 		serviceCallActivitiesUrl = serviceCallActivitiesUrl.replace("{id}", parentObjectId.toString());
 		LOGGER.debug(urlSAP);
 
 		ResponseEntity<String> serviceCallActivities = null;
-		serviceCallActivities = restTemplate.doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
+		serviceCallActivities = getRestTemplate().doExchange(serviceCallActivitiesUrl, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
 				});
 

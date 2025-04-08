@@ -319,6 +319,8 @@ public class InformeBuilderChecklist extends InformeBuilder {
 				next = iterator.next();
 
 				cellContentNombre.setPhrase(new Phrase(next.getNombre(), fontHeaderTable));
+				cellContentNombre.setNoWrap(false);
+				
 				tablechecklist.addCell(cellContentNombre);
 
 				tablechecklist.addCell(getCeldaCheck(check, next.isOk()));
@@ -326,6 +328,7 @@ public class InformeBuilderChecklist extends InformeBuilder {
 				tablechecklist.addCell(getCeldaCheck(check, next.isNa()));
 
 				cellContentObservaciones.setPhrase(new Phrase(next.getObservaciones(), fontHeaderTable));
+				cellContentObservaciones.setNoWrap(false);
 				tablechecklist.addCell(cellContentObservaciones);
 
 			}

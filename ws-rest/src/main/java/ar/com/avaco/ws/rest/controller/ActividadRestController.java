@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
+import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
 import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
@@ -28,6 +29,17 @@ public class ActividadRestController {
 
 	private ActividadEPService actividadedService;
 
+	@RequestMapping(value = "/actividadesCrossJoin", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> actividadesCrossJoin(@RequestParam Long userId) throws SapBusinessException {
+		JSONResponse response = new JSONResponse();
+
+		List<ActividadTarjetaDTO> actividades = this.actividadedService.getActividadesCrossJoin(userId);
+		response.setData(actividades);
+		
+		response.setStatus(JSONResponse.OK);
+		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
+	
 	@RequestMapping(value = "/encodearServiceCall", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> encodearServiceCall(@RequestParam Long serviceCallId) {
 		JSONResponse response = new JSONResponse();
