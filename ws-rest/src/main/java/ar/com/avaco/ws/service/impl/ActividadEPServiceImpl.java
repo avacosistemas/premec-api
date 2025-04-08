@@ -2,6 +2,7 @@ package ar.com.avaco.ws.service.impl;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -89,7 +90,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 	private List<String> exclusiones;
 
 	private GrupoTipoActividadService grupoTipoActividadService;
-	
+
 	@PostConstruct
 	public void onInit() {
 		this.actividadUrl = urlSAP + "/Activities({id})";
@@ -566,7 +567,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
 		Date parse = sdfinput.parse(fecha);
 		String currentDate = sdfoutput.format(parse);
-		
+
 		// Armo el parametro de la actividad
 		String fechaActividad = "'" + currentDate + "'";
 
@@ -638,23 +639,23 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 				gtaf.setTipoActividad(ta);
 				gtaf.setAsc(true);
 				gtaf.setIdx("orden");
-				
+
 				// Inicializo el listado
 				atdto.setGrupos(new ArrayList<>());
 
 				// Obtengo los checks
 				List<GrupoTipoActividad> grupos = grupoTipoActividadService.listFilter(gtaf);
-				
-				// En caso de haber resultados los agrega 
+
+				// En caso de haber resultados los agrega
 				grupos.forEach(grupo -> {
-					GrupoDTO grupoDTO = new GrupoDTO(grupo.getTitulo()); 
+					GrupoDTO grupoDTO = new GrupoDTO(grupo.getTitulo());
 					grupo.getItems().forEach(item -> {
 						CheckListItemDTO clidto = new CheckListItemDTO(item.getNombre());
 						grupoDTO.getChecklist().add(clidto);
 					});
 					atdto.getGrupos().add(grupoDTO);
 				});
-				
+
 				switch (ta) {
 				case EC:
 					atdto.setTipoMaquina("Combustión");
@@ -668,8 +669,9 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 				default:
 					break;
 				}
-				
-				// 31/1/2025 se quita esta regla de negocio. trae problemas con nuevas actividades.
+
+				// 31/1/2025 se quita esta regla de negocio. trae problemas con nuevas
+				// actividades.
 //				if (!atdto.getActividadTaller()) {
 //					// Ajuste solicitado por Walter, si la actividad es de cliente, siempre va a ser
 //					// de reparación 22/4/24
@@ -1052,12 +1054,12 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 		String surl = serviceCallUrl.replace("{id}", serviceCallId.toString());
 
 		ResponseEntity<String> responseServiceCall = null;
-		
+
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Prefer", "odata.maxpagesize=0");
 
 		HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
-		
+
 		try {
 			responseServiceCall = getRestTemplate().doExchange(surl, HttpMethod.GET, requestEntity,
 					new ParameterizedTypeReference<String>() {
@@ -1381,9 +1383,27 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 	}
 
 	@Override
-	public List<ActividadTarjetaDTO> getActividadesCrossJoin(Long userId) throws SapBusinessException {
-		
-		String url2 = urlSAP + "/$crossjoin(Activities, EmployeesInfo, ServiceCalls, Users, ServiceCalls/ServiceCallActivities)"
+	public List<ActividadTarjetaDTO> getActividadesCrossJoin(String fecha, String username)
+			throws SapBusinessException {
+
+		// Obtengo el usuario sap del usuario logueado
+		String usuarioSAP = usuarioService.getUsuarioSAP(username);
+
+		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
+		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
+		Date parse = null;
+		try {
+			parse = sdfinput.parse(fecha);
+		} catch (ParseException e1) {
+			e1.printStackTrace();
+		}
+		String currentDate = sdfoutput.format(parse);
+
+		// Armo el parametro de la actividad
+		String fechaActividad = "'" + currentDate + "'";
+
+		String url2 = urlSAP
+				+ "/$crossjoin(Activities, EmployeesInfo, ServiceCalls, Users, ServiceCalls/ServiceCallActivities)"
 				+ "?$expand=	Activities($select=ActivityCode, U_Taller, U_T_Tarea, Priority, StartDate, ActivityTime, Details, U_ConCargo, "
 				+ "HandledByEmployee, Location,ParentObjectId), EmployeesInfo($select=LastName,FirstName), ServiceCalls($select=ServiceCallID, "
 				+ "ResponseAssignee, ItemCode, Subject, InternalSerialNum, CustomerName, ManufacturerSerialNum),	"
@@ -1391,31 +1411,34 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 				+ "U_U_HsMaq)&$filter=Activities/HandledByEmployee eq EmployeesInfo/EmployeeID and "
 				+ "Activities/ParentObjectId eq ServiceCalls/ServiceCallID and ServiceCalls/ResponseAssignee eq "
 				+ "Users/InternalKey and Activities/ActivityCode eq ServiceCalls/ServiceCallActivities/ActivityCode and "
-				+ "Activities/HandledByEmployee eq 79 and Activities/Closed eq 'tNO' and Activities/U_Estado eq 'Pendiente' "
-				+ "and Activities/StartDate eq '2025-03-11'";
+				+ "Activities/HandledByEmployee eq " + usuarioSAP +" and Activities/Closed eq 'tNO' and Activities/U_Estado eq 'Pendiente' "
+				+ "and Activities/StartDate eq " + fechaActividad;
 
-		TypeReference<List<ActividadTarjetaResponseSapDTO>> jacksonTypeReference = new TypeReference<List<ActividadTarjetaResponseSapDTO>>() {};
-		
+		TypeReference<List<ActividadTarjetaResponseSapDTO>> jacksonTypeReference = new TypeReference<List<ActividadTarjetaResponseSapDTO>>() {
+		};
+
 		ResponseEntity<String> responseActividades = getRestTemplate().doExchange(url2, HttpMethod.GET, null,
 				new ParameterizedTypeReference<String>() {
 				});
-		
+
 		ObjectMapper mapper = new ObjectMapper();
-		
+
 		JsonArray arctividadesArray = gson.fromJson(responseActividades.getBody(), JsonObject.class)
 				.getAsJsonArray("value");
-		
+
 		List<ActividadTarjetaDTO> actividades = new ArrayList<>();
-		
+
 		try {
-			List<ActividadTarjetaResponseSapDTO> list = mapper.readValue(arctividadesArray.toString(), jacksonTypeReference);
-			if (list != null && !list.isEmpty()) list.forEach(x-> actividades.add(x.getActividadTarjetaDTO()));
+			List<ActividadTarjetaResponseSapDTO> list = mapper.readValue(arctividadesArray.toString(),
+					jacksonTypeReference);
+			if (list != null && !list.isEmpty())
+				list.forEach(x -> actividades.add(x.getActividadTarjetaDTO()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		return actividades;
-		
+
 	}
-	
+
 }

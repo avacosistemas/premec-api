@@ -29,17 +29,6 @@ public class ActividadRestController {
 
 	private ActividadEPService actividadedService;
 
-	@RequestMapping(value = "/actividadesCrossJoin", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> actividadesCrossJoin(@RequestParam Long userId) throws SapBusinessException {
-		JSONResponse response = new JSONResponse();
-
-		List<ActividadTarjetaDTO> actividades = this.actividadedService.getActividadesCrossJoin(userId);
-		response.setData(actividades);
-		
-		response.setStatus(JSONResponse.OK);
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-	
 	@RequestMapping(value = "/encodearServiceCall", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> encodearServiceCall(@RequestParam Long serviceCallId) {
 		JSONResponse response = new JSONResponse();
@@ -91,7 +80,8 @@ public class ActividadRestController {
 		Usuario u = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 		List<ActividadTarjetaDTO> actividades;
 		try {
-			actividades = this.actividadedService.getActividades(fecha, u.getUsername());
+//			actividades = this.actividadedService.getActividades(fecha, u.getUsername());
+			actividades = this.actividadedService.getActividadesCrossJoin(fecha, u.getUsername());
 			response.setData(actividades);
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {
