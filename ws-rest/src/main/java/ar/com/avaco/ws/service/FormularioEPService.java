@@ -13,4 +13,6 @@ public interface FormularioEPService {
 	void quitarArchivoColaEnvio(long actividadId) throws Exception;
 
 	void validarHorasMaquina(Long parentObjectId, int horasMaquina) throws Exception;
+
+	void subirFotosBulk();
 }

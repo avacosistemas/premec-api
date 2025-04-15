@@ -42,8 +42,8 @@ public class ActividadTarjetaResponseSapDTO {
 		dto.setHorasMaquina(serviceCallActivity.getHorasMaquina() == null ? 0 : new Integer(serviceCallActivity.getHorasMaquina()));
 		dto.setIdActividad(actividad.getActivityCode());
 		dto.setLlamadaID(serviceCall.getServiceCallID().toString());
-		dto.setNroFabricante(serviceCall.getManufacturerSerialNum());
-		dto.setNroSerie(serviceCall.getInternalSerialNum());
+		dto.setNroFabricante(serviceCall.getManufacturerSerialNum() != null ? serviceCall.getManufacturerSerialNum() : "");
+		dto.setNroSerie(serviceCall.getInternalSerialNum() != null ? serviceCall.getInternalSerialNum() : "");
 		dto.setNumero(actividad.getActivityCode().toString());
 		dto.setPrioridad(actividad.getPriority());
 		dto.setTareasARealizar(actividad.getDetails());

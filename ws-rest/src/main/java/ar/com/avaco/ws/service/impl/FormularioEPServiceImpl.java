@@ -5,6 +5,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -39,10 +44,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
-import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
-import ar.com.avaco.factory.RestTemplateFactory;
-import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadPatch;
@@ -117,19 +119,28 @@ public class FormularioEPServiceImpl extends AbstractSapService implements Formu
 		File folder = new File(jsonPath);
 		File[] listOfFiles = folder.listFiles();
 
+		// Por cada archivo en la carpeta de pendientes
 		for (File file : listOfFiles) {
+
+			// Si es un archivo (y no una carpeta)
 			if (file.isFile()) {
 				Long activityCode = null;
 				String fileName = null;
 				try {
+					// Leo el archivo
 					String readFileToString = FileUtils.readFileToString(file);
+
+					// Lo mapeo a un formularioDTO
 					FormularioDTO formularioDTO = mapper.readValue(readFileToString, FormularioDTO.class);
+
+					// Parseo el nombre del archivo para sacar el nro de acividad y el usuario
 					fileName = file.getName();
 					String[] split = fileName.split("\\.")[0].split("-");
 					String userId = split[3];
 					String formularioId = split[1];
 					activityCode = formularioDTO.getIdActividad();
 
+					// Si la actividad esta abierta
 					if (isActividadAbierta(activityCode)) {
 						LOGGER.debug("##### Enviando formulario " + formularioId);
 						// Se envia el formulario a sap
@@ -456,9 +467,12 @@ public class FormularioEPServiceImpl extends AbstractSapService implements Formu
 		Map<String, Object> attachmentMap = new HashMap<>();
 
 		try {
+			// Busco la carpeta que tiene las fotos
 			String path = informePath + "\\fotosactividades\\" + formulario.getIdActividad();
-
 			File folder = new File(path);
+
+			// Si la carpeta existe borro el contenido, esto es por si ya se envio en algun
+			// momento y llego a fallar.
 			if (folder.exists()) {
 				File[] listFiles = folder.listFiles();
 				for (File f : listFiles) {
@@ -473,6 +487,7 @@ public class FormularioEPServiceImpl extends AbstractSapService implements Formu
 				}
 			}
 
+			// Genero el diretorio con el path
 			try {
 				Files.createDirectories(Paths.get(path));
 			} catch (IOException e) {
@@ -483,7 +498,11 @@ public class FormularioEPServiceImpl extends AbstractSapService implements Formu
 			List<Map<String, String>> archivos = new ArrayList<>();
 
 			int i = 1;
+
+			// Por cada foto del formulario
 			for (FotoDTO foto : formulario.getFotos()) {
+
+				// Armo el nombre del archivo
 				String[] split = foto.getNombre().split("\\.");
 				String fileName = "FOTO-" + Calendar.getInstance().getTimeInMillis() + "-" + i;
 				String fileExtension = split[split.length - 1];
@@ -841,4 +860,161 @@ public class FormularioEPServiceImpl extends AbstractSapService implements Formu
 		this.mailService = mailService;
 	}
 
+	@Override
+	public void subirFotosBulk() {
+		Logger logger = Logger.getLogger(this.getClass());
+
+		List<String> bien = new ArrayList<>();
+		List<String> mal = new ArrayList<>();
+
+		// Traigo el driver para la query
+		try {
+			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		}
+
+		// Datos de conexion
+//		String url = "jdbc:sqlserver://;serverName=vm-sap;port=1433;databaseName=Pruebas2_Premec";
+		String url = "jdbc:sqlserver://;serverName=vm-sap;port=1433;databaseName=AR_PRD_PREMEC";
+		String user = "sa";
+		String password = "SAPB1Admin";
+
+		// Query que trae todos los registros de actividades que tienen un id de
+		// attachment pero que no existe en la tabla de attachments
+		String query = " select * from att_aux WHERE ESTADO = 'PROCESAR'";
+
+		try {
+			
+			Connection conn = DriverManager.getConnection(url, user, password);
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(query);
+
+			// Por cada registro
+			while (rs.next()) {
+
+				// Armo un mapa de attachments
+				Map<String, Object> attachmentMap = new HashMap<>();
+
+				// Obtengo el codigo de actividad
+				Long activityCode = rs.getLong("ClgCode");
+
+				// El usuario sap
+				Long usuarioSAP = rs.getLong("AttendEmpl");
+
+				logger.debug("### INICIANDO ENVIO FOTOS ###");
+				logger.debug("### Actividad: " + activityCode);
+				logger.debug("### Usuario: " + usuarioSAP);
+
+				String path = "\\\\10.0.0.8\\sapb1\\actividades\\informes\\fotosactividades\\" + activityCode;
+				logger.debug("### Path: " + path);
+
+				// Armo el listado de maps que contiene cada uno de los archivos
+				List<Map<String, String>> attachments = new ArrayList<>();
+
+				// Busco la carpeta con las imagenes
+				File carpeta = new File(path);
+				if (carpeta.exists() && carpeta.isDirectory()) {
+
+					logger.debug("### La carpeta existe");
+
+					File[] listFiles = carpeta.listFiles();
+
+					if (listFiles.length > 0) {
+
+						logger.debug("### La carpeta tiene fotos");
+
+						for (File foto : listFiles) {
+
+							logger.debug("### Foto: " + foto.getName());
+
+							String existingpath = "\\\\10.0.0.8\\sapb1\\Carpeta Anexos\\" + foto.getName();
+							File existente = new File(existingpath);
+							if (existente.exists()) {
+								logger.debug("### El archivo ya existe en anexos. Se borra.");
+								existente.delete();
+							} else {
+								logger.debug("### El archivo no existe en anexos. No se borra.");
+							}
+
+							String nombre = foto.getName().split("\\.")[0];
+							String extension = foto.getName().split("\\.")[1];
+
+							Map<String, String> fotoMap = new HashMap<String, String>();
+							fotoMap.put("FileName", nombre);
+							fotoMap.put("FileExtension", extension);
+							fotoMap.put("SourcePath", path);
+							fotoMap.put("UserID", usuarioSAP.toString());
+
+							logger.debug("### Mapa armado para: " + foto.getName());
+
+							attachments.add(fotoMap);
+
+						}
+
+						// Pongo en el mapa los archivos
+						attachmentMap.put("Attachments2_Lines", attachments.toArray());
+
+						logger.debug("### Mapa de attachments completo");
+
+						// Preparo la url para enviar el attachment
+						String attachmentUrl = urlSAP + "/Attachments2";
+						HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
+						ResponseEntity<Object> attachmentRespose = null;
+
+						logger.debug("### Invocando POST para attachments");
+						logger.debug("### " + attachmentUrl);
+
+						attachmentRespose = getRestTemplate().doExchange(attachmentUrl, HttpMethod.POST,
+								httpEntityAttach, Object.class);
+						Object object = ((Map) attachmentRespose.getBody()).entrySet().toArray()[1];
+
+						// Obtengo el nuevo attachment entry a setear en la actividad
+						String attchEntry = (object.toString().split("="))[1];
+						logger.debug("### Nuevo Entry Attachment: " + attchEntry);
+
+						Map<String, Object> map = new HashMap<String, Object>();
+						map.put("AttachmentEntry", attchEntry);
+
+						logger.debug("### Invocando PATCH para actividad con nuevo entry");
+						// Envio el attachment entry
+						HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<Map<String, Object>>(map);
+						String actividadUrl = urlSAP + "/Activities({id})".replace("{id}", activityCode.toString());
+						getRestTemplate().doExchange(actividadUrl, HttpMethod.PATCH, httpEntity, Object.class);
+
+						bien.add(activityCode.toString());
+
+					} else {
+						logger.debug("### La carpeta no tiene fotos");
+						mal.add(activityCode.toString());
+					}
+
+				} else {
+					logger.debug("### La carpeta no existe. ");
+					mal.add(activityCode.toString());
+				}
+
+				logger.debug("### Finalizado nuevo registro de fotos ");
+			}
+
+			rs.close();
+			
+			String updatebien = "update att_aux set estado = 'PROCESADO' where ClgCode in ({ids})".replace("{ids}",
+					String.join(",", bien));
+			if (!bien.isEmpty())
+				stmt.executeUpdate(updatebien);
+
+			String updatemal = "update att_aux set estado = 'PROBLEMAS' where ClgCode in ({ids})".replace("{ids}",
+					String.join(",", mal));
+			if (!mal.isEmpty())
+				stmt.executeUpdate(updatemal);
+			
+			stmt.close();
+			
+			conn.close();
+			
+		} catch (SQLException | SapBusinessException e) {
+			e.printStackTrace();
+		}
+	}
 }
