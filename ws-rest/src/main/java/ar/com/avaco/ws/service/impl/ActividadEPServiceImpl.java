@@ -1,7 +1,6 @@
 package ar.com.avaco.ws.service.impl;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -29,9 +28,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
@@ -49,7 +46,6 @@ import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.commons.domain.GrupoTipoActividad;
 import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.commons.service.GrupoTipoActividadService;
-import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.ActividadReporteDTO;
@@ -1403,8 +1399,8 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 		String fechaActividad = "'" + currentDate + "'";
 
 		String url2 = urlSAP
-				+ "/$crossjoin(Activities, EmployeesInfo, ServiceCalls, Users, ServiceCalls/ServiceCallActivities)"
-				+ "?$expand=	Activities($select=ActivityCode, U_Taller, U_T_Tarea, Priority, StartDate, ActivityTime, Details, U_ConCargo, "
+				+ "/$crossjoin(Activities, EmployeesInfo, ServiceCalls, Users, ServiceCalls/ServiceCallActivities, ActivityLocations)"
+				+ "?$expand=ActivityLocations($select=Code, Name), Activities($select=ActivityCode, U_Taller, U_T_Tarea, Priority, StartDate, ActivityTime, Details, U_ConCargo, "
 				+ "HandledByEmployee, Location,ParentObjectId), EmployeesInfo($select=LastName,FirstName), ServiceCalls($select=ServiceCallID, "
 				+ "ResponseAssignee, ItemCode, Subject, InternalSerialNum, CustomerName, ManufacturerSerialNum),	"
 				+ "Users($select=UserName), ServiceCalls/ServiceCallActivities($select=ActivityCode, "
@@ -1412,7 +1408,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 				+ "Activities/ParentObjectId eq ServiceCalls/ServiceCallID and ServiceCalls/ResponseAssignee eq "
 				+ "Users/InternalKey and Activities/ActivityCode eq ServiceCalls/ServiceCallActivities/ActivityCode and "
 				+ "Activities/HandledByEmployee eq " + usuarioSAP +" and Activities/Closed eq 'tNO' and Activities/U_Estado eq 'Pendiente' "
-				+ "and Activities/StartDate eq " + fechaActividad;
+				+ "and Activities/StartDate eq " + fechaActividad + " and ActivityLocations/Code eq Activities/Location ";
 
 		TypeReference<List<ActividadTarjetaResponseSapDTO>> jacksonTypeReference = new TypeReference<List<ActividadTarjetaResponseSapDTO>>() {
 		};
@@ -1432,7 +1428,35 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 			List<ActividadTarjetaResponseSapDTO> list = mapper.readValue(arctividadesArray.toString(),
 					jacksonTypeReference);
 			if (list != null && !list.isEmpty())
-				list.forEach(x -> actividades.add(x.getActividadTarjetaDTO()));
+				list.forEach(x -> {
+					
+					TipoActividad ta = TipoActividad.valueOf(x.getActividad().getTipoTarea());
+					// Armo el filtro para obtener listado de checks
+					GrupoTipoActividadFilter gtaf = new GrupoTipoActividadFilter();
+					gtaf.setTipoActividad(ta);
+					gtaf.setAsc(true);
+					gtaf.setIdx("orden");
+					
+					List<GrupoDTO> gruposDTO = new ArrayList<>();
+
+					// Obtengo los checks
+					List<GrupoTipoActividad> grupos = grupoTipoActividadService.listFilter(gtaf);
+					
+					// En caso de haber resultados los agrega 
+					grupos.forEach(grupo -> {
+						GrupoDTO grupoDTO = new GrupoDTO(grupo.getTitulo()); 
+						grupo.getItems().forEach(item -> {
+							CheckListItemDTO clidto = new CheckListItemDTO(item.getNombre());
+							grupoDTO.getChecklist().add(clidto);
+						});
+						gruposDTO.add(grupoDTO);
+					});
+					
+					actividades.add(x.getActividadTarjetaDTO(gruposDTO));
+					
+				});
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

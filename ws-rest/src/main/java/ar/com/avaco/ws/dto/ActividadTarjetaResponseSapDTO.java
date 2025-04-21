@@ -1,6 +1,7 @@
 package ar.com.avaco.ws.dto;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,10 +24,17 @@ public class ActividadTarjetaResponseSapDTO {
 	@JsonProperty("Users")
 	private UsersResponseSapDTO usuario;
 
+	@JsonProperty("ActivityLocations")
+	private LocationResponseSapDTO location;
+	
 	@JsonProperty("ServiceCalls/ServiceCallActivities")
 	private ServiceCallActivitiesResponseSapDTO serviceCallActivity;
 
 	public ActividadTarjetaDTO getActividadTarjetaDTO() {
+		return getActividadTarjetaDTO(new ArrayList<>());		
+	}
+	
+	public ActividadTarjetaDTO getActividadTarjetaDTO(List<GrupoDTO> grupos) {
 		ActividadTarjetaDTO dto = new ActividadTarjetaDTO();
 		dto.setActividadTaller(actividad.getEsTaller().equals("Y"));
 		dto.setAsignadoPor(usuario.getUsername());
@@ -34,10 +42,10 @@ public class ActividadTarjetaResponseSapDTO {
 		dto.setCodigoArticulo(serviceCall.getItemCode());
 		dto.setConCargo(actividad.getConCargo().equals("Y"));
 		dto.setDetalle(serviceCall.getSubject());
-		dto.setDireccion("A REVISAR");
+		dto.setDireccion(location.getName());
 		dto.setEmpleado(empleado.getFirstName() + " " + empleado.getLastName());
 		dto.setFecha(actividad.getStartDate());
-		dto.setGrupos(new ArrayList<GrupoDTO>());
+		dto.setGrupos(grupos);
 		dto.setHora(actividad.getActivityTime());
 		dto.setHorasMaquina(serviceCallActivity.getHorasMaquina() == null ? 0 : new Integer(serviceCallActivity.getHorasMaquina()));
 		dto.setIdActividad(actividad.getActivityCode());
