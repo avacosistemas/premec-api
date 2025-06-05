@@ -5,6 +5,7 @@ import java.util.Date;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -15,6 +16,8 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplatePremec extends RestTemplate {
 
 	private Date expiration;
+
+	private HttpHeaders defaultHeaders;
 
 	public RestTemplatePremec(HttpComponentsClientHttpRequestFactory httpRequestFactory) {
 		super(httpRequestFactory);
@@ -69,6 +72,14 @@ public class RestTemplatePremec extends RestTemplate {
 
 	public boolean isSessionActive() {
 		return Calendar.getInstance().getTime().before(expiration);
+	}
+
+	public HttpHeaders getDefaultHeaders() {
+		return defaultHeaders;
+	}
+
+	public void setDefaultHeaders(HttpHeaders defaultHeaders) {
+		this.defaultHeaders = defaultHeaders;
 	}
 
 }

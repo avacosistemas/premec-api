@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.repuesto;
 
 public class RepuestoDepositoDTO {
 

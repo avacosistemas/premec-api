@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
-import ar.com.avaco.ws.dto.RepuestoDepositoDTO;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDepositoDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.RepuestoEPService;
 

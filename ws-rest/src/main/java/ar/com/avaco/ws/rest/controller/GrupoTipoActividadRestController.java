@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.commons.exception.BusinessException;
-import ar.com.avaco.ws.dto.GrupoTipoActividadDTO;
+import ar.com.avaco.ws.dto.formulario.GrupoTipoActividadDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.GrupoTipoActividadEPService;
 

@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.formulario;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

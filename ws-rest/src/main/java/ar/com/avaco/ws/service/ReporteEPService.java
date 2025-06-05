@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.itextpdf.text.DocumentException;
 
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
 public interface ReporteEPService {

@@ -1,7 +1,9 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.actividad;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import ar.com.avaco.ws.dto.formulario.GrupoDTO;
 
 public class ActividadTarjetaDTO {
 

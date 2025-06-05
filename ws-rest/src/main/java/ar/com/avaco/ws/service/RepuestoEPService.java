@@ -2,7 +2,7 @@ package ar.com.avaco.ws.service;
 
 import java.util.List;
 
-import ar.com.avaco.ws.dto.RepuestoDepositoDTO;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDepositoDTO;
 
 public interface RepuestoEPService {
 

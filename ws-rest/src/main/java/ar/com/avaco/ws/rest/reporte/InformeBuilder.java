@@ -13,7 +13,7 @@ import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.PageSize;
 import com.itextpdf.text.pdf.PdfWriter;
 
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
 public abstract class InformeBuilder {

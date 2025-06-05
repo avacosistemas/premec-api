@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.formulario;
 
 import ar.com.avaco.ws.rest.dto.DTOEntity;
 

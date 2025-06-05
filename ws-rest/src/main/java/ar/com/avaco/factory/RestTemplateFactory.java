@@ -115,6 +115,7 @@ public class RestTemplateFactory {
 
 			restTemplate.setDefaultUriVariables(headers);
 			restTemplate.addSessionExpiration(response.getBody().getSessionTimeout().intValue());
+			restTemplate.setDefaultHeaders(headers);
 			return restTemplate;
 		} catch (RestClientException rce) {
 			throw new SapBusinessException(rce);

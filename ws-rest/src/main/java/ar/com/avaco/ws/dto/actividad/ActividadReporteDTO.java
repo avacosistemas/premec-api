@@ -1,12 +1,12 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.actividad;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ar.com.avaco.ws.dto.ItemCheckDTO;
-import ar.com.avaco.ws.dto.RepuestoDTO;
+import ar.com.avaco.ws.dto.formulario.ItemCheckDTO;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDTO;
 
 public class ActividadReporteDTO {
 

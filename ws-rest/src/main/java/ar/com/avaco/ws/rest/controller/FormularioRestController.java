@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
-import ar.com.avaco.ws.dto.FormularioDTO;
+import ar.com.avaco.ws.dto.formulario.FormularioDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.FormularioEPService;
 

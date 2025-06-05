@@ -47,9 +47,9 @@ import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.factory.ParentObjectIdNotFoundException;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
-import ar.com.avaco.ws.dto.ActividadPatch;
-import ar.com.avaco.ws.dto.FormularioDTO;
-import ar.com.avaco.ws.dto.FotoDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadPatch;
+import ar.com.avaco.ws.dto.formulario.FormularioDTO;
+import ar.com.avaco.ws.dto.formulario.FotoDTO;
 import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.FormularioEPService;
 

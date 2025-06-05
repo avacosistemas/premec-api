@@ -30,8 +30,8 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPCellEvent;
 import com.itextpdf.text.pdf.PdfPTable;
 
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
-import ar.com.avaco.ws.dto.ItemCheckDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.formulario.ItemCheckDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 
 public class InformeBuilderChecklist extends InformeBuilder {

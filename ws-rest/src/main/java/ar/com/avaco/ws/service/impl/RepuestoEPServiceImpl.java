@@ -29,7 +29,7 @@ import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.factory.RestTemplateFactory;
 import ar.com.avaco.factory.RestTemplatePremec;
 import ar.com.avaco.factory.SapBusinessException;
-import ar.com.avaco.ws.dto.RepuestoDepositoDTO;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDepositoDTO;
 import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.RepuestoEPService;
 

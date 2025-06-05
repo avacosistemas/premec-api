@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.formulario;
 
 import java.util.ArrayList;
 import java.util.List;

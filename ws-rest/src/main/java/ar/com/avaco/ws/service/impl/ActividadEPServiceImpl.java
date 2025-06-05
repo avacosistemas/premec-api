@@ -48,17 +48,17 @@ import ar.com.avaco.commons.domain.TipoActividad;
 import ar.com.avaco.commons.service.GrupoTipoActividadService;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
-import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
-import ar.com.avaco.ws.dto.ActividadTarjetaResponseSapDTO;
-import ar.com.avaco.ws.dto.CheckListItemDTO;
-import ar.com.avaco.ws.dto.GrupoDTO;
-import ar.com.avaco.ws.dto.ItemCheckDTO;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
 import ar.com.avaco.ws.dto.RegistroInformeActividadDTO;
 import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
-import ar.com.avaco.ws.dto.RepuestoDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadTarjetaDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadTarjetaResponseSapDTO;
+import ar.com.avaco.ws.dto.formulario.CheckListItemDTO;
+import ar.com.avaco.ws.dto.formulario.GrupoDTO;
+import ar.com.avaco.ws.dto.formulario.ItemCheckDTO;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDTO;
 import ar.com.avaco.ws.service.AbstractSapService;
 import ar.com.avaco.ws.service.ActividadEPService;
 import ar.com.avaco.ws.service.filter.GrupoTipoActividadFilter;
@@ -557,7 +557,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 	public List<ActividadTarjetaDTO> getActividades(String fecha, String username) throws Exception {
 
 		// Obtengo el usuario sap del usuario logueado
-		String usuarioSAP = usuarioService.getUsuarioSAP(username);
+		String usuarioSAP = usuarioService.getUsuarioSAPByUsername(username);
 
 		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");
@@ -1383,7 +1383,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 			throws SapBusinessException {
 
 		// Obtengo el usuario sap del usuario logueado
-		String usuarioSAP = usuarioService.getUsuarioSAP(username);
+		String usuarioSAP = usuarioService.getUsuarioSAPByUsername(username);
 
 		SimpleDateFormat sdfinput = new SimpleDateFormat("yyyyMMdd");
 		SimpleDateFormat sdfoutput = new SimpleDateFormat("yyyy-MM-dd");

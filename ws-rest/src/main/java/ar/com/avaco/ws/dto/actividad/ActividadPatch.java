@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.actividad;
 
 import java.util.HashMap;
 import java.util.Map;

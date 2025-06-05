@@ -1,9 +1,10 @@
-package ar.com.avaco.ws.dto;
+package ar.com.avaco.ws.dto.formulario;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import ar.com.avaco.commons.domain.TipoActividad;
+import ar.com.avaco.ws.dto.repuesto.RepuestoDTO;
 
 public class FormularioDTO {
 

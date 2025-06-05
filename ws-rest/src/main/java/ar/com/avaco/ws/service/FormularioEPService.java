@@ -1,6 +1,6 @@
 package ar.com.avaco.ws.service;
 
-import ar.com.avaco.ws.dto.FormularioDTO;
+import ar.com.avaco.ws.dto.formulario.FormularioDTO;
 
 public interface FormularioEPService {
 

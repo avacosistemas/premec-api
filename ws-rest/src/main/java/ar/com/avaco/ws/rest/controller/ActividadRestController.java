@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
 import ar.com.avaco.factory.SapBusinessException;
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
-import ar.com.avaco.ws.dto.ActividadTarjetaDTO;
 import ar.com.avaco.ws.dto.RegistroHorasMaquinaDTO;
 import ar.com.avaco.ws.dto.RegistroInformeServicioDTO;
 import ar.com.avaco.ws.dto.RegistroMonitorDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadTarjetaDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ActividadEPService;
 

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.itextpdf.text.DocumentException;
 
-import ar.com.avaco.ws.dto.ActividadReporteDTO;
+import ar.com.avaco.ws.dto.actividad.ActividadReporteDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.rest.reporte.InformeBuilder;
 import ar.com.avaco.ws.rest.reporte.InformeBuilderChecklist;
