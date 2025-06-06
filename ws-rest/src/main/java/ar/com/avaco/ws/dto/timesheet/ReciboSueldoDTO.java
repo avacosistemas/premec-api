@@ -10,6 +10,7 @@ public class ReciboSueldoDTO {
 	private BigDecimal neto;
 	private String tipo;
 	private String observaciones;
+	private Boolean aprobado;
 
 	public ReciboSueldoDTO() {
 	}
@@ -69,6 +70,14 @@ public class ReciboSueldoDTO {
 
 	public void setObservaciones(String observaciones) {
 		this.observaciones = observaciones;
+	}
+
+	public Boolean getAprobado() {
+		return aprobado;
+	}
+
+	public void setAprobado(Boolean aprobado) {
+		this.aprobado = aprobado;
 	}
 
 }

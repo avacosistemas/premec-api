@@ -1,6 +1,7 @@
 package ar.com.avaco.ws.rest.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.Resource;
 
@@ -12,7 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import ar.com.avaco.ws.dto.timesheet.LoteRecibosSueldoDTO;
+import ar.com.avaco.ws.dto.timesheet.ArchivoReciboDTO;
+import ar.com.avaco.ws.dto.timesheet.ReciboSueldoDTO;
 import ar.com.avaco.ws.dto.timesheet.RegistroReciboPorUsuarioDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
 import ar.com.avaco.ws.service.ReciboSueldoService;
@@ -22,11 +24,11 @@ public class ReciboSueldoRestController {
 
 	private ReciboSueldoService reciboService;
 
-	@RequestMapping(value = "/procesarRecibos", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> procesarRecibos(String tipo) {
+	@RequestMapping(value = "/procesarRecibos", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> procesarRecibos(@RequestBody ArchivoReciboDTO archivo) {
 		JSONResponse response = new JSONResponse();
 		try {
-			response.setData(this.reciboService.procesarRecibos(tipo));
+			response.setData(this.reciboService.procesarRecibos(archivo.getTipo(), archivo.getArchivo()));
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {
 			response.setStatus(JSONResponse.ERROR);
@@ -36,25 +38,12 @@ public class ReciboSueldoRestController {
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 	
-	@RequestMapping(value = "/aprobarRecibos", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> aprobarRecibos(@RequestBody LoteRecibosSueldoDTO lote) {
+	@RequestMapping(value = "/aprobarRechazarRecibos", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> aprobarRecibos(@RequestBody List<ReciboSueldoDTO> recibos) {
 		JSONResponse response = new JSONResponse();
 		try {
-			this.reciboService.aprobarRecibos(lote);
-			response.setStatus(JSONResponse.OK);
-		} catch (Exception e) {
-			response.setStatus(JSONResponse.ERROR);
-			response.setData(e);
-			e.printStackTrace();
-		}
-		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
-	}
-	
-	@RequestMapping(value = "/rechazarRecibos", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JSONResponse> rechazarRecibos(@RequestBody LoteRecibosSueldoDTO lote) {
-		JSONResponse response = new JSONResponse();
-		try {
-			this.reciboService.rechazarRecibos(lote);
+			this.reciboService.aprobarRecibos(recibos.stream().filter(recibo -> recibo.getAprobado()).collect(Collectors.toList()));
+			this.reciboService.rechazarRecibos(recibos.stream().filter(recibo -> !recibo.getAprobado()).collect(Collectors.toList()));
 			response.setStatus(JSONResponse.OK);
 		} catch (Exception e) {
 			response.setStatus(JSONResponse.ERROR);

@@ -18,10 +18,8 @@ import ar.com.avaco.arc.core.component.bean.repository.NJBaseRepository;
 import ar.com.avaco.arc.sec.domain.Usuario;
 import ar.com.avaco.arc.sec.repository.UsuarioRepository;
 
-
 @Repository("usuarioRepository")
-public class UsuarioRepositoryImpl extends NJBaseRepository<Long, Usuario>
-		implements UsuarioRepository {
+public class UsuarioRepositoryImpl extends NJBaseRepository<Long, Usuario> implements UsuarioRepository {
 
 	protected UsuarioRepositoryImpl(EntityManager em) {
 		super(Usuario.class, em);
@@ -29,7 +27,7 @@ public class UsuarioRepositoryImpl extends NJBaseRepository<Long, Usuario>
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public List<Usuario> getExternalUsersLike(String userLess,String userlike) {
+	public List<Usuario> getExternalUsersLike(String userLess, String userlike) {
 		Criteria c = this.getCurrentSession().createCriteria(this.getHandledClass());
 		c.add(Restrictions.eq("interno", false));
 		c.add(Restrictions.ne("username", userLess));
@@ -48,21 +46,19 @@ public class UsuarioRepositoryImpl extends NJBaseRepository<Long, Usuario>
 		usuario = (Usuario) getCurrentSession().load(this.getHandledClass(), usuario.getId());
 		return new ArrayList<Usuario>(usuario.getImpersonables());
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public List<Usuario> getAllOnlyIdUsernameAndName() {
 		Criteria c = this.getCurrentSession().createCriteria(this.getHandledClass());
-		
-		c.setProjection(Projections.projectionList()
-				.add(Projections.property("id"), "id")
-				.add(Projections.property("username"), "username")
-				.add(Projections.property("nombre"), "nombre")
+
+		c.setProjection(Projections.projectionList().add(Projections.property("id"), "id")
+				.add(Projections.property("username"), "username").add(Projections.property("nombre"), "nombre")
 				.add(Projections.property("apellido"), "apellido"));
-		
+
 		c.addOrder(Order.asc("nombre")).addOrder(Order.asc("apellido"));
-		
+
 		c.setResultTransformer(Transformers.aliasToBean(this.getHandledClass()));
-		
+
 		return c.list();
 	}
 
@@ -79,11 +75,25 @@ public class UsuarioRepositoryImpl extends NJBaseRepository<Long, Usuario>
 		c.add(Restrictions.eq("email", email));
 		return (Usuario) c.uniqueResult();
 	}
-	
+
 	@Override
 	public boolean isUserExistWithEmail(String email) {
-		return this.findByEmail(email) != null;
+		Criteria c = this.getCurrentSession().createCriteria(this.getHandledClass());
+		c.add(Restrictions.eq("email", email));
+		return c.uniqueResult() != null;
 	}
 
+	@Override
+	public List<Usuario> findByLegajoIn(List<String> legajos) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Usuario findByLegajo(int legajo) {
+		Criteria c = this.getCurrentSession().createCriteria(this.getHandledClass());
+		c.add(Restrictions.eq("legajo", legajo));
+		return (Usuario) c.uniqueResult();
+	}
 
 }

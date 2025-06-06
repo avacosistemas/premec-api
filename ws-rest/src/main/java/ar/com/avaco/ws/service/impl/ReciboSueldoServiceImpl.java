@@ -1,6 +1,6 @@
 package ar.com.avaco.ws.service.impl;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -41,7 +42,6 @@ import ar.com.avaco.commons.exception.ErrorValidationException;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.attachment.ResponseAttachmentGetPost;
-import ar.com.avaco.ws.dto.timesheet.LoteRecibosSueldoDTO;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetDTO;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetResponse;
 import ar.com.avaco.ws.dto.timesheet.ReciboSueldoDTO;
@@ -51,9 +51,6 @@ import ar.com.avaco.ws.service.ReciboSueldoService;
 
 @Service("reciboSueldoService")
 public class ReciboSueldoServiceImpl extends AbstractSapService implements ReciboSueldoService {
-
-	@Value("${recibo.test.path}")
-	private String reciboTest;
 
 	@Value("${email.contador.from}")
 	private String emailFromContador;
@@ -79,8 +76,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 	private UsuarioService usuarioService;
 
 	@Override
-	public void aprobarRecibos(LoteRecibosSueldoDTO lote) {
-		for (ReciboSueldoDTO recibo : lote.getRecibos()) {
+	public void aprobarRecibos(List<ReciboSueldoDTO> lista) {
+		for (ReciboSueldoDTO recibo : lista) {
 			String usuarioSap = usuarioService.getUsuarioSAPByLegajo(recibo.getLegajo());
 
 			String legajo = Integer.toString(recibo.getLegajo());
@@ -295,10 +292,10 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 	}
 
 	@Override
-	public List<ReciboSueldoDTO> procesarRecibos(String tipo) {
+	public List<ReciboSueldoDTO> procesarRecibos(String tipo, byte[] archivo) {
 		List<ReciboSueldoDTO> recibos = new ArrayList<>();
 		try {
-			PDDocument documento = PDDocument.load(new File(reciboTest));
+			PDDocument documento = PDDocument.load(new ByteArrayInputStream(archivo));
 			PDFTextStripper stripper = new PDFTextStripper();
 
 			for (int i = 0; i < documento.getNumberOfPages(); i++) {
@@ -395,14 +392,14 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 	}
 
 	@Override
-	public void rechazarRecibos(LoteRecibosSueldoDTO lote) {
-		String msj = bodyRechazo.replace("%detalle%", generarMensajeRechazo(lote));
+	public void rechazarRecibos(List<ReciboSueldoDTO> lista) {
+		String msj = bodyRechazo.replace("%detalle%", generarMensajeRechazo(lista));
 		sender.sendMail(emailFromContador, emailToContador, subjectRechazo, msj, null);
 	}
 
-	private String generarMensajeRechazo(LoteRecibosSueldoDTO lote) {
+	private String generarMensajeRechazo(List<ReciboSueldoDTO> lista) {
 		String body = "";
-		for (ReciboSueldoDTO recibo : lote.getRecibos()) {
+		for (ReciboSueldoDTO recibo : lista) {
 			body += "<tr>";
 			body += "<td>" + recibo.getLegajo() + "</td>";
 			body += "<td>" + recibo.getNombreCompleto() + "</td>";
@@ -428,7 +425,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 		// Preparo la url para enviar el attachment
 		String attachmentUrl = urlSAP
-				+ "/ProjectManagementTimeSheet?$filter=UserID eq {userId}&$expand=Attachments2&$orderby=DateFrom desc";
+				+ "/ProjectManagementTimeSheet?$filter=UserID eq {userId} and AttachmentEntry ne null&$expand=Attachments2&$orderby=DateFrom desc";
 		attachmentUrl = attachmentUrl.replace("{userId}", usuarioSAP);
 
 		ResponseEntity<ProjectManagementTimeSheetResponse> timeshteeRespose = null;
@@ -449,10 +446,11 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
 
 		registros.stream().forEach(registro -> {
+			int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
+			int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
+
 			Calendar instance = Calendar.getInstance();
-			instance.setTime(registro.getDateFrom());
-			int month = (instance.get(Calendar.MONTH)) + 1;
-			int year = instance.get(Calendar.YEAR);
+			instance.set(Calendar.MONTH, month - 1);
 
 			SimpleDateFormat formatoMes = new SimpleDateFormat("MMMM", new Locale("es", "ES"));
 			String monthString = formatoMes.format(instance.getTime());
@@ -477,9 +475,9 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		String name = SecurityContextHolder.getContext().getAuthentication().getName();
 		Integer legajo = usuarioService.findByUsername(name).getLegajo();
 		Integer year = recibo.getYear();
-		Integer month = recibo.getMonth();
-		Path path = Paths.get(reciboPathServeSap + "\\" + year + month + "\\" + legajo + "_" + year + month + "_"
-				+ recibo.getTipo() + ".pdf");
+		String month = StringUtils.leftPad(recibo.getMonth().toString(), 2, "0");
+		Path path = Paths
+				.get(reciboPathServeSap + "\\" + legajo + "_" + year + month + "_" + recibo.getTipo() + ".pdf");
 		byte[] contenido = Files.readAllBytes(path);
 		return contenido;
 	}

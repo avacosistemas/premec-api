@@ -55,7 +55,7 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 		Usuario usuario = this.getRepository().findByUsername(username);
 		return usuario.getUsuariosap();
 	}
-	
+
 	public String getDeposito(String username) {
 		Usuario usuario = this.getRepository().findByUsername(username);
 		return usuario.getDeposito();
@@ -264,6 +264,17 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 
 	public void setCc(String cc) {
 		this.cc = cc;
+	}
+
+	@Override
+	public String getUsuarioSAPByUsername(String username) {
+		Usuario usuario = this.getRepository().findByUsername(username);
+		return usuario.getUsuariosap();
+	}
+
+	@Override
+	public String getUsuarioSAPByLegajo(int legajo) {
+		return this.repository.findByLegajo(legajo).getUsuariosap();
 	}
 
 }

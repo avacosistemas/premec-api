@@ -1,4 +1,4 @@
-package ar.com.avaco.ws.rest.dto;
+package ar.com.avaco.ws.rest.security.dto;
 import java.io.Serializable;
 
 /**

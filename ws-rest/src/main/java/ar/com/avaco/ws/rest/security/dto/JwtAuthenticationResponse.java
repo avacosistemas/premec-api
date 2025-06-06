@@ -1,12 +1,8 @@
-package ar.com.avaco.ws.rest.dto;
+package ar.com.avaco.ws.rest.security.dto;
 
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
-
-import ar.com.avaco.ws.rest.security.dto.Permission;
-import ar.com.avaco.ws.rest.security.dto.Profile;
-import ar.com.avaco.ws.rest.security.dto.User;
 
 /**
  * 

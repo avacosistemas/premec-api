@@ -147,6 +147,9 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 			@JoinColumn(name = "ID_SEG_USUARIO", referencedColumnName = "ID_SEG_USUARIO") }, inverseJoinColumns = @JoinColumn(name = "ID_SEG_USUARIO_IMPER", referencedColumnName = "ID_SEG_USUARIO"))
 	private Set<Usuario> impersonables = new HashSet<Usuario>();
 
+	@Column(name = "LEGAJO")
+	private Integer legajo;
+
 	public Long getId() {
 		return this.id;
 	}
@@ -483,6 +486,14 @@ public class Usuario extends ar.com.avaco.arc.core.domain.Entity<Long> implement
 
 	public void setDeposito(String deposito) {
 		this.deposito = deposito;
+	}
+
+	public Integer getLegajo() {
+		return legajo;
+	}
+
+	public void setLegajo(Integer legajo) {
+		this.legajo = legajo;
 	}
 
 }

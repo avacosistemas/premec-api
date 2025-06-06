@@ -29,6 +29,8 @@ public class User extends Entity<Long> implements Serializable {
 	private Boolean admin;
 	private String deposito;
 
+	private Long legajoFichaje;
+
 	public User() {
 
 	}
@@ -126,6 +128,14 @@ public class User extends Entity<Long> implements Serializable {
 
 	public void setDeposito(String deposito) {
 		this.deposito = deposito;
+	}
+
+	public Long getLegajoFichaje() {
+		return legajoFichaje;
+	}
+
+	public void setLegajoFichaje(Long legajoFichaje) {
+		this.legajoFichaje = legajoFichaje;
 	}
 
 }

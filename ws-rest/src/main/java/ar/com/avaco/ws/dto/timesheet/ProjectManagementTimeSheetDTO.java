@@ -17,7 +17,7 @@ public class ProjectManagementTimeSheetDTO {
 	private Long userID;
 
 	@JsonProperty(value = "DateFrom")
-	private Date dateFrom;
+	private String dateFrom;
 
 	@JsonProperty(value = "AttachmentEntry")
 	private Long attachmentEntry;
@@ -41,11 +41,11 @@ public class ProjectManagementTimeSheetDTO {
 		this.userID = userID;
 	}
 
-	public Date getDateFrom() {
+	public String getDateFrom() {
 		return dateFrom;
 	}
 
-	public void setDateFrom(Date dateFrom) {
+	public void setDateFrom(String dateFrom) {
 		this.dateFrom = dateFrom;
 	}
 
