@@ -4,6 +4,7 @@
 package ar.com.avaco.ws.rest.security.dto;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import ar.com.avaco.arc.core.domain.Entity;
@@ -12,21 +13,21 @@ import ar.com.avaco.arc.core.domain.Entity;
  * @author avaco
  *
  */
-public class Profile extends Entity<Long> implements Serializable{
+public class Profile extends Entity<Long> implements Serializable {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1484703680205099614L;
-	
+
 	private Long id;
 	private String name;
 	private Role role;
-	private List<Permission> permissions;
+	private List<Permission> permissions = new ArrayList<Permission>();
 	private Boolean enabled;
-	
+
 	public Profile() {
-		
+
 	}
 
 	public Profile(Long id, String name, Role role, List<Permission> permissions, Boolean enabled) {
@@ -37,8 +38,6 @@ public class Profile extends Entity<Long> implements Serializable{
 		this.permissions = permissions;
 		this.enabled = enabled;
 	}
-
-
 
 	public Long getId() {
 		return id;
@@ -79,5 +78,5 @@ public class Profile extends Entity<Long> implements Serializable{
 	public void setName(String name) {
 		this.name = name;
 	}
-	
+
 }

@@ -1,7 +1,9 @@
 package ar.com.avaco.arc.sec.domain;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -36,7 +38,7 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SEG_PERFIL_SEQ")
-	@Column(name  = "ID_SEG_PERFIL")
+	@Column(name = "ID_SEG_PERFIL")
 	private Long id;
 
 	/**
@@ -46,9 +48,9 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	private String nombre;
 
 	/**
-	 * Determina si el Perfil esta activo. Si esta inactivo, no puede asignarse
-	 * a un usuario. Si ya se encuentra asignado, no deberían devolverse los
-	 * permisos asociados.
+	 * Determina si el Perfil esta activo. Si esta inactivo, no puede asignarse a un
+	 * usuario. Si ya se encuentra asignado, no deberían devolverse los permisos
+	 * asociados.
 	 */
 	@Column
 	private boolean activo;
@@ -64,11 +66,9 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	 * Los permisos asignados al perfil.
 	 */
 	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(name = "SEG_PERFIL_PERMISO", 
-	joinColumns = @JoinColumn(name = "ID_SEG_PERFIL", referencedColumnName = "ID_SEG_PERFIL"), 
-	inverseJoinColumns = @JoinColumn(name = "ID_SEG_PERMISO", referencedColumnName = "ID_SEG_PERMISO"))
+	@JoinTable(name = "SEG_PERFIL_PERMISO", joinColumns = @JoinColumn(name = "ID_SEG_PERFIL", referencedColumnName = "ID_SEG_PERFIL"), inverseJoinColumns = @JoinColumn(name = "ID_SEG_PERMISO", referencedColumnName = "ID_SEG_PERMISO"))
 	@Fetch(FetchMode.SELECT)
-	private List<Permiso> permisos;
+	private Set<Permiso> permisos = new HashSet<>();
 
 	public List<String> getPermisosString() {
 		List<String> permisosString = new ArrayList<String>();
@@ -77,7 +77,7 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 		}
 		return permisosString;
 	}
-	
+
 	public Long getId() {
 		return this.id;
 	}
@@ -94,8 +94,7 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	}
 
 	/**
-	 * @param nombre
-	 *            the nombre to set
+	 * @param nombre the nombre to set
 	 */
 	public void setNombre(String nombre) {
 		this.nombre = nombre;
@@ -109,8 +108,7 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	}
 
 	/**
-	 * @param activo
-	 *            the activo to set
+	 * @param activo the activo to set
 	 */
 	public void setActivo(boolean activo) {
 		this.activo = activo;
@@ -124,18 +122,12 @@ public class Perfil extends ar.com.avaco.arc.core.domain.Entity<Long> {
 		this.rol = rol;
 	}
 
-	/**
-	 * @return the permisos
-	 */
-	public List<Permiso> getPermisos() {
+	public Set<Permiso> getPermisos() {
 		return permisos;
 	}
 
-	/**
-	 * @param permisos
-	 *            the permisos to set
-	 */
-	public void setPermisos(List<Permiso> permisos) {
+	public void setPermisos(Set<Permiso> permisos) {
 		this.permisos = permisos;
 	}
+
 }

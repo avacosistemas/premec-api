@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -75,6 +76,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 	private UsuarioService usuarioService;
 
+	private Logger logger = Logger.getLogger(this.getClass());
+	
 	@Override
 	public void aprobarRecibos(List<ReciboSueldoDTO> lista) {
 		for (ReciboSueldoDTO recibo : lista) {
@@ -379,16 +382,18 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 	}
 
 	private BigDecimal extraerNeto(String texto) {
-		Matcher m = Pattern.compile("([\\d,]+\\.[\\d]{2})\\s+0\\.00\\s+0\\.00\\s+([\\d,]+\\.[\\d]{2}):\\s*Neto")
-				.matcher(texto);
-		if (m.find()) {
-			try {
-				return new BigDecimal(m.group(2).replace(",", ""));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-		return null;
+		Pattern pattern = Pattern.compile("([\\d,.]+)\\s*:\\s*Neto");
+	    Matcher matcher = pattern.matcher(texto);
+	    if (matcher.find()) {
+	        try {
+	            // Reemplazamos la coma por vacío para convertir correctamente a BigDecimal
+	            String numero = matcher.group(1).replace(",", "");
+	            return new BigDecimal(numero);
+	        } catch (Exception e) {
+	            return null;
+	        }
+	    }
+	    return null;
 	}
 
 	@Override
@@ -421,13 +426,18 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 	public List<RegistroReciboPorUsuarioDTO> listarRecibosPorUsuario() {
 
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		this.logger.debug("Username: " + username);
+		
 		String usuarioSAP = usuarioService.getUsuarioSAPByUsername(username);
-
+		this.logger.debug("Usuario Sap: " + usuarioSAP);
+		
 		// Preparo la url para enviar el attachment
 		String attachmentUrl = urlSAP
 				+ "/ProjectManagementTimeSheet?$filter=UserID eq {userId} and AttachmentEntry ne null&$expand=Attachments2&$orderby=DateFrom desc";
 		attachmentUrl = attachmentUrl.replace("{userId}", usuarioSAP);
 
+		this.logger.debug("URL: " + attachmentUrl);
+		
 		ResponseEntity<ProjectManagementTimeSheetResponse> timeshteeRespose = null;
 
 		try {
@@ -443,9 +453,15 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 		List<ProjectManagementTimeSheetDTO> registros = timeshteeRespose.getBody().getValue();
 
+		this.logger.debug("Cantidad de registros: " + registros.size());
+		this.logger.debug("Registros: " + timeshteeRespose.getBody().toString());
+		
 		List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
 
 		registros.stream().forEach(registro -> {
+			
+			this.logger.debug("Procesando Registro: " + registro.getAttachmentEntry());
+			
 			int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
 			int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
 
@@ -456,6 +472,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 			String monthString = formatoMes.format(instance.getTime());
 
 			registro.getAttachments2().getLines().stream().forEach(tipo -> {
+				this.logger.debug("Procesando Attach: " + tipo.getFileName() + " " + tipo.getFreeText());
 				RegistroReciboPorUsuarioDTO r = new RegistroReciboPorUsuarioDTO();
 				r.setAttachmentEntry(registro.getAttachmentEntry());
 				r.setMonth(month);

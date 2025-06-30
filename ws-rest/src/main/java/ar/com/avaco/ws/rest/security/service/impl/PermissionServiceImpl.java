@@ -38,7 +38,7 @@ public class PermissionServiceImpl extends AbstractConvertService<Permission, Lo
 
 	@Override
 	public Permiso convertToEntity(Permiso entity, Permission dto) {
-		entity.setActivo(dto.getEnabled());
+		entity.setActivo(true);
 		entity.setCodigo(dto.getCode());
 		entity.setDescripcion(dto.getDescription());
 		return entity;

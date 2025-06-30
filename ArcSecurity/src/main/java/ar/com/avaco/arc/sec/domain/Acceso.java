@@ -12,12 +12,11 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-
 /**
- * Un acceso representa la union de un perfil con un listado de rolCompania.
- * Un usuario tiene asigando un acceso y este determina que las
- * acciones que puede realizar en base a los permisos puede realizarse oeprando
- * con el listado de companias y gasoductos asignados.
+ * Un acceso representa la union de un perfil con un listado de rolCompania. Un
+ * usuario tiene asigando un acceso y este determina que las acciones que puede
+ * realizar en base a los permisos puede realizarse oeprando con el listado de
+ * companias y gasoductos asignados.
  * 
  * @author aogonzalez
  * 
@@ -38,7 +37,7 @@ public class Acceso extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	@ManyToOne
 	@JoinColumn(foreignKey = @ForeignKey(name = "USUARIO_FK"))
 	private Usuario usuario;
-	
+
 	public Usuario getUsuario() {
 		return usuario;
 	}
@@ -62,8 +61,7 @@ public class Acceso extends ar.com.avaco.arc.core.domain.Entity<Long> {
 	}
 
 	/**
-	 * @param perfil
-	 *            the perfil to set
+	 * @param perfil the perfil to set
 	 */
 	public void setPerfil(Perfil perfil) {
 		this.perfil = perfil;
@@ -93,4 +91,5 @@ public class Acceso extends ar.com.avaco.arc.core.domain.Entity<Long> {
 		sb.append(getPerfil().getNombre());
 		return sb.toString();
 	}
+
 }

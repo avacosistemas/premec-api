@@ -1,14 +1,19 @@
 package ar.com.avaco.ws.rest.security.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.annotation.Resource;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.com.avaco.commons.exception.BusinessException;
@@ -22,10 +27,19 @@ public class ProfileRestController extends AbsctractRestController<Profile, Long
 
 	//-------------------Retrieve All permisos--------------------------------------------------------    
 
-	@RequestMapping(value = "/profiles/", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(value = "/profiles", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JSONResponse> list() {
     	return super.list();
     }
+
+	@RequestMapping(value = "/profiles/filterByName", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JSONResponse> list(@RequestParam String name) {
+		List<Profile> listPattern = this.service.listPattern("nombre", name);
+    	JSONResponse response = new JSONResponse();
+		response.setData(listPattern);
+		response.setStatus(OK);	
+        return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
+	}
     
     //-------------------Retrieve single Pages--------------------------------------------------------  
     @RequestMapping(value = "/profiles/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -34,15 +48,15 @@ public class ProfileRestController extends AbsctractRestController<Profile, Long
     }
        
     //-------------------Create a Page--------------------------------------------------------    
-    @RequestMapping(value = "/profiles/", method = RequestMethod.POST)
+    @RequestMapping(value = "/profiles", method = RequestMethod.POST)
     public  ResponseEntity<JSONResponse> create(@RequestBody Profile profile) throws BusinessException {
     	return super.create(profile);
     }
     
     //------------------- Update a Page --------------------------------------------------------    
-    @RequestMapping(value = "/profiles/{id}", method = RequestMethod.PUT)
-    public ResponseEntity<JSONResponse> update(@PathVariable("id") Long id, @RequestBody Profile profile) throws BusinessException {
-    	return super.update(id, profile);
+    @RequestMapping(value = "/profiles", method = RequestMethod.PUT)
+    public ResponseEntity<JSONResponse> update(@RequestBody Profile profile) throws BusinessException {
+    	return super.update(profile.getId(), profile);
     }
     //------------------- Delete a Page --------------------------------------------------------
     

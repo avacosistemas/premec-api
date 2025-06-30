@@ -55,23 +55,30 @@ public class ProfileServiceImpl extends AbstractConvertService<Profile, Long, Pe
 
 	@Override
 	public Perfil convertToEntity(Perfil entity, Profile dto) {
-		entity.setActivo(dto.getEnabled());
+		
+		if (dto.getId() == null) {
+			entity = new Perfil();
+			entity.setActivo(true);
+			Role role = roleService.list().stream().filter(rol -> rol.getCode().equals("ADM")).findFirst().orElse(new Role());
+
+			Rol r = new Rol();
+			r.setId(role.getId());
+			
+			entity.setRol(roleService.convertToEntity(r,role));
+		} else {
+			entity = this.service.get(dto.getId());
+		}
+		
 		entity.setNombre(dto.getName());
 		
-		//FIXME Por default tiene el rol ADM, modificar cuando se requiera
-		Role role = roleService.list().stream().filter(rol -> rol.getCode().equals("ADM")).findFirst().orElse(new Role());
-		Rol r = new Rol();
-		r.setId(role.getId());
-		//r.setId(dto.getRole().getId());
-		entity.setRol(roleService.convertToEntity(r,role/*dto.getRole()*/));
-		
-		List<Permiso> permisos = new  ArrayList<>();
-		for(Permission permission :dto.getPermissions()) {
-			Permiso p = new Permiso();
-			p.setId(permission.getId());
-			permisos.add(permissionService.convertToEntity(p, permission));
-		}
-		entity.setPermisos(permisos);
+//		//FIXME Por default tiene el rol ADM, modificar cuando se requiera
+//		List<Permiso> permisos = new  ArrayList<>();
+//		for(Permission permission :dto.getPermissions()) {
+//			Permiso p = new Permiso();
+//			p.setId(permission.getId());
+//			permisos.add(permissionService.convertToEntity(p, permission));
+//		}
+//		entity.getPermisos().addAll(permisos);
 		return entity;
 	}
 	

@@ -27,24 +27,24 @@ import ar.com.avaco.arc.sec.service.UsuarioService;
 @Transactional
 @Service
 public class InitialDataServiceImpl implements InitialDataService {
-	
+
 	@Resource
 	private UsuarioService usuarioService;
-	
+
 	private Map<String, Permiso> permisosAdmin;
 
 	@Resource
 	PermisoService permisoService;
-	
+
 	@Resource
 	private RolService rolService;
-	
+
 	@Resource
 	private PerfilService perfilService;
-	
+
 	@Resource
 	private UsuarioRepository usuarioRepository;
-	
+
 	@Resource
 	private ParametroGeneralRepository parametroGeneralRepository;
 
@@ -65,22 +65,20 @@ public class InitialDataServiceImpl implements InitialDataService {
 		perfilAdmin = new Perfil();
 		perfilAdmin.setActivo(true);
 		perfilAdmin.setNombre("Administrador");
-		
+
 		List<Permiso> permisosAdminList = new ArrayList<Permiso>(permisosAdmin.values());
-		perfilAdmin.setPermisos(permisosAdminList);
+		perfilAdmin.getPermisos().addAll(permisosAdminList);
 		perfilAdmin.setRol(rolStandar);
 		perfilService.save(perfilAdmin);
 	}
-	
-	
-	
+
 	private void generarRoles() {
-		
+
 		rolStandar = new Rol();
 		rolStandar.setCodigo("Standar");
 		rolStandar.setNombre("Standar");
 		rolStandar.setSuperRol(true);
-		
+
 		rolService.save(rolStandar);
 	}
 
@@ -112,25 +110,23 @@ public class InitialDataServiceImpl implements InitialDataService {
 		admin.setInterno(true);
 		admin.setNombre("Alberto");
 		admin.setUsername("admin");
-		
+
 		Acceso accesoAdmin = new Acceso();
 		accesoAdmin.setPerfil(perfilAdmin);
 		accesoAdmin.setUsuario(admin);
 		admin.getAccesos().add(accesoAdmin);
 		usuarioService.update(admin);
-		
+
 		admin.setIntentosFallidosLogin(0);
 		admin.setBloqueado(false);
 		admin.setPassword("$2a$10$9EmXkvYDoxA/rwi2.uxOue/I2Z2.6fzIubnhKnjFEQvCESbfzuqZm");
 		admin.setRequiereCambioPassword(false);
 		usuarioRepository.save(admin);
-		
-		
+
 	}
 
 	@Override
 	public boolean isDatosGenerados() {
-		return parametroGeneralRepository
-				.getParametroGeneral(ParametroGeneral.DATOS_GENERADOS) != null;
+		return parametroGeneralRepository.getParametroGeneral(ParametroGeneral.DATOS_GENERADOS) != null;
 	}
 }
