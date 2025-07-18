@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import ar.com.avaco.commons.domain.TipoActividad;
-import ar.com.avaco.ws.dto.EmployeesInfoReponseSapDTO;
 import ar.com.avaco.ws.dto.UsersResponseSapDTO;
+import ar.com.avaco.ws.dto.employee.EmployeesInfoReponseSapDTO;
 import ar.com.avaco.ws.dto.formulario.GrupoDTO;
 import ar.com.avaco.ws.dto.formulario.LocationResponseSapDTO;
 import ar.com.avaco.ws.dto.formulario.ServiceCallActivitiesResponseSapDTO;

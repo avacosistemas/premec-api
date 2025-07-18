@@ -3,7 +3,7 @@ package ar.com.avaco.ws.dto.timesheet;
 import java.util.HashMap;
 import java.util.Map;
 
-public class POSTProjectManagementTimeSheetDTO {
+public class ProjectManagementTimeSheetPatchDTO {
 
 	private String userID;
 	private String dateFrom;

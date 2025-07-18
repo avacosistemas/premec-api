@@ -46,9 +46,12 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 			});
 		}
 
+		Long legajoFichaje = null;
+		if (usuario.getLegajo() != null) 
+		legajoFichaje = new Long(usuario.getLegajo());
 		return new User(usuario.getId(), usuario.getUsername(), usuario.getNombre(), usuario.getApellido(), profiles,
 				usuario.getEmail(), usuario.getUsuariosap(), usuario.isEnabled(), usuario.getAdmin(),
-				usuario.getDeposito());
+				usuario.getDeposito(), legajoFichaje);
 	}
 
 	@Override
@@ -66,6 +69,8 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 		entity.setAdmin(dto.getAdmin());
 		entity.setUsuariosap(dto.getUsuariosap());
 		entity.setDeposito(dto.getDeposito());
+		Integer legajoFichaje = dto.getLegajoFichaje() != null ? dto.getLegajoFichaje().intValue() : null ;
+		entity.setLegajo(legajoFichaje);
 		if (dto.getProfiles() != null) {
 			Set<Acceso> accesos = new HashSet<>();
 			dto.getProfiles().stream().forEach(e -> {

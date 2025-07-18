@@ -2,8 +2,8 @@ package ar.com.avaco.ws.rest.security.dto;
 
 public class RegistroFichadoDTO {
 
-	private String dia;
-	private String fecha;
+	private String dia; // la fecha
+	private String fecha; // el nombre del dia (lunes martes miercoles)
 	private String entrada1;
 	private String salida1;
 	private String entrada2;

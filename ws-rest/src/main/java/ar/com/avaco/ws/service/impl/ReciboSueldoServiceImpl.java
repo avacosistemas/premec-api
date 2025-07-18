@@ -25,26 +25,15 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 import ar.com.avaco.arc.core.service.MailSenderSMTPService;
 import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.commons.exception.ErrorValidationException;
-import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.attachment.ResponseAttachmentGetPost;
-import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetDTO;
-import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetResponse;
+import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetAttachDTO;
 import ar.com.avaco.ws.dto.timesheet.ReciboSueldoDTO;
 import ar.com.avaco.ws.dto.timesheet.RegistroReciboPorUsuarioDTO;
 import ar.com.avaco.ws.service.AbstractSapService;
@@ -76,8 +65,12 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 	private UsuarioService usuarioService;
 
+	private TimeSheetService timeSheetService;
+
 	private Logger logger = Logger.getLogger(this.getClass());
-	
+
+	private AttachmentService attachmentService;
+
 	@Override
 	public void aprobarRecibos(List<ReciboSueldoDTO> lista) {
 		for (ReciboSueldoDTO recibo : lista) {
@@ -99,16 +92,16 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 			String to = DateUtils.toString(instance.getTime(), "yyyyMMdd");
 
 			// Busco el registros del timesheet con el periodo
-			PMTSEntryAttach entryAttach = getPMTSEntry(usuarioSap, from, to);
+			TimeSheetEntryAttach entryAttach = this.timeSheetService.getTimeSheetEntries(usuarioSap, from, to);
 
 			// Nuevo attachment entry del project management timesheet existente
 			Long newAttachmentEntry;
 
-			// Si no existe el registro del timeshee lo creo y obtengo el nuevo entry.
+			// Si no existe el registro del timesheet lo creo y obtengo el nuevo entry.
 			// El attachmententry va a ser null en este caso
 			if (entryAttach.getAbsEntry() == null) {
 				// Genero el timesheet y luego obtengo el absentry
-				Long absEntry = generarTimeSheet(usuarioSap, from, to);
+				Long absEntry = this.timeSheetService.generarTimeSheet(usuarioSap, from, to);
 				entryAttach.setAbsEntry(absEntry);
 			}
 
@@ -125,7 +118,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 				// Si ya existe un attachment en ese timesheet
 				// Obtengo el attachment
 
-				ResponseAttachmentGetPost currentAttach = obtenerAttachment(entryAttach.getAttachmentEntry());
+				ResponseAttachmentGetPost currentAttach = this.attachmentService
+						.getAttachment(entryAttach.getAttachmentEntry());
 
 				// por cada attachment armo el adjunto en la lista para volver a enviar
 				currentAttach.getAttachments2Lines().stream().forEach(att -> {
@@ -137,54 +131,12 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 			// Envio el nuevo archivo y los posibles actuales (si existian) y obtengo un
 			// nuevo entry
-			newAttachmentEntry = enviarAttachmentsSap(attachments);
+			newAttachmentEntry = this.attachmentService.enviarAttachmentsSap(attachments);
 
 			// Actualizo ProjectManagementTimeSheet
-
-			actualizarTimeSheetAttachmentEntry(entryAttach, newAttachmentEntry);
+			this.timeSheetService.updateTimeSheetAttachmentEntry(entryAttach.getAbsEntry(), newAttachmentEntry);
 
 		}
-	}
-
-	private void actualizarTimeSheetAttachmentEntry(PMTSEntryAttach entryAttach, Long newAttachmentEntry) {
-		String timeSheetPatchEntry = urlSAP + "/ProjectManagementTimeSheet(" + entryAttach.getAbsEntry() + ")";
-
-		Map<String, Object> timesheetpatch = new HashMap<>();
-		timesheetpatch.put("AttachmentEntry", newAttachmentEntry);
-
-		HttpHeaders headers = getRestTemplate().getDefaultHeaders();
-		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(timesheetpatch, headers);
-
-		try {
-
-			getRestTemplate().doExchange(timeSheetPatchEntry, HttpMethod.PATCH, httpEntityPatchServiceCall,
-					Object.class);
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", timeSheetPatchEntry);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-	}
-
-	private ResponseAttachmentGetPost obtenerAttachment(Long attachmentEntry) {
-		String attachmentGetUrl = urlSAP + "/Attachments2(" + attachmentEntry + ")";
-
-		ResponseEntity<ResponseAttachmentGetPost> currentAttachmentResponse;
-		try {
-			currentAttachmentResponse = getRestTemplate().doExchange(attachmentGetUrl, HttpMethod.GET, null,
-					ResponseAttachmentGetPost.class);
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", attachmentGetUrl);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-
-		ResponseAttachmentGetPost currentAttach = currentAttachmentResponse.getBody();
-		return currentAttach;
 	}
 
 	private Map<String, String> genearAttachmentRecibo(String tipo, String legajo, String usuarioSap, String month,
@@ -202,97 +154,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		return fotoMap;
 	}
 
-	private Long enviarAttachmentsSap(List<Map<String, String>> attachments) {
-		Map<String, Object> attachmentMap = new HashMap<>();
-		attachmentMap.put("Attachments2_Lines", attachments.toArray());
-
-		// Preparo la url para enviar el attachment
-		String attachmentUrl = urlSAP + "/Attachments2";
-		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(attachmentMap);
-		ResponseEntity<ResponseAttachmentGetPost> attachmentRespose = null;
-
-		try {
-			attachmentRespose = getRestTemplate().doExchange(attachmentUrl, HttpMethod.POST, httpEntityAttach,
-					ResponseAttachmentGetPost.class);
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", attachmentUrl);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-
-		return attachmentRespose.getBody().getAbsoluteEntry();
-
-	}
-
-	private Long generarTimeSheet(String usuarioSap, String from, String to) {
-		Map<String, Object> pmtsMap = new HashMap<>();
-		pmtsMap.put("UserID", usuarioSap);
-		pmtsMap.put("DateFrom", from);
-		pmtsMap.put("DateTo", to);
-
-		String pmtsUrlPost = urlSAP + "/ProjectManagementTimeSheet";
-		HttpEntity<Map<String, Object>> httpEntityAttach = new HttpEntity<>(pmtsMap);
-
-		ResponseEntity<String> pmtsResponse = null;
-		try {
-			pmtsResponse = getRestTemplate().doExchange(pmtsUrlPost, HttpMethod.POST, httpEntityAttach,
-					new ParameterizedTypeReference<String>() {
-					});
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", pmtsUrlPost);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-
-		Long absEntry = gson.fromJson(pmtsResponse.getBody(), JsonObject.class).get("AbsEntry").getAsLong();
-		return absEntry;
-	}
-
-	private PMTSEntryAttach getPMTSEntry(String usuarioSap, String from, String to) {
-		// Armo el parametro de la actividad
-		String fechaDesde = "'" + from + "'";
-		String fechaHasta = "'" + to + "'";
-
-		String urlObtenerEntryPMTSGet = urlSAP
-				+ "/ProjectManagementTimeSheet?$select=AbsEntry,AttachmentEntry&$filter=UserID eq " + usuarioSap
-				+ " and DateFrom eq " + fechaDesde + " and DateTo eq " + fechaHasta;
-
-		ResponseEntity<String> entrySetPMTSResponse;
-		try {
-			entrySetPMTSResponse = getRestTemplate().doExchange(urlObtenerEntryPMTSGet, HttpMethod.GET, null,
-					new ParameterizedTypeReference<String>() {
-					});
-
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", urlObtenerEntryPMTSGet);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-
-		JsonArray pmtsEntryArray = gson.fromJson(entrySetPMTSResponse.getBody(), JsonObject.class)
-				.getAsJsonArray("value");
-
-		PMTSEntryAttach ret = new PMTSEntryAttach();
-
-		// Si obtengo un registros es porque el entry ya existe. Obtengo el entry y el
-		// attachment
-		if (pmtsEntryArray.size() == 1) {
-			ret.setAbsEntry(pmtsEntryArray.get(0).getAsJsonObject().get("AbsEntry").getAsLong());
-			JsonElement jsonElement = pmtsEntryArray.get(0).getAsJsonObject().get("AttachmentEntry");
-			// El attachment puede o no existir
-			if (!jsonElement.isJsonNull()) {
-				ret.setAttachmentEntry(jsonElement.getAsLong());
-			}
-		}
-
-		return ret;
-	}
+	
 
 	@Override
 	public List<ReciboSueldoDTO> procesarRecibos(String tipo, byte[] archivo) {
@@ -383,17 +245,17 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 	private BigDecimal extraerNeto(String texto) {
 		Pattern pattern = Pattern.compile("([\\d,.]+)\\s*:\\s*Neto");
-	    Matcher matcher = pattern.matcher(texto);
-	    if (matcher.find()) {
-	        try {
-	            // Reemplazamos la coma por vacío para convertir correctamente a BigDecimal
-	            String numero = matcher.group(1).replace(",", "");
-	            return new BigDecimal(numero);
-	        } catch (Exception e) {
-	            return null;
-	        }
-	    }
-	    return null;
+		Matcher matcher = pattern.matcher(texto);
+		if (matcher.find()) {
+			try {
+				// Reemplazamos la coma por vacío para convertir correctamente a BigDecimal
+				String numero = matcher.group(1).replace(",", "");
+				return new BigDecimal(numero);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+		return null;
 	}
 
 	@Override
@@ -427,41 +289,18 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		this.logger.debug("Username: " + username);
-		
+
 		String usuarioSAP = usuarioService.getUsuarioSAPByUsername(username);
 		this.logger.debug("Usuario Sap: " + usuarioSAP);
-		
-		// Preparo la url para enviar el attachment
-		String attachmentUrl = urlSAP
-				+ "/ProjectManagementTimeSheet?$filter=UserID eq {userId} and AttachmentEntry ne null&$expand=Attachments2&$orderby=DateFrom desc";
-		attachmentUrl = attachmentUrl.replace("{userId}", usuarioSAP);
 
-		this.logger.debug("URL: " + attachmentUrl);
-		
-		ResponseEntity<ProjectManagementTimeSheetResponse> timeshteeRespose = null;
+		List<ProjectManagementTimeSheetAttachDTO> registros = this.timeSheetService.listTimeSheetByUsuarioSap(usuarioSAP);
 
-		try {
-			timeshteeRespose = getRestTemplate().doExchange(attachmentUrl, HttpMethod.GET, null,
-					ProjectManagementTimeSheetResponse.class);
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", attachmentUrl);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
-		}
-
-		List<ProjectManagementTimeSheetDTO> registros = timeshteeRespose.getBody().getValue();
-
-		this.logger.debug("Cantidad de registros: " + registros.size());
-		this.logger.debug("Registros: " + timeshteeRespose.getBody().toString());
-		
 		List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
 
 		registros.stream().forEach(registro -> {
-			
+
 			this.logger.debug("Procesando Registro: " + registro.getAttachmentEntry());
-			
+
 			int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
 			int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
 
@@ -487,6 +326,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		return recibos;
 	}
 
+	
+
 	@Override
 	public byte[] obtenerReciboPDF(RegistroReciboPorUsuarioDTO recibo) throws IOException {
 		String name = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -497,6 +338,16 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 				.get(reciboPathServeSap + "\\" + legajo + "_" + year + month + "_" + recibo.getTipo() + ".pdf");
 		byte[] contenido = Files.readAllBytes(path);
 		return contenido;
+	}
+
+	@Resource(name = "timeSheetService")
+	public void setTimeSheetService(TimeSheetService timeSheetService) {
+		this.timeSheetService = timeSheetService;
+	}
+
+	@Resource(name = "attachmentService")
+	public void setAttachmentService(AttachmentService attachmentService) {
+		this.attachmentService = attachmentService;
 	}
 
 }

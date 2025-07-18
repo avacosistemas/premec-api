@@ -1,14 +1,12 @@
 package ar.com.avaco.ws.dto.timesheet;
 
-import java.util.Date;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import ar.com.avaco.ws.dto.attachment.Attachments2;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ProjectManagementTimeSheetDTO {
+public class ProjectManagementTimeSheetAttachDTO {
 
 	@JsonProperty(value = "AbsEntry")
 	private Long absEntry;
