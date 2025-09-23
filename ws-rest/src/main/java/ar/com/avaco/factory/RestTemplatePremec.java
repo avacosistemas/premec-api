@@ -56,6 +56,8 @@ public class RestTemplatePremec extends RestTemplate {
 				tries++;
 			} catch (RestClientException rce) {
 				throw new SapBusinessException(rce);
+			} catch (Exception e) {
+				throw new SapBusinessException(e);
 			}
 		} while (tries < 3 && exchange == null);
 		return exchange;

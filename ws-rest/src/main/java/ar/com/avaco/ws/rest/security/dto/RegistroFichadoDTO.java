@@ -13,10 +13,8 @@ public class RegistroFichadoDTO {
 	private String normal;
 	private String extra50;
 	private String extra100;
-	private String horaNoTipificada;
 	private String tarde;
 	private String comentarios;
-	private String horasProductivas;
 
 	public String getDia() {
 		return dia;
@@ -106,14 +104,6 @@ public class RegistroFichadoDTO {
 		this.extra100 = extra100;
 	}
 
-	public String getHoraNoTipificada() {
-		return horaNoTipificada;
-	}
-
-	public void setHoraNoTipificada(String horaNoTipificada) {
-		this.horaNoTipificada = horaNoTipificada;
-	}
-
 	public String getTarde() {
 		return tarde;
 	}
@@ -128,14 +118,6 @@ public class RegistroFichadoDTO {
 
 	public void setComentarios(String comentarios) {
 		this.comentarios = comentarios;
-	}
-
-	public String getHorasProductivas() {
-		return horasProductivas;
-	}
-
-	public void setHorasProductivas(String horasProductivas) {
-		this.horasProductivas = horasProductivas;
 	}
 
 }

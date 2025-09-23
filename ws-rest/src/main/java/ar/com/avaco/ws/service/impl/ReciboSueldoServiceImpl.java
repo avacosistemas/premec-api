@@ -92,7 +92,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 			String to = DateUtils.toString(instance.getTime(), "yyyyMMdd");
 
 			// Busco el registros del timesheet con el periodo
-			TimeSheetEntryAttach entryAttach = this.timeSheetService.getTimeSheetEntries(usuarioSap, from, to);
+			TimeSheetEntryAttach entryAttach = this.timeSheetService.getTimeSheetEntries(new Long(usuarioSap), from, to);
 
 			// Nuevo attachment entry del project management timesheet existente
 			Long newAttachmentEntry;
@@ -101,7 +101,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 			// El attachmententry va a ser null en este caso
 			if (entryAttach.getAbsEntry() == null) {
 				// Genero el timesheet y luego obtengo el absentry
-				Long absEntry = this.timeSheetService.generarTimeSheet(usuarioSap, from, to);
+				Long absEntry = this.timeSheetService.generarTimeSheet(new Long(usuarioSap), from, to);
 				entryAttach.setAbsEntry(absEntry);
 			}
 
@@ -293,37 +293,42 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		String usuarioSAP = usuarioService.getUsuarioSAPByUsername(username);
 		this.logger.debug("Usuario Sap: " + usuarioSAP);
 
-		List<ProjectManagementTimeSheetAttachDTO> registros = this.timeSheetService.listTimeSheetByUsuarioSap(usuarioSAP);
-
-		List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
-
-		registros.stream().forEach(registro -> {
-
-			this.logger.debug("Procesando Registro: " + registro.getAttachmentEntry());
-
-			int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
-			int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
-
-			Calendar instance = Calendar.getInstance();
-			instance.set(Calendar.MONTH, month - 1);
-
-			SimpleDateFormat formatoMes = new SimpleDateFormat("MMMM", new Locale("es", "ES"));
-			String monthString = formatoMes.format(instance.getTime());
-
-			registro.getAttachments2().getLines().stream().forEach(tipo -> {
-				this.logger.debug("Procesando Attach: " + tipo.getFileName() + " " + tipo.getFreeText());
-				RegistroReciboPorUsuarioDTO r = new RegistroReciboPorUsuarioDTO();
-				r.setAttachmentEntry(registro.getAttachmentEntry());
-				r.setMonth(month);
-				r.setYear(year);
-				r.setMonthString(monthString);
-				r.setTipo(tipo.getFreeText());
-				recibos.add(r);
-
+		if (StringUtils.isNotBlank(usuarioSAP)) {
+		
+			List<ProjectManagementTimeSheetAttachDTO> registros = this.timeSheetService.listTimeSheetByUsuarioSap(new Long(usuarioSAP));
+	
+			List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
+	
+			registros.stream().forEach(registro -> {
+	
+				this.logger.debug("Procesando Registro: " + registro.getAttachmentEntry());
+	
+				int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
+				int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
+	
+				Calendar instance = Calendar.getInstance();
+				instance.set(Calendar.MONTH, month - 1);
+	
+				SimpleDateFormat formatoMes = new SimpleDateFormat("MMMM", new Locale("es", "ES"));
+				String monthString = formatoMes.format(instance.getTime());
+	
+				registro.getAttachments2().getLines().stream().forEach(tipo -> {
+					this.logger.debug("Procesando Attach: " + tipo.getFileName() + " " + tipo.getFreeText());
+					RegistroReciboPorUsuarioDTO r = new RegistroReciboPorUsuarioDTO();
+					r.setAttachmentEntry(registro.getAttachmentEntry());
+					r.setMonth(month);
+					r.setYear(year);
+					r.setMonthString(monthString);
+					r.setTipo(tipo.getFreeText());
+					recibos.add(r);
+	
+				});
+	
 			});
-
-		});
-		return recibos;
+			return recibos;
+		} else {
+			throw new ErrorValidationException("El usuario no tiene asociado usuario sap", null);
+		}
 	}
 
 	

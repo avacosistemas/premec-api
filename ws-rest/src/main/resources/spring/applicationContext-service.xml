@@ -23,6 +23,8 @@
 	<ctx:component-scan base-package="ar.com.avaco.commons.service.captcha" resource-pattern="**/*.class" />
 		
 	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate"> </bean>
+
+	<bean id="sqlServerConnection" class="ar.com.avaco.ws.service.impl.SQLServerConnection"> </bean>
 						
 </beans>
 

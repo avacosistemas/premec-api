@@ -26,14 +26,17 @@ public class EmployeeServiceImpl extends AbstractSapService implements EmployeeS
 			employee = getRestTemplate().doExchange(urlEmployee, HttpMethod.GET, null,
 					EmployeesInfoReponseSapDTO.class);
 		} catch (SapBusinessException e) {
+		    String fullStackTrace = SapBusinessException.generarStackTraceString(e);
 			Map<String, String> errors = new HashMap<String, String>();
 			errors.put("url", urlEmployee);
-			errors.put("error", e.getMessage());
+			errors.put("error", fullStackTrace);
 			e.printStackTrace();
 			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
 		}
 
 		return employee.getBody();
 	}
+
+	
 
 }

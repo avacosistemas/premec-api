@@ -78,7 +78,7 @@ public class RestTemplateFactory {
 		keyManagerFactory.init(keyStore, null);
 
 		// Crear un contexto SSL con el KeyManagerFactory y TrustManagerFactory
-		SSLContext sslContext = SSLContext.getInstance("TLS");
+		SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
 		sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
 		// Crear una fábrica de solicitudes HTTP que use la conexión SSL
@@ -109,7 +109,7 @@ public class RestTemplateFactory {
 		try {
 			ResponseEntity<ResponseLoginSAPDTO> response = restTemplate.exchange(urlLogin, HttpMethod.POST, httpEntity,
 					ResponseLoginSAPDTO.class);
-			headers.add("Cookie", "B1SESSION=" + response.getBody().getSessionId() + "; ROUTEID=.node2");
+			headers.add("Cookie", "B1SESSION=" + response.getBody().getSessionId() + "; ROUTEID=.node7");
 			headers.setCacheControl("no-cache");
 			headers.add("Prefer", "odata.maxpagesize=0");
 

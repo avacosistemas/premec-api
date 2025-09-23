@@ -25,20 +25,12 @@ public class NovedadesFichadoRestController {
 
 	@Value(value = "${path.recibo.prueba}")
 	private String pathPruebas;
-	
+
 	private NovedadesFichadoService service;
 
 	@RequestMapping(value = "/procesarExcel", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> procesarExcelFichado(@RequestBody ArchivoDTO archivo) throws IOException {
 		JSONResponse response = new JSONResponse();
-
-		if (archivo.getFile() == null || archivo.getFile().length == 0) {
-			// Obtengo el auxiliar para las pruebas. FIXME QUITAR
-			File file = new File(pathPruebas);
-			byte[] readAllBytes = Files.readAllBytes(file.toPath());
-			archivo.setFile(readAllBytes);
-		}
-
 		response.setData(service.parsearExcelNovedadesFichado(archivo.getFile()));
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);

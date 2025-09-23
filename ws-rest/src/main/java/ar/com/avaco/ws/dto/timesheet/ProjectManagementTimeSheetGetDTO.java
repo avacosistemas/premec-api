@@ -1,7 +1,9 @@
 package ar.com.avaco.ws.dto.timesheet;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -56,18 +58,18 @@ public class ProjectManagementTimeSheetGetDTO {
 	@JsonProperty(value = "PM_TimeSheetLineDataCollection")
 	private Set<ProjectManagementTimeSheetLineGetDTO> lineas = new HashSet<>();
 
-	private Set<Map<String, Object>> getLinesAsMap() {
-		Set<Map<String, Object>> mapLines = new HashSet<>();
+	private List<Map<String, Object>> getLinesAsMap() {
+		List<Map<String, Object>> mapLines = new ArrayList<>();
 		lineas.forEach(linea -> mapLines.add(linea.getAsMapNewLine()));
 		return mapLines;
 	}
-	
+
 	public Map<String, Object> getAsMapUpdateTimeSheetLines() {
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("PM_TimeSheetLineDataCollection", this.getLinesAsMap());
 		return map;
 	}
-	
+
 	public Long getAbsEntry() {
 		return absEntry;
 	}

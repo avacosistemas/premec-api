@@ -55,6 +55,11 @@
 			</exclusions>
 		</dependency>
 		<dependency>
+			<groupId>com.microsoft.sqlserver</groupId>
+			<artifactId>mssql-jdbc</artifactId>
+			<version>12.8.1.jre8</version>
+		</dependency>
+		<dependency>
 			<groupId>ar.com.avaco</groupId>
 			<artifactId>avaco-domain</artifactId>
 			<version>0.3</version>

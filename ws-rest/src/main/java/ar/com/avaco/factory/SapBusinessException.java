@@ -1,5 +1,7 @@
 package ar.com.avaco.factory;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +41,10 @@ public class SapBusinessException extends Exception {
 		this.errorCode = getErrorCode(ex);
 	}
 
+	public SapBusinessException(Exception ex) {
+		super(ex);
+	}
+
 	public SapBusinessException(ResourceAccessException e) {
 		super(e);
 		if (e.getCause() instanceof SocketTimeoutException) {
@@ -69,6 +75,14 @@ public class SapBusinessException extends Exception {
 		} catch (Exception e) {
 			return MALFORMED_JSON;
 		}
+	}
+	
+	public static String generarStackTraceString(Exception e) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		e.printStackTrace(pw);
+		String fullStackTrace = sw.toString();
+		return fullStackTrace;
 	}
 
 }

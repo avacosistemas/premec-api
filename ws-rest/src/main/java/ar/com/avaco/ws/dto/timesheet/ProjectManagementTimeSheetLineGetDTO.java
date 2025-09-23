@@ -1,22 +1,24 @@
 package ar.com.avaco.ws.dto.timesheet;
 
-import java.util.Date;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import ar.com.avaco.utils.DateUtils;
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ProjectManagementTimeSheetLineGetDTO {
 
 	@JsonProperty(value = "LineID")
 	private Long lineId;
 
 	@JsonProperty(value = "Date")
-	private Date date;
+	private String date;
+
+	@JsonProperty(value = "U_hsfichado")
+	private String horaFichado;
 
 	@JsonProperty(value = "StartTime")
 	private String startTime;
@@ -36,25 +38,31 @@ public class ProjectManagementTimeSheetLineGetDTO {
 	@JsonProperty(value = "U_hsextras100")
 	private String horasExtras100;
 
-	@JsonProperty(value = "U_hsextrasferiados")
+	@JsonProperty(value = "U_hsextrasferiado")
 	private String horasExtrasFeriados;
 
-	@JsonProperty(value = "U_comida")
+	@JsonProperty(value = "U_comidas")
 	private String comida;
 
 	@JsonProperty(value = "U_tipoausentismo")
 	private String tipoAusentismo;
 
-	@JsonProperty(value = "U_horasnormales")
+	@JsonProperty(value = "U_hsnormales")
 	private String horasNormales;
 
 	@JsonProperty(value = "U_tarde")
 	private String tarde;
 
+	@JsonProperty(value = "U_hsinjustificadas")
+	private String horasInjustificadas;
+
+	@JsonProperty(value = "U_hsferiado")
+	private String horasFeriado;
+
 	public Map<String, Object> getAsMapNewLine() {
-		Map<String, Object> map = new HashMap<String, Object>();
+		Map<String, Object> map = new LinkedHashMap<String, Object>();
 		map.put("LineID", this.lineId);
-		map.put("Date", DateUtils.toString(this.date, "yyyyMMdd"));
+		map.put("Date", this.date);
 		map.put("StartTime", this.startTime.trim());
 		map.put("EndTime", this.endTime.trim());
 
@@ -68,20 +76,38 @@ public class ProjectManagementTimeSheetLineGetDTO {
 			map.put("U_hsextras100", this.horasExtras100.trim());
 
 		if (StringUtils.isNotEmpty(this.horasExtrasFeriados))
-			map.put("U_hsextrasferiados", this.horasExtrasFeriados.trim());
+			map.put("U_hsextrasferiado", this.horasExtrasFeriados.trim());
 
 		if (StringUtils.isNotEmpty(this.comida))
-			map.put("U_comida", this.comida.trim());
-		
-		map.put("U_tipoausentismo", this.tipoAusentismo.trim());
+			map.put("U_comidas", this.comida.trim());
+
+		if (StringUtils.isNotEmpty(this.tipoAusentismo))
+			map.put("U_tipoausentismo", this.tipoAusentismo.trim());
 
 		if (StringUtils.isNotEmpty(this.horasNormales))
-			map.put("U_horasnormales", this.horasNormales.trim());
+			map.put("U_hsnormales", this.horasNormales.trim());
 
 		if (StringUtils.isNotEmpty(this.tarde))
 			map.put("U_tarde", this.tarde.trim());
 
+		if (StringUtils.isNotEmpty(this.horaFichado))
+			map.put("U_hsfichado", this.horaFichado.trim());
+
+		if (StringUtils.isNotEmpty(this.horasInjustificadas))
+			map.put("U_hsinjustificadas", this.horasInjustificadas.trim());
+
+		if (StringUtils.isNotEmpty(this.horasFeriado))
+			map.put("U_hsferiado", this.horasFeriado.trim());
+
 		return map;
+	}
+
+	public String getHorasFeriado() {
+		return horasFeriado;
+	}
+
+	public void setHorasFeriado(String horasFeriado) {
+		this.horasFeriado = horasFeriado;
 	}
 
 	public Long getLineId() {
@@ -92,12 +118,20 @@ public class ProjectManagementTimeSheetLineGetDTO {
 		this.lineId = lineId;
 	}
 
-	public Date getDate() {
+	public String getDate() {
 		return date;
 	}
 
-	public void setDate(Date date) {
+	public void setDate(String date) {
 		this.date = date;
+	}
+
+	public String getHoraFichado() {
+		return horaFichado;
+	}
+
+	public void setHoraFichado(String horaFichado) {
+		this.horaFichado = horaFichado;
 	}
 
 	public String getStartTime() {
@@ -124,6 +158,14 @@ public class ProjectManagementTimeSheetLineGetDTO {
 		this.billableTime = billableTime;
 	}
 
+	public String getNonBillableTime() {
+		return nonBillableTime;
+	}
+
+	public void setNonBillableTime(String nonBillableTime) {
+		this.nonBillableTime = nonBillableTime;
+	}
+
 	public String getHorasExtras50() {
 		return horasExtras50;
 	}
@@ -146,6 +188,14 @@ public class ProjectManagementTimeSheetLineGetDTO {
 
 	public void setHorasExtrasFeriados(String horasExtrasFeriados) {
 		this.horasExtrasFeriados = horasExtrasFeriados;
+	}
+
+	public String getComida() {
+		return comida;
+	}
+
+	public void setComida(String comida) {
+		this.comida = comida;
 	}
 
 	public String getTipoAusentismo() {
@@ -172,20 +222,12 @@ public class ProjectManagementTimeSheetLineGetDTO {
 		this.tarde = tarde;
 	}
 
-	public String getComida() {
-		return comida;
+	public String getHorasInjustificadas() {
+		return horasInjustificadas;
 	}
 
-	public void setComida(String comida) {
-		this.comida = comida;
-	}
-
-	public String getNonBillableTime() {
-		return nonBillableTime;
-	}
-
-	public void setNonBillableTime(String nonBillableTime) {
-		this.nonBillableTime = nonBillableTime;
+	public void setHorasInjustificadas(String horasInjustificadas) {
+		this.horasInjustificadas = horasInjustificadas;
 	}
 
 }

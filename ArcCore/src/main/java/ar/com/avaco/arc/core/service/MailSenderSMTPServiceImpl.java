@@ -2,6 +2,7 @@ package ar.com.avaco.arc.core.service;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -128,8 +129,13 @@ public class MailSenderSMTPServiceImpl implements MailSenderSMTPService {
 		List<String> messages = new ArrayList<String>();
 		messages.add(msg);
 		String[] arrayTo = { to };
-		String[] arrayBcc = { bccTo };
-		sendMail(from, arrayTo, arrayBcc, subject, messages, archivos);
+		String[] arrayBcc = { bccTo};
+		if (bccTo != null) {
+			sendMail(from, arrayTo, arrayBcc, subject, messages, archivos);
+		} else {
+			sendMail(from, arrayTo, null, subject, messages, archivos);
+		}
+		
 
 	}
 

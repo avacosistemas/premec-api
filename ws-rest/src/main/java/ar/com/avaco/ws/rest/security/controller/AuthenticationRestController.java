@@ -51,9 +51,9 @@ public class AuthenticationRestController {
 		// Reload password post-security so we can generate the token
 		final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
 		final String token = jwtTokenUtil.generateToken(userDetails);
-		
-		User usuario=userService.getByUsername(userDetails.getUsername());		
-		
+
+		User usuario = userService.getByUsername(userDetails.getUsername());
+
 		// Return the token and user datas
 		return ResponseEntity.ok(new JwtAuthenticationResponse(token, usuario));
 	}
@@ -66,15 +66,16 @@ public class AuthenticationRestController {
 		// Reload password post-security so we can generate the token
 		final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
 		final String token = jwtTokenUtil.generateToken(userDetails);
-		
-		User usuario=userService.getByUsername(userDetails.getUsername());		
+
+		User usuario = userService.getByUsername(userDetails.getUsername());
 		if (!usuario.getAdmin().booleanValue()) {
-			throw new AuthenticationException("El usuario " + authenticationRequest.getUsername() + " no es admin", null);
+			throw new AuthenticationException("El usuario " + authenticationRequest.getUsername() + " no es admin",
+					null);
 		}
 		// Return the token and user datas
 		return ResponseEntity.ok(new JwtAuthenticationResponse(token, usuario));
 	}
-	
+
 	@RequestMapping(value = "/refresh", method = RequestMethod.POST)
 	public ResponseEntity<?> refreshAndGetAuthenticationToken(HttpServletRequest request) {
 		String authToken = request.getHeader(tokenHeader);
@@ -82,9 +83,11 @@ public class AuthenticationRestController {
 		String username = jwtTokenUtil.getUsernameFromToken(token);
 		Usuario user = (Usuario) userDetailsService.loadUserByUsername(username);
 
+		User usuario = userService.getByUsername(username);
+
 		if (jwtTokenUtil.canTokenBeRefreshed(token, user.getFechaAltaPassword())) {
 			String refreshedToken = jwtTokenUtil.refreshToken(token);
-			return ResponseEntity.ok(new JwtAuthenticationResponse(refreshedToken));
+			return ResponseEntity.ok(new JwtAuthenticationResponse(refreshedToken, usuario));
 		} else {
 			return ResponseEntity.badRequest().body(null);
 		}

@@ -18,16 +18,16 @@ import com.google.gson.JsonObject;
 import ar.com.avaco.commons.exception.ErrorValidationException;
 import ar.com.avaco.factory.SapBusinessException;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetAttachDTO;
+import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetAttachResponse;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetGetDTO;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetLinesResponse;
-import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetAttachResponse;
 import ar.com.avaco.ws.service.AbstractSapService;
 
 @Service("timeSheetService")
 public class TimeSheetServiceImpl extends AbstractSapService implements TimeSheetService {
 
 	@Override
-	public Long generarTimeSheet(String usuarioSap, String from, String to) {
+	public Long generarTimeSheet(Long usuarioSap, String from, String to) {
 		Map<String, Object> pmtsMap = new HashMap<>();
 		pmtsMap.put("UserID", usuarioSap);
 		pmtsMap.put("DateFrom", from);
@@ -54,7 +54,7 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 	}
 
 	@Override
-	public TimeSheetEntryAttach getTimeSheetEntries(String usuarioSap, String from, String to) {
+	public TimeSheetEntryAttach getTimeSheetEntries(Long usuarioSap, String from, String to) {
 		// Armo el parametro de la actividad
 		String fechaDesde = "'" + from + "'";
 		String fechaHasta = "'" + to + "'";
@@ -120,11 +120,31 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 	}
 
 	@Override
-	public List<ProjectManagementTimeSheetAttachDTO> listTimeSheetByUsuarioSap(String usuarioSAP) {
+	public void updateTimeSheetAttachmentEntry(Long absEntry, Map<String, Object> timesheetpatch) {
+		String timeSheetPatchEntry = urlSAP + "/ProjectManagementTimeSheet(" + absEntry + ")";
+		
+		HttpHeaders headers = getRestTemplate().getDefaultHeaders();
+		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(timesheetpatch, headers);
+		
+		try {
+			
+			getRestTemplate().doExchange(timeSheetPatchEntry, HttpMethod.PATCH, httpEntityPatchServiceCall,
+					Object.class);
+		} catch (SapBusinessException e) {
+			Map<String, String> errors = new HashMap<String, String>();
+			errors.put("url", timeSheetPatchEntry);
+			errors.put("error", e.getMessage());
+			e.printStackTrace();
+			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
+		}
+	}
+
+	@Override
+	public List<ProjectManagementTimeSheetAttachDTO> listTimeSheetByUsuarioSap(Long usuarioSAP) {
 		// Preparo la url para enviar el attachment
 		String attachmentUrl = urlSAP
 				+ "/ProjectManagementTimeSheet?$filter=UserID eq {userId} and AttachmentEntry ne null&$expand=Attachments2&$orderby=DateFrom desc";
-		attachmentUrl = attachmentUrl.replace("{userId}", usuarioSAP);
+		attachmentUrl = attachmentUrl.replace("{userId}", usuarioSAP.toString());
 
 		ResponseEntity<ProjectManagementTimeSheetAttachResponse> timeshteeRespose = null;
 
@@ -167,7 +187,7 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 	}
 
 	@Override
-	public ProjectManagementTimeSheetGetDTO getTimeSheet(String usuarioSap, String from, String to) {
+	public ProjectManagementTimeSheetGetDTO getTimeSheet(Long usuarioSap, String from, String to) {
 		// Armo el parametro de la actividad
 		String fechaDesde = "'" + from + "'";
 		String fechaHasta = "'" + to + "'";
@@ -195,6 +215,33 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 
 		return projectManagementTimeSheetGetDTO;
 
+	}
+
+	@Override
+	public List<ProjectManagementTimeSheetGetDTO> getTimeSheets(String from, String to) {
+		// Armo el parametro de la actividad
+		String fechaDesde = "'" + from + "'";
+		String fechaHasta = "'" + to + "'";
+		
+		String urlObtenerPMTSGet = urlSAP + "/ProjectManagementTimeSheet?$filter=DateFrom eq " + fechaDesde + " and DateTo eq " + fechaHasta;
+		
+		ResponseEntity<ProjectManagementTimeSheetLinesResponse> timeshteeRespose = null;
+		
+		try {
+			timeshteeRespose = getRestTemplate().doExchange(urlObtenerPMTSGet, HttpMethod.GET, null,
+					ProjectManagementTimeSheetLinesResponse.class);
+		} catch (SapBusinessException e) {
+			Map<String, String> errors = new HashMap<String, String>();
+			errors.put("url", urlObtenerPMTSGet);
+			errors.put("error", e.getMessage());
+			e.printStackTrace();
+			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
+		}
+		
+		List<ProjectManagementTimeSheetGetDTO> value = timeshteeRespose.getBody().getValue();
+		
+		return value;
+		
 	}
 
 }

@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ar.com.avaco.arc.sec</groupId>
@@ -17,19 +18,19 @@
 	</properties>
 
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <configuration>
-                    <source>${project.java.version}</source>
-                    <target>${project.java.version}</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>${project.java.version}</source>
+					<target>${project.java.version}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
 	<dependencies>
 
@@ -75,11 +76,11 @@
 			<version>${project.spring.version}</version>
 		</dependency>
 
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.springframework</groupId> -->
-<!-- 			<artifactId>spring-messaging</artifactId> -->
-<!-- 			<version>${project.spring.version}</version> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>org.springframework</groupId> -->
+		<!-- <artifactId>spring-messaging</artifactId> -->
+		<!-- <version>${project.spring.version}</version> -->
+		<!-- </dependency> -->
 
 		<dependency>
 			<groupId>org.springframework.security</groupId>
@@ -171,17 +172,17 @@
 			<version>4.3.1.Final</version>
 		</dependency>
 
-<!-- 		<dependency> -->
-<!-- 			<groupId>javax.mail</groupId> -->
-<!-- 			<artifactId>mail</artifactId> -->
-<!-- 			<version>1.4.7</version> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>javax.mail</groupId> -->
+		<!-- <artifactId>mail</artifactId> -->
+		<!-- <version>1.4.7</version> -->
+		<!-- </dependency> -->
 
-<!-- 		<dependency> -->
-<!-- 			<groupId>log4j</groupId> -->
-<!-- 			<artifactId>log4j</artifactId> -->
-<!-- 			<version>1.2.17</version> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>log4j</groupId> -->
+		<!-- <artifactId>log4j</artifactId> -->
+		<!-- <version>1.2.17</version> -->
+		<!-- </dependency> -->
 
 		<dependency>
 			<groupId>org.powermock</groupId>
@@ -212,5 +213,5 @@
 		</dependency>
 
 	</dependencies>
-	
+
 </project>
