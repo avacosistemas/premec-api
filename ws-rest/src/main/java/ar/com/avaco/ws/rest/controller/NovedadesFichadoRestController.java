@@ -1,8 +1,6 @@
 package ar.com.avaco.ws.rest.controller;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 
 import javax.annotation.Resource;
 

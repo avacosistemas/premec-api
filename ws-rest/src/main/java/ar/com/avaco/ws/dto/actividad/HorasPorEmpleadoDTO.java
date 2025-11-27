@@ -7,14 +7,16 @@ public class HorasPorEmpleadoDTO {
 	private int attendEmpl;
 	private Date seStartDat;
 	private int duration;
+	private String tieneActNoTallerDespuesMediodia;
 
 	public HorasPorEmpleadoDTO() {
 	}
 
-	public HorasPorEmpleadoDTO(int attendEmpl, Date seStartDat, int duration) {
+	public HorasPorEmpleadoDTO(int attendEmpl, Date seStartDat, int duration, String tieneActNoTallerDespuesMediodia) {
 		this.attendEmpl = attendEmpl;
 		this.seStartDat = seStartDat;
 		this.duration = duration;
+		this.tieneActNoTallerDespuesMediodia = tieneActNoTallerDespuesMediodia;
 	}
 
 	public int getAttendEmpl() {
@@ -41,9 +43,12 @@ public class HorasPorEmpleadoDTO {
 		this.duration = duration;
 	}
 
-	@Override
-	public String toString() {
-		return "HorasPorEmpleadoDTO{" + "attendEmpl=" + attendEmpl + ", seStartDat=" + seStartDat + ", duration="
-				+ duration + '}';
+	public String getTieneActNoTallerDespuesMediodia() {
+		return tieneActNoTallerDespuesMediodia;
 	}
+
+	public void setTieneActNoTallerDespuesMediodia(String tieneActNoTallerDespuesMediodia) {
+		this.tieneActNoTallerDespuesMediodia = tieneActNoTallerDespuesMediodia;
+	}
+
 }

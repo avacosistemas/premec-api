@@ -184,18 +184,30 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 
 	@Override
 	public List<HorasPorEmpleadoDTO> obtenerHorasAgrupadasPorFechaEmpleado(Long employeeId, String fechaDesde,
-			String fechaHasta, String horaDesde, String horaHasta, String exclusionesActividadesCalculoHorasNetas) {
+			String fechaHasta, String horaDesde, String horaHasta, String exclusionesPalabrasClaves) {
 		return obtenerHorasAgrupadasPorFechaEmpleado(Collections.singletonList(employeeId), fechaDesde, fechaHasta,
-				null, null, exclusionesActividadesCalculoHorasNetas);
+				null, null, exclusionesPalabrasClaves);
 	}
 
 	private List<HorasPorEmpleadoDTO> obtenerHorasAgrupadasPorFechaEmpleado(List<Long> employeeIds, String fechaDesde,
-			String fechaHasta, String horaDesde, String horaHasta, String exclusionesActividadesCalculoHorasNetas) {
+			String fechaHasta, String horaDesde, String horaHasta, String exclusionPalabrasClaves) {
 
 		List<String> ids = new ArrayList<>();
 		employeeIds.forEach(x -> ids.add(x.toString()));
 
-		String sql = " SELECT SUM(act.duration) AS duration, act.recontact, act.AttendEmpl " + " FROM OCLG act "
+		String sql = " SELECT "
+				+ " SUM(act.duration) AS duration, "
+				+ " act.recontact, "
+				+ " act.AttendEmpl, "
+				+ "  CASE " 
+				+ "        WHEN MAX(CASE " 
+				+ "                    WHEN act.U_Taller <> 'Y' AND act.EndTime > 1159 THEN 1 " 
+				+ "                    ELSE 0 " 
+				+ "                 END) = 1 " 
+				+ "             THEN 'Y'" 
+				+ "        ELSE 'N'" 
+				+ "    END AS TieneActividadNoTallerDespuesDeMediodia "
+				+ " FROM OCLG act "
 				+ " LEFT JOIN OHEM emp ON act.AttendEmpl = emp.empID " + " WHERE 1 = 1 "
 				+ " AND act.AttendEmpl IN ({ids}) ".replace("{ids}", String.join(",", ids))
 				+ " AND act.recontact >= '{fechaDesde}' ".replace("{fechaDesde}", fechaDesde)
@@ -210,7 +222,7 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 			sql += " AND act.BeginTime <= '{horaHasta}' ".replace("{horaHasta}", hastaInt);
 		}
 
-		List<String> exclusiones = Lists.newArrayList(exclusionesActividadesCalculoHorasNetas.split(","));
+		List<String> exclusiones = Lists.newArrayList(exclusionPalabrasClaves.split(","));
 		for (String exclusion : exclusiones) {
 			sql += " and act.Details not like '%{exclusion}%' ".replace("{exclusion}", exclusion);
 		}
@@ -227,8 +239,9 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				int duration = rs.getInt("duration");
 				Date seStartDat = rs.getDate("recontact");
 				int attendEmpl = rs.getInt("AttendEmpl");
+				String tieneActNoTallerMediodia = rs.getString("TieneActividadNoTallerDespuesDeMediodia");
 
-				HorasPorEmpleadoDTO resumen = new HorasPorEmpleadoDTO(attendEmpl, seStartDat, duration);
+				HorasPorEmpleadoDTO resumen = new HorasPorEmpleadoDTO(attendEmpl, seStartDat, duration, tieneActNoTallerMediodia);
 				lista.add(resumen);
 			}
 
@@ -256,6 +269,8 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"	LTRIM(RTRIM(CAST(E.u_categoria AS VARCHAR))) AS Categoria, " + 
 				"	LTRIM(RTRIM(CAST(FORMAT(E.salary, 'N2', 'es-ES') as varchar))) AS Salary, " + 
 				"	E.salaryunit AS SalaryUnit, " + 
+				"   LTRIM(RTRIM(REPLACE(STR(ISNULL(H.Billable, 0), 10, 1), '.0', ''))) AS hsProductivas, " +
+				"   LTRIM(RTRIM(REPLACE(STR(ISNULL(H.Total_hstarde, 0), 10, 1), '.0', ''))) AS tarde, " +
 				"	LTRIM(RTRIM(REPLACE(STR(ISNULL(H.Total_hsnormales, 0), 10, 1), '.0', ''))) AS hsNormales, " + 
 				"	LTRIM(RTRIM(REPLACE(STR(ISNULL(H.Total_hsferiado, 0), 10, 1), '.0', ''))) AS hsFeriado, " + 
 				"	LTRIM(RTRIM(CAST(CAB.U_adelanto AS VARCHAR))) AS Adelanto, " + 
@@ -273,12 +288,14 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"LEFT JOIN ( " + 
 				"	SELECT " + 
 				"		AbsEntry, " + 
-				"		SUM(dbo.fnHorasDecimal(U_hsnormales)) AS Total_hsnormales, " + 
-				"		SUM(dbo.fnHorasDecimal(U_hsextras50)) AS Total_hsextras50, " + 
-				"		SUM(dbo.fnHorasDecimal(U_hsextras100)) AS Total_hsextras100, " + 
-				"		SUM(dbo.fnHorasDecimal(U_hsferiado)) AS Total_hsferiado, " + 
-				"		SUM(dbo.fnHorasDecimal(U_hsextrasferiado)) AS Total_hsextrasferiado, " + 
-				"		SUM(CASE WHEN U_comidas = 'SI' THEN 1 ELSE 0 END) AS Total_comidas " + 
+				" 		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_tarde))) AS Total_hstarde, " +
+				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsnormales))) AS Total_hsnormales, " + 
+				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextras50))) AS Total_hsextras50, " + 
+				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextras100))) AS Total_hsextras100, " + 
+				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsferiado))) AS Total_hsferiado, " + 
+				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextrasferiado))) AS Total_hsextrasferiado, " + 
+				"		SUM(CASE WHEN U_comidas = 'SI' THEN 1 ELSE 0 END) AS Total_comidas, " + 
+				" 		sum(dbo.fnRedondeo05(billablehr)) as billable " +
 				"	FROM " + 
 				"		TSH1 " + 
 				"	GROUP BY " + 
@@ -366,6 +383,7 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 		m.setPrestamos(rs.getString("Prestamo"));
 		m.setAusencias(rs.getString("Ausencias"));
 		m.setGratificaciones(rs.getString("Gratificaciones"));
+		m.setTarde(rs.getString("tarde"));
 		
 		return m;
 	}
@@ -401,6 +419,7 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 		m.setComida(rs.getString("Comida"));
 		m.setAusencias(rs.getString("Ausencias"));
 		m.setGratificaciones(rs.getString("Gratificaciones"));
+		m.setTarde(rs.getString("tarde"));
 		
 		return m;
 	}
@@ -426,9 +445,19 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 		m.setHs50(rs.getString("Total_hsextras50"));
 		m.setHs100(rs.getString("Total_hsextras100"));
 		m.setPremio(rs.getString("Premio"));
-		m.setComida(rs.getString("Comida"));
+		
+		Long comida = Long.parseLong(rs.getString("Comida"));
+		if (comida > 0) {
+			m.setComida(comida.toString());
+			m.setHsProductivas(rs.getString("hsProductivas"));
+		} else {
+			m.setComida("-");
+			m.setHsProductivas("-");
+		}
+		
 		m.setAusencias(rs.getString("Ausencias"));
 		m.setGratificaciones(rs.getString("Gratificaciones"));
+		m.setTarde(rs.getString("tarde"));
 		return m;
 	}
 

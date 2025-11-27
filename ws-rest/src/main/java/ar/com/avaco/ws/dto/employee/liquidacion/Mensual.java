@@ -20,6 +20,15 @@ public class Mensual {
 	private String premio;
 	private String comida;
 	private String ausencias;
+	private String tarde;
+
+	public String getTarde() {
+		return tarde;
+	}
+
+	public void setTarde(String tarde) {
+		this.tarde = tarde;
+	}
 
 	public String getAusencias() {
 		return ausencias;

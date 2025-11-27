@@ -19,6 +19,24 @@ public class Jornal {
 	private String premio;
 	private String comida;
 	private String ausencias;
+	private String tarde;
+	private String hsProductivas;
+
+	public String getHsProductivas() {
+		return hsProductivas;
+	}
+
+	public void setHsProductivas(String hsProductivas) {
+		this.hsProductivas = hsProductivas;
+	}
+
+	public String getTarde() {
+		return tarde;
+	}
+
+	public void setTarde(String tarde) {
+		this.tarde = tarde;
+	}
 
 	public String getAusencias() {
 		return ausencias;

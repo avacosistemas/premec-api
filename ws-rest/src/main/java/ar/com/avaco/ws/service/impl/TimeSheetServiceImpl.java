@@ -1,5 +1,6 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,7 +128,6 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 		HttpEntity<Map<String, Object>> httpEntityPatchServiceCall = new HttpEntity<>(timesheetpatch, headers);
 		
 		try {
-			
 			getRestTemplate().doExchange(timeSheetPatchEntry, HttpMethod.PATCH, httpEntityPatchServiceCall,
 					Object.class);
 		} catch (SapBusinessException e) {
@@ -226,21 +226,39 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 		String urlObtenerPMTSGet = urlSAP + "/ProjectManagementTimeSheet?$filter=DateFrom eq " + fechaDesde + " and DateTo eq " + fechaHasta;
 		
 		ResponseEntity<ProjectManagementTimeSheetLinesResponse> timeshteeRespose = null;
+
+		HttpHeaders defaultHeaders = getRestTemplate().getDefaultHeaders();
+		defaultHeaders.add("Prefer", "odata.maxpagesize=0");
+		HttpEntity<Object> requestEntity = new HttpEntity<>(defaultHeaders);
 		
-		try {
-			timeshteeRespose = getRestTemplate().doExchange(urlObtenerPMTSGet, HttpMethod.GET, null,
-					ProjectManagementTimeSheetLinesResponse.class);
-		} catch (SapBusinessException e) {
-			Map<String, String> errors = new HashMap<String, String>();
-			errors.put("url", urlObtenerPMTSGet);
-			errors.put("error", e.getMessage());
-			e.printStackTrace();
-			throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
+		List<ProjectManagementTimeSheetGetDTO> list = new ArrayList<ProjectManagementTimeSheetGetDTO>();
+		
+		while (urlObtenerPMTSGet != null && !urlObtenerPMTSGet.isEmpty()) {
+		
+			try {
+				timeshteeRespose = getRestTemplate().doExchange(urlObtenerPMTSGet, HttpMethod.GET, requestEntity,
+						ProjectManagementTimeSheetLinesResponse.class);
+								
+				List<ProjectManagementTimeSheetGetDTO> res = timeshteeRespose.getBody().getValue();
+				
+				list.addAll(res);
+				
+				urlObtenerPMTSGet = timeshteeRespose.getBody().getNextLink();
+				
+				if (urlObtenerPMTSGet != null && !urlObtenerPMTSGet.isEmpty()) {
+					urlObtenerPMTSGet = urlSAP + "/" + urlObtenerPMTSGet.replace("%20", " ");
+				}
+				
+			} catch (SapBusinessException e) {
+				Map<String, String> errors = new HashMap<String, String>();
+				errors.put("url", urlObtenerPMTSGet);
+				errors.put("error", e.getMessage());
+				e.printStackTrace();
+				throw new ErrorValidationException("Error al ejecutar el siguiente WS", errors);
+			}
 		}
 		
-		List<ProjectManagementTimeSheetGetDTO> value = timeshteeRespose.getBody().getValue();
-		
-		return value;
+		return list;
 		
 	}
 

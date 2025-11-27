@@ -1,5 +1,7 @@
 package ar.com.avaco.ws.service.impl;
 
+import java.awt.Color;
+import java.awt.Rectangle;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -22,7 +24,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.text.PDFTextStripperByArea;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -92,7 +96,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 			String to = DateUtils.toString(instance.getTime(), "yyyyMMdd");
 
 			// Busco el registros del timesheet con el periodo
-			TimeSheetEntryAttach entryAttach = this.timeSheetService.getTimeSheetEntries(new Long(usuarioSap), from, to);
+			TimeSheetEntryAttach entryAttach = this.timeSheetService.getTimeSheetEntries(new Long(usuarioSap), from,
+					to);
 
 			// Nuevo attachment entry del project management timesheet existente
 			Long newAttachmentEntry;
@@ -154,108 +159,68 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		return fotoMap;
 	}
 
-	
-
 	@Override
 	public List<ReciboSueldoDTO> procesarRecibos(String tipo, byte[] archivo) {
 		List<ReciboSueldoDTO> recibos = new ArrayList<>();
 		try {
 			PDDocument documento = PDDocument.load(new ByteArrayInputStream(archivo));
-			PDFTextStripper stripper = new PDFTextStripper();
+			// PDFTextStripper stripper = new PDFTextStripper();
+
+			Rectangle recttest = new Rectangle(140, 470, 60, 13);
+
+			// rectangulo para obtener el periodo
+			Rectangle rectPeriodo = new Rectangle(25, 110, 84, 13);
+			Rectangle rectLegajo = new Rectangle(25, 138, 65, 13);
+			Rectangle rectNombre = new Rectangle(91, 138, 205, 13);
+			Rectangle rectNeto = new Rectangle(140, 470, 60, 13);
+
+			PDFTextStripperByArea stripper = new PDFTextStripperByArea();
+			stripper.setSortByPosition(true);
+			stripper.addRegion("periodo", rectPeriodo);
+			stripper.addRegion("legajo", rectLegajo);
+			stripper.addRegion("nombre", rectNombre);
+			stripper.addRegion("neto", rectNeto);
 
 			for (int i = 0; i < documento.getNumberOfPages(); i++) {
+
+				PDPage page = documento.getPage(i);
+				stripper.extractRegions(page);
+
+//				drawTestRectangle(documento, page, recttest.x, recttest.y, recttest.width, recttest.height, Color.BLUE);
+
+				String periodo = stripper.getTextForRegion("periodo").trim().replace("\\n", "").replace("\\n", "");
+				String nombre = stripper.getTextForRegion("nombre").trim().replace("\\n", "").replace("\\n", "");
+				String textoLegajo = stripper.getTextForRegion("legajo").trim().replace("\\n", "").replace("\\n", "");
+				String textoNeto = stripper.getTextForRegion("neto").trim().replace("\\n", "").replace("\\n", "");
+
+				Integer legajo = Integer.parseInt(textoLegajo);
+				BigDecimal neto = new BigDecimal(textoNeto.replace(",", ""));
+
 				stripper.setStartPage(i + 1);
 				stripper.setEndPage(i + 1);
-				String texto;
-				texto = stripper.getText(documento);
-				// Parseo de datos
-				String nombre = extraerNombre(texto);
-				Integer legajo = extraerLegajo(texto);
-				String periodoRecibo = extraerPeriodo(texto);
 
-				BigDecimal neto = extraerNeto(texto);
+				ReciboSueldoDTO recibo = new ReciboSueldoDTO(legajo, nombre, periodo, neto, tipo);
+				recibos.add(recibo);
 
-				if (nombre != null && legajo != null && periodoRecibo != null && neto != null) {
+				String month = periodo.split("/")[0];
+				String year = periodo.split("/")[1];
 
-					ReciboSueldoDTO recibo = new ReciboSueldoDTO(legajo, nombre, periodoRecibo, neto, tipo);
-					recibos.add(recibo);
+				String folder = reciboPath + "\\" + year + month;
+				Files.createDirectories(Paths.get(folder));
+				String baseName = folder + "\\" + legajo + "_" + year + month + "_" + tipo;
+				// Guardar PDF individual
+				PDPage pagina = documento.getPage(i);
+				PDDocument salida = new PDDocument();
+				salida.addPage(pagina);
+				salida.save(baseName + ".pdf");
+				salida.close();
 
-					String month = periodoRecibo.split("/")[0];
-					String year = periodoRecibo.split("/")[1];
-
-					String folder = reciboPath + "\\" + year + month;
-					Files.createDirectories(Paths.get(folder));
-					String baseName = folder + "\\" + legajo + "_" + year + month + "_" + tipo;
-					// Guardar PDF individual
-					PDPage pagina = documento.getPage(i);
-					PDDocument salida = new PDDocument();
-					salida.addPage(pagina);
-					salida.save(baseName + ".pdf");
-					salida.close();
-
-				} else {
-					throw new ErrorValidationException("No se pudo parsear el archivo de recibos en la pagina " + i,
-							null);
-				}
 			}
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return recibos;
-	}
-
-	private String extraerNombre(String texto) {
-		// 1. Cortamos el texto hasta la primera aparición de "Apellido y nombre del
-		// empleado"
-		int indexFinNombre = texto.indexOf("Apellido y nombre del empleado");
-		if (indexFinNombre == -1)
-			return null;
-
-		String bloqueNombre = texto.substring(0, indexFinNombre);
-
-		// 2. Buscamos el último candidato tipo "Apellido , Nombre" en ese bloque
-		Pattern pattern = Pattern.compile("([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\\s*,\\s*[A-ZÁÉÍÓÚÑa-záéíóúñ\\s\\.]+)");
-		Matcher matcher = pattern.matcher(bloqueNombre);
-
-		String ultimoMatch = null;
-		while (matcher.find()) {
-			ultimoMatch = matcher.group(1).trim();
-		}
-
-		return ultimoMatch;
-	}
-
-	private Integer extraerLegajo(String texto) {
-		Matcher m = Pattern.compile("(?m)^\\s*(\\d{2,4})\\s*$").matcher(texto);
-		return m.find() ? Integer.parseInt(m.group(1)) : null;
-	}
-
-	private String extraerPeriodo(String texto) {
-		// Buscar el patrón MM/YYYY al principio de una línea
-		Pattern pattern = Pattern.compile("(?m)^\\s*(\\d{2}/\\d{4})\\b");
-		Matcher matcher = pattern.matcher(texto);
-
-		// Devolver el primer match que aparezca
-		if (matcher.find()) {
-			return matcher.group(1);
-		}
-		return null;
-	}
-
-	private BigDecimal extraerNeto(String texto) {
-		Pattern pattern = Pattern.compile("([\\d,.]+)\\s*:\\s*Neto");
-		Matcher matcher = pattern.matcher(texto);
-		if (matcher.find()) {
-			try {
-				// Reemplazamos la coma por vacío para convertir correctamente a BigDecimal
-				String numero = matcher.group(1).replace(",", "");
-				return new BigDecimal(numero);
-			} catch (Exception e) {
-				return null;
-			}
-		}
-		return null;
 	}
 
 	@Override
@@ -294,24 +259,25 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 		this.logger.debug("Usuario Sap: " + usuarioSAP);
 
 		if (StringUtils.isNotBlank(usuarioSAP)) {
-		
-			List<ProjectManagementTimeSheetAttachDTO> registros = this.timeSheetService.listTimeSheetByUsuarioSap(new Long(usuarioSAP));
-	
+
+			List<ProjectManagementTimeSheetAttachDTO> registros = this.timeSheetService
+					.listTimeSheetByUsuarioSap(new Long(usuarioSAP));
+
 			List<RegistroReciboPorUsuarioDTO> recibos = new ArrayList<>();
-	
+
 			registros.stream().forEach(registro -> {
-	
+
 				this.logger.debug("Procesando Registro: " + registro.getAttachmentEntry());
-	
+
 				int month = Integer.parseInt(registro.getDateFrom().split("-")[1]);
 				int year = Integer.parseInt(registro.getDateFrom().split("-")[0]);
-	
+
 				Calendar instance = Calendar.getInstance();
 				instance.set(Calendar.MONTH, month - 1);
-	
+
 				SimpleDateFormat formatoMes = new SimpleDateFormat("MMMM", new Locale("es", "ES"));
 				String monthString = formatoMes.format(instance.getTime());
-	
+
 				registro.getAttachments2().getLines().stream().forEach(tipo -> {
 					this.logger.debug("Procesando Attach: " + tipo.getFileName() + " " + tipo.getFreeText());
 					RegistroReciboPorUsuarioDTO r = new RegistroReciboPorUsuarioDTO();
@@ -321,17 +287,15 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 					r.setMonthString(monthString);
 					r.setTipo(tipo.getFreeText());
 					recibos.add(r);
-	
+
 				});
-	
+
 			});
 			return recibos;
 		} else {
 			throw new ErrorValidationException("El usuario no tiene asociado usuario sap", null);
 		}
 	}
-
-	
 
 	@Override
 	public byte[] obtenerReciboPDF(RegistroReciboPorUsuarioDTO recibo) throws IOException {

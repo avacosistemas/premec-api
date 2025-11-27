@@ -74,11 +74,6 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 		generarHojaJornalesl(periodo, jornales, workbook);
 		generarHojaMensual(periodo, mensuales, workbook);
 
-		// Guardar archivo
-		try (FileOutputStream fos = new FileOutputStream("d:\\desarrollo\\premec\\liquidacion.xlsx")) {
-			workbook.write(fos);
-		}
-
 		File file = File.createTempFile("Novedades " + periodo, ".xlsx");
 		try (FileOutputStream fos = new FileOutputStream(file)) {
 			workbook.write(fos);
@@ -102,7 +97,7 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 		agregarPeriodo(periodo, sheet);
 
 		// Header
-		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Feriado", "Adelanto de sueldo",
+		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Feriado", "Tarde", "Adelanto de sueldo",
 				"Prestamos", "Gratificaciones/Aumentos", "Novedades", "Ausencias" };
 		agregarHeader(sheet, columnas);
 
@@ -117,6 +112,7 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 			agregarCelda(row, ++cellindexRow, a.getCuil());
 			agregarCelda(row, ++cellindexRow, a.getCategoria());
 			agregarCelda(row, ++cellindexRow, a.getFeriado());
+			agregarCelda(row, ++cellindexRow, a.getTarde());
 			agregarCelda(row, ++cellindexRow, a.getAdelantoSueldo());
 			agregarCelda(row, ++cellindexRow, a.getPrestamos());
 			agregarCelda(row, ++cellindexRow, a.getGratificaciones());
@@ -140,7 +136,7 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 		agregarPeriodo(periodo, sheet);
 
 		// Header
-		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Valor Hora", "Feriado",
+		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Valor Hora", "Feriado", "Tarde",
 				"Hs Normales", "hsn100% Feriado", "Adelanto de sueldo", "Préstamos", "Hs 50%", "Hs100%",
 				"Gratificaciones/Aumentos", "Novedades", "Premio", "Ausencias" };
 		agregarHeader(sheet, columnas);
@@ -157,6 +153,7 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 			agregarCelda(row, ++cellindexRow, a.getCategoria());
 			agregarCelda(row, ++cellindexRow, a.getValorHora());
 			agregarCelda(row, ++cellindexRow, a.getFeriado());
+			agregarCelda(row, ++cellindexRow, a.getTarde());
 			agregarCelda(row, ++cellindexRow, a.getHsNormales());
 			agregarCelda(row, ++cellindexRow, a.getFeriadoExtra());
 			agregarCelda(row, ++cellindexRow, a.getAdelantoSueldo());
@@ -184,8 +181,8 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 		agregarPeriodo(periodo, sheet);
 
 		// Header
-		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Valor Hora", "Feriado",
-				"Hs Normales", "hsn100% Feriado", "Adelanto de sueldo", "Préstamos", "Hs 50%", "Hs100%",
+		String[] columnas = { "Legajo", "Apellido", "Nombre", "CUIL", "Categoría", "Valor Hora", "Feriado", "Tarde", 
+				"Hs Normales", "hsn100% Feriado", "Adelanto de sueldo", "Comida", "Hs. Prod.", "Préstamos", "Hs 50%", "Hs100%",
 				"Gratificaciones/Aumentos", "Novedades", "Premio", "Ausencias" };
 		agregarHeader(sheet, columnas);
 
@@ -201,9 +198,15 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 			agregarCelda(row, ++cellindexRow, a.getCategoria());
 			agregarCelda(row, ++cellindexRow, a.getValorHora());
 			agregarCelda(row, ++cellindexRow, a.getFeriado());
+			agregarCelda(row, ++cellindexRow, a.getTarde());
 			agregarCelda(row, ++cellindexRow, a.getHsNormales());
 			agregarCelda(row, ++cellindexRow, a.getFeriadoExtra());
 			agregarCelda(row, ++cellindexRow, a.getAdelantoSueldo());
+
+			agregarCelda(row, ++cellindexRow, a.getComida());
+			agregarCelda(row, ++cellindexRow, a.getHsProductivas());
+			
+			
 			agregarCelda(row, ++cellindexRow, a.getPrestamos());
 			agregarCelda(row, ++cellindexRow, a.getHs50());
 			agregarCelda(row, ++cellindexRow, a.getHs100());

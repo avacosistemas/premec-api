@@ -1,6 +1,8 @@
 package ar.com.avaco.ws.rest.security.controller;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Resource;
 
@@ -33,9 +35,15 @@ public class PermissionRestController extends AbsctractRestController<Permission
 
 	@RequestMapping(value = "/permissions/filterPermisoByNombre", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> listFilter(@RequestParam String name) {
-		List<Permission> listPattern = this.service.listPattern("codigo", name);
+		List<Permission> pornombre = this.service.listPattern("codigo", name);
+		List<Permission> porcodigo = this.service.listPattern("descripcion", name);
+		
+		Set<Permission> permisos = new HashSet<>();
+		permisos.addAll(pornombre);
+		permisos.addAll(porcodigo);
+		
 		JSONResponse response = new JSONResponse();
-		response.setData(listPattern);
+		response.setData(permisos);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}
 

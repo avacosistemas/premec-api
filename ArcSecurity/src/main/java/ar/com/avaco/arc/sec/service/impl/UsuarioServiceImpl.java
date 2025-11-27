@@ -7,6 +7,7 @@ import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,8 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 	private static final Integer INICIO_REINTENTOS_LOGIN = 0;
 	private static final String USER_NEWPASSWORD_EQUALS_CURRENT = "user.newpassword.currentpassword.equals";
 	private static final String USER_CURRENT_PASSWORD_INVALID = "user.currentpassword.invalid";
+
+	private Logger logger = Logger.getLogger(this.getClass());
 
 	@Value("${email.from}")
 	private String from;
@@ -274,7 +277,20 @@ public class UsuarioServiceImpl extends NJBaseService<Long, Usuario, UsuarioRepo
 
 	@Override
 	public String getUsuarioSAPByLegajo(int legajo) {
-		return this.repository.findByLegajo(legajo).getUsuariosap();
+		try {
+			String usuariosap = this.repository.findByLegajo(legajo).getUsuariosap();
+			return usuariosap;
+		} catch (Exception e) {
+			logger.error("----------");
+			logger.error("----------");
+			logger.error("----------");
+			logger.error("----------");
+			logger.error("No se encontro usuario con legajo " + legajo);
+			logger.error("----------");
+			logger.error("----------");
+			logger.error("----------");
+			throw e;
+		}
 	}
 
 }

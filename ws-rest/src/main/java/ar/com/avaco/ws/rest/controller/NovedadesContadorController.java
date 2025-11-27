@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import ar.com.avaco.ws.dto.employee.liquidacion.PlantillaData;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
-import ar.com.avaco.ws.rest.security.dto.EmpleadoFichadoDTO;
 import ar.com.avaco.ws.service.LiquidacionService;
 import ar.com.avaco.ws.service.NovedadesContadorService;
 

@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import ar.com.avaco.ws.dto.actividad.RegistroPreviewEmpleadoMensualDTO;
 import ar.com.avaco.ws.rest.dto.JSONResponse;
-import ar.com.avaco.ws.rest.security.dto.EmpleadoFichadoDTO;
 import ar.com.avaco.ws.service.CierreMesService;
 
 @Controller
@@ -36,7 +35,11 @@ public class CierreMesRestController {
 	@RequestMapping(value = "/cierremespreview", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JSONResponse> enviarFichados(@RequestBody List<RegistroPreviewEmpleadoMensualDTO> cierre, @RequestParam String mes, @RequestParam String anio) throws IOException {
 		JSONResponse response = new JSONResponse();
-		this.cierreMesService.cerrarMes(cierre, anio, mes);
+		try {
+			this.cierreMesService.cerrarMes(cierre, anio, mes);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		response.setStatus(JSONResponse.OK);
 		return new ResponseEntity<JSONResponse>(response, HttpStatus.OK);
 	}

@@ -12,6 +12,15 @@ public class FueraConvenio {
 	private String gratificaciones;
 	private String novedades;
 	private String ausencias;
+	private String tarde;
+
+	public String getTarde() {
+		return tarde;
+	}
+
+	public void setTarde(String tarde) {
+		this.tarde = tarde;
+	}
 
 	public String getAusencias() {
 		return ausencias;
