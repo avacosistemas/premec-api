@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -27,6 +31,8 @@ import ar.com.avaco.ws.service.AbstractSapService;
 @Service("timeSheetService")
 public class TimeSheetServiceImpl extends AbstractSapService implements TimeSheetService {
 
+	private Logger logger = Logger.getLogger(TimeSheetServiceImpl.class);
+	
 	@Override
 	public Long generarTimeSheet(Long usuarioSap, String from, String to) {
 		Map<String, Object> pmtsMap = new HashMap<>();
@@ -219,26 +225,42 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 
 	@Override
 	public List<ProjectManagementTimeSheetGetDTO> getTimeSheets(String from, String to) {
+		
+		logger.debug("Obteniendo timesheets");
+		
 		// Armo el parametro de la actividad
 		String fechaDesde = "'" + from + "'";
 		String fechaHasta = "'" + to + "'";
+		
+		
 		
 		String urlObtenerPMTSGet = urlSAP + "/ProjectManagementTimeSheet?$filter=DateFrom eq " + fechaDesde + " and DateTo eq " + fechaHasta;
 		
 		ResponseEntity<ProjectManagementTimeSheetLinesResponse> timeshteeRespose = null;
 
-		HttpHeaders defaultHeaders = getRestTemplate().getDefaultHeaders();
-		defaultHeaders.add("Prefer", "odata.maxpagesize=0");
-		HttpEntity<Object> requestEntity = new HttpEntity<>(defaultHeaders);
-		
 		List<ProjectManagementTimeSheetGetDTO> list = new ArrayList<ProjectManagementTimeSheetGetDTO>();
 		
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+				
 		while (urlObtenerPMTSGet != null && !urlObtenerPMTSGet.isEmpty()) {
 		
 			try {
-				timeshteeRespose = getRestTemplate().doExchange(urlObtenerPMTSGet, HttpMethod.GET, requestEntity,
+
+				logger.debug("URL: " + urlObtenerPMTSGet);
+				
+				timeshteeRespose = getRestTemplate().doExchange(urlObtenerPMTSGet, HttpMethod.GET, null,
 						ProjectManagementTimeSheetLinesResponse.class);
-								
+							
+				logger.debug("Respuesta obtenida ");
+				String json = "No se pudo parsear";
+				try {
+					json = mapper.writeValueAsString(timeshteeRespose.getBody());
+				} catch (JsonProcessingException e) {
+					e.printStackTrace();
+				}
+				logger.debug(json);
+				
 				List<ProjectManagementTimeSheetGetDTO> res = timeshteeRespose.getBody().getValue();
 				
 				list.addAll(res);
@@ -246,7 +268,10 @@ public class TimeSheetServiceImpl extends AbstractSapService implements TimeShee
 				urlObtenerPMTSGet = timeshteeRespose.getBody().getNextLink();
 				
 				if (urlObtenerPMTSGet != null && !urlObtenerPMTSGet.isEmpty()) {
+					logger.debug("Hay mas registros para procesar");
 					urlObtenerPMTSGet = urlSAP + "/" + urlObtenerPMTSGet.replace("%20", " ");
+				} else {
+					logger.debug("No hay mas registros para procesar");
 				}
 				
 			} catch (SapBusinessException e) {

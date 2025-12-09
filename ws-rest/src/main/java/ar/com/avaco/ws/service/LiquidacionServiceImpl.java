@@ -31,6 +31,9 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 	@Value("${contador.mail}")
 	private String contadorMail;
 
+	@Value("${rrhh.mail}")
+	private String rrhhMail;
+	
 	private CellStyle estiloCabecera;
 
 	private CellStyle estiloDatos;
@@ -82,8 +85,8 @@ public class LiquidacionServiceImpl implements LiquidacionService {
 		List<File> archivos = new ArrayList<>();
 		archivos.add(file);
 
-		mailSender.sendMail("reportesservicios@premecsa.com.ar", contadorMail, null,
-				"Premec - Novedades Sueldos" + periodo, "", archivos);
+		mailSender.sendMail("reportesservicios@premecsa.com.ar", contadorMail, rrhhMail,
+				"Premec - Novedades Sueldos " + periodo, "", archivos);
 
 		workbook.close();
 

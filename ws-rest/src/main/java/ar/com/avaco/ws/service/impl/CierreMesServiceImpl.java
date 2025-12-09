@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.ibm.icu.util.Calendar;
 
 import ar.com.avaco.utils.DateUtils;
@@ -33,7 +34,7 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 	@Autowired
 	private TimeSheetService timeSheetService;
 
-	private Logger logger = Logger.getLogger(this.getClass());
+	private Logger logger = Logger.getLogger(CierreMesServiceImpl.class);
 
 	@Override
 	public List<RegistroPreviewEmpleadoMensualDTO> getRegistrosCierre(String mes, String anio) {
@@ -56,7 +57,7 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 	public void cerrarMes(List<RegistroPreviewEmpleadoMensualDTO> cierre, String anio, String mes) {
 
 		logger.debug("Procesando periodo " + mes + "-" + anio + " con " + cierre.size() + " registros ");
-
+		
 		String fechaDesde = anio + StringUtils.leftPad(mes, 2, "0") + "01";
 
 		Calendar fecha = Calendar.getInstance();
@@ -70,6 +71,9 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 		logger.debug("Se obtuvieron " + timeSheets.size() + " para procesar");
 		logger.debug("Inicio iteracion de json");
 
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		
 		for (RegistroPreviewEmpleadoMensualDTO empleado : cierre) {
 
 			logger.debug("Procesando " + empleado.getNombre() + " con usuario sap " + empleado.getUsuarioSap());
@@ -86,7 +90,7 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 				ProjectManagementTimeSheetGetDTO cabecera = resultado.get();
 				Map<String, Object> updateMap = empleado.generarMapUpdate();
 				
-				ObjectMapper mapper = new ObjectMapper();
+				
 				String json = "No se pudo parsear";
 				try {
 					json = mapper.writeValueAsString(updateMap);
@@ -96,6 +100,7 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 				
 				logger.debug("Se genera mapa de actualizacio para sap con los siguientes valores: " + json);
 				this.timeSheetService.updateTimeSheetAttachmentEntry(cabecera.getAbsEntry(), updateMap);
+				logger.debug("Procesado correctamente " + empleado.getNombre() + " con usuario sap " + empleado.getUsuarioSap());
 			} else {
 				logger.debug("NO Se encontro correspondencia en timesheets de sap para " + empleado.getNombre()
 				+ " con usuario sap " + empleado.getUsuarioSap());

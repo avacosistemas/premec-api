@@ -264,7 +264,7 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"	LTRIM(RTRIM(CAST(CAB.UserID AS VARCHAR))) AS UserID, " + 
 				"	LTRIM(RTRIM(CAST(CAB.LastName AS VARCHAR))) AS Apellido, " + 
 				"	LTRIM(RTRIM(CAST(CAB.FirstName AS VARCHAR))) AS Nombre, " +
-				"   LTRIM(RTRIM(CAST(CAB.u_aumento AS VARCHAR))) AS Gratificaciones, " +
+				"   LTRIM(RTRIM(CAB.u_aumento)) AS Gratificaciones, " +
 				"	LTRIM(RTRIM(CAST(E.u_cuil AS VARCHAR))) AS Cuil, " + 
 				"	LTRIM(RTRIM(CAST(E.u_categoria AS VARCHAR))) AS Categoria, " + 
 				"	LTRIM(RTRIM(CAST(FORMAT(E.salary, 'N2', 'es-ES') as varchar))) AS Salary, " + 
@@ -288,14 +288,14 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"LEFT JOIN ( " + 
 				"	SELECT " + 
 				"		AbsEntry, " + 
-				" 		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_tarde))) AS Total_hstarde, " +
-				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsnormales))) AS Total_hsnormales, " + 
+				" 		SUM(dbo.fnHorasDecimal(U_tarde)) AS Total_hstarde, " +
+				"		SUM(dbo.fnHorasDecimal(U_hsnormales)) AS Total_hsnormales, " + 
 				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextras50))) AS Total_hsextras50, " + 
 				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextras100))) AS Total_hsextras100, " + 
-				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsferiado))) AS Total_hsferiado, " + 
+				"		SUM(dbo.fnHorasDecimal(U_hsferiado)) AS Total_hsferiado, " + 
 				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextrasferiado))) AS Total_hsextrasferiado, " + 
 				"		SUM(CASE WHEN U_comidas = 'SI' THEN 1 ELSE 0 END) AS Total_comidas, " + 
-				" 		sum(dbo.fnRedondeo05(billablehr)) as billable " +
+				" 		sum(billablehr) as billable " +
 				"	FROM " + 
 				"		TSH1 " + 
 				"	GROUP BY " + 
