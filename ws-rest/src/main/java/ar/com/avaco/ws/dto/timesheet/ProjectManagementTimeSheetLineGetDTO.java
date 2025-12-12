@@ -5,8 +5,10 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ProjectManagementTimeSheetLineGetDTO {
@@ -59,6 +61,10 @@ public class ProjectManagementTimeSheetLineGetDTO {
 	@JsonProperty(value = "U_hsferiado")
 	private String horasFeriado;
 
+	@JsonProperty(value = "U_pagohsproductivas")
+	private String pagarHorasProductivas;
+
+	@JsonIgnore
 	public Map<String, Object> getAsMapNewLine() {
 		Map<String, Object> map = new LinkedHashMap<String, Object>();
 		map.put("LineID", this.lineId);
@@ -98,6 +104,18 @@ public class ProjectManagementTimeSheetLineGetDTO {
 
 		if (StringUtils.isNotEmpty(this.horasFeriado))
 			map.put("U_hsferiado", this.horasFeriado.trim());
+
+		if (StringUtils.isNotEmpty(this.pagarHorasProductivas)) {
+			long totalSegundos = new Double(this.pagarHorasProductivas).longValue();
+			
+		    long horas = totalSegundos / 3600;
+		    long minutos = (totalSegundos % 3600) / 60;
+		    long segundos = totalSegundos % 60;
+
+		    String valor = String.format("%02d:%02d:%02d", horas, minutos, segundos);
+		
+			map.put("U_pagohsproductivas", valor);
+		}
 
 		return map;
 	}
@@ -228,6 +246,14 @@ public class ProjectManagementTimeSheetLineGetDTO {
 
 	public void setHorasInjustificadas(String horasInjustificadas) {
 		this.horasInjustificadas = horasInjustificadas;
+	}
+
+	public String getPagarHorasProductivas() {
+		return pagarHorasProductivas;
+	}
+
+	public void setPagarHorasProductivas(String pagarHorasProductivas) {
+		this.pagarHorasProductivas = pagarHorasProductivas;
 	}
 
 }

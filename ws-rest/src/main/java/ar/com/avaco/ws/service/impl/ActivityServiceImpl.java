@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -17,6 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Lists;
 
 import ar.com.avaco.arc.sec.domain.Usuario;
@@ -192,26 +196,37 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 	private List<HorasPorEmpleadoDTO> obtenerHorasAgrupadasPorFechaEmpleado(List<Long> employeeIds, String fechaDesde,
 			String fechaHasta, String horaDesde, String horaHasta, String exclusionPalabrasClaves) {
 
-		List<String> ids = new ArrayList<>();
+ 		List<String> ids = new ArrayList<>();
 		employeeIds.forEach(x -> ids.add(x.toString()));
 
-		String sql = " SELECT "
-				+ " SUM(act.duration) AS duration, "
-				+ " act.recontact, "
-				+ " act.AttendEmpl, "
-				+ "  CASE " 
-				+ "        WHEN MAX(CASE " 
-				+ "                    WHEN act.U_Taller <> 'Y' AND act.EndTime > 1159 THEN 1 " 
-				+ "                    ELSE 0 " 
-				+ "                 END) = 1 " 
-				+ "             THEN 'Y'" 
-				+ "        ELSE 'N'" 
-				+ "    END AS TieneActividadNoTallerDespuesDeMediodia "
-				+ " FROM OCLG act "
-				+ " LEFT JOIN OHEM emp ON act.AttendEmpl = emp.empID " + " WHERE 1 = 1 "
-				+ " AND act.AttendEmpl IN ({ids}) ".replace("{ids}", String.join(",", ids))
-				+ " AND act.recontact >= '{fechaDesde}' ".replace("{fechaDesde}", fechaDesde)
-				+ " AND act.recontact <= '{fechaHasta}' ".replace("{fechaHasta}", fechaHasta);
+		String sql =
+			    " SELECT "
+			  + "   SUM( " 
+			  + "        CASE " 
+			  + "            WHEN emp.U_SERVICIOTECNICO = 'NO' AND act.U_Taller = 'N' " 
+			  + "                THEN act.duration " 
+			  + "            WHEN emp.U_SERVICIOTECNICO <> 'NO' " 
+			  + "                THEN act.duration " 
+			  + "            ELSE 0 " 
+			  + "        END " 
+			  + "    ) AS u_pagohsproductivas,"
+			  + "   sum(duration) AS duration, "
+			  + "   act.recontact, "
+			  + "   act.AttendEmpl, "
+			  + "   CASE "
+			  + "     WHEN MAX(CASE "
+			  + "                WHEN act.U_Taller <> 'Y' AND act.EndTime > 1159 THEN 1 "
+			  + "                ELSE 0 "
+			  + "              END) = 1 "
+			  + "     THEN 'Y' "
+			  + "     ELSE 'N' "
+			  + "   END AS TieneActividadNoTallerDespuesDeMediodia "
+			  + " FROM OCLG act "
+			  + " LEFT JOIN OHEM emp ON act.AttendEmpl = emp.empID "
+			  + " WHERE 1 = 1 "
+			  + " AND act.AttendEmpl IN ({ids}) ".replace("{ids}", String.join(",", ids))
+			  + " AND act.recontact >= '{fechaDesde}' ".replace("{fechaDesde}", fechaDesde)
+			  + " AND act.recontact <= '{fechaHasta}' ".replace("{fechaHasta}", fechaHasta);
 
 		if (horaDesde != null && horaHasta != null) {
 			String[] splitDesde = horaDesde.split(":");
@@ -240,8 +255,9 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				Date seStartDat = rs.getDate("recontact");
 				int attendEmpl = rs.getInt("AttendEmpl");
 				String tieneActNoTallerMediodia = rs.getString("TieneActividadNoTallerDespuesDeMediodia");
+				int pagHorasProductivas = rs.getInt("u_pagohsproductivas");
 
-				HorasPorEmpleadoDTO resumen = new HorasPorEmpleadoDTO(attendEmpl, seStartDat, duration, tieneActNoTallerMediodia);
+				HorasPorEmpleadoDTO resumen = new HorasPorEmpleadoDTO(attendEmpl, seStartDat, duration, tieneActNoTallerMediodia, pagHorasProductivas);
 				lista.add(resumen);
 			}
 
@@ -251,6 +267,19 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 			e.printStackTrace();
 		}
 
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT); // Para indentar el JSON
+		mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+
+		String json;
+		try {
+			json = mapper.writeValueAsString(lista);
+			System.out.println(json);
+		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return lista;
 
 	}
@@ -280,6 +309,7 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"	LTRIM(RTRIM(REPLACE(STR(ISNULL(H.Total_hsextrasferiado, 0), 10, 1), '.0', ''))) AS Total_hsextrasFeriado, " + 
 				"	LTRIM(RTRIM(CAST(CAB.U_premio AS VARCHAR))) AS Premio, " + 
 				"	LTRIM(RTRIM(CAST(ISNULL(H.Total_comidas, 0) AS VARCHAR))) AS comida, " + 
+				"   H.Total_pagohsproductivas AS Total_pagohsproductivas, " +
 				"	ISNULL(Aus.Ausencias, '') AS Ausencias " + 
 				"FROM " + 
 				"	OTSH CAB " + 
@@ -295,7 +325,8 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				"		SUM(dbo.fnHorasDecimal(U_hsferiado)) AS Total_hsferiado, " + 
 				"		SUM(dbo.fnRedondeo05(dbo.fnHorasDecimal(U_hsextrasferiado))) AS Total_hsextrasferiado, " + 
 				"		SUM(CASE WHEN U_comidas = 'SI' THEN 1 ELSE 0 END) AS Total_comidas, " + 
-				" 		sum(billablehr) as billable " +
+				" 		sum(billablehr) as billable, " +
+				"       cast(sum(dbo.fnHorasDecimal(U_pagohsproductivas)) as decimal(18,2)) as Total_pagohsproductivas " +
 				"	FROM " + 
 				"		TSH1 " + 
 				"	GROUP BY " + 
@@ -449,7 +480,8 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 		Long comida = Long.parseLong(rs.getString("Comida"));
 		if (comida > 0) {
 			m.setComida(comida.toString());
-			m.setHsProductivas(rs.getString("hsProductivas"));
+//			m.setHsProductivas(rs.getString("hsProductivas"));
+			m.setHsProductivas(rs.getString("Total_pagohsproductivas"));
 		} else {
 			m.setComida("-");
 			m.setHsProductivas("-");

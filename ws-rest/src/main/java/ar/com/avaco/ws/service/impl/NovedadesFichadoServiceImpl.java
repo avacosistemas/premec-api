@@ -160,30 +160,6 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 		return empleadoFichadoList;
 	}
 
-	private static String getCellValue(Cell cell) {
-		if (cell == null)
-			return "";
-		switch (cell.getCellType()) {
-		case STRING:
-			return cell.getStringCellValue();
-		case NUMERIC:
-			if (DateUtil.isCellDateFormatted(cell)) {
-				return new SimpleDateFormat("dd/MM/yyyy").format(cell.getDateCellValue());
-			}
-			return String.valueOf((int) cell.getNumericCellValue());
-		default:
-			return "";
-		}
-	}
-
-	private static boolean isRowEmpty(Row row) {
-		for (Cell cell : row) {
-			if (cell != null && cell.getCellType() != CellType.BLANK)
-				return false;
-		}
-		return true;
-	}
-
 	@Override
 	public void enviarFichados(List<EmpleadoFichados> registros) {
 
@@ -225,10 +201,9 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 		// Pido la sumatoria de horas por dia por usuario de acuerdo a las actividades
 		String desdeFormatedo = DateUtils.toString(desdeRango, "yyyyMMdd");
 		String hastaFormateado = DateUtils.toString(hastaRango, "yyyyMMdd");
-		
-		List<HorasPorEmpleadoDTO> horasPorFechaEmpleado = this.activityService
-				.obtenerHorasAgrupadasPorFechaEmpleado(employeeIds, desdeFormatedo, hastaFormateado,
-						exclusionesActividadesCalculoHorasNetas);
+
+		List<HorasPorEmpleadoDTO> horasPorFechaEmpleado = this.activityService.obtenerHorasAgrupadasPorFechaEmpleado(
+				employeeIds, desdeFormatedo, hastaFormateado, exclusionesActividadesCalculoHorasNetas);
 
 		// Los meto en un mapa
 		Map<String, HorasPorEmpleadoDTO> mapaSegundosEmpleadoDiaActividad = new HashMap<>();
@@ -247,7 +222,7 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 			// Obtengo el usuario sap
 			String usuarioSapString = registroEmpleadoDTO.getEmpleado().getUsuarioSap();
-			
+
 			// Si tiene usuario sap
 			if (StringUtils.isNotBlank(usuarioSapString)) {
 
@@ -259,7 +234,7 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 				EmployeesInfoReponseSapDTO employee = employeeService.getById(usuarioSap);
 
 				boolean isServicioTecnico = "SI".equals(employee.getServicioTecnico());
-				
+
 				// FIXME Comidas
 				// Servicio Tecnico SI -> reviso comidas
 				// Servicio Tecnico NO -> ver si en el día tiene al menos una actividad
@@ -267,14 +242,18 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 				// Por cada registro de horas por dia
 				for (RegistroFichadoDTO fichadoDTO : registroEmpleadoDTO.getFichados()) {
-					
+
 					String key = usuarioSap + "-" + fichadoDTO.getDia();
 					HorasPorEmpleadoDTO horasPorEmpleadoDTO = mapaSegundosEmpleadoDiaActividad.get(key);
+
+					double pagoHorasProductivas = horasPorEmpleadoDTO != null ? horasPorEmpleadoDTO.getPagoHorasProductivas() : 0;
 					
-					boolean isTieneAcNoTallerDespuesMediodia = horasPorEmpleadoDTO != null ? "Y".equals(horasPorEmpleadoDTO.getTieneActNoTallerDespuesMediodia()) : false;
-					
+					boolean isTieneAcNoTallerDespuesMediodia = horasPorEmpleadoDTO != null
+							? "Y".equals(horasPorEmpleadoDTO.getTieneActNoTallerDespuesMediodia())
+							: false;
+
 					boolean aplicaComida = isTieneAcNoTallerDespuesMediodia || isServicioTecnico;
-							
+
 					boolean tieneEntrada1 = StringUtils.isNotBlank(fichadoDTO.getEntrada1());
 					boolean tieneSalida1 = StringUtils.isNotBlank(fichadoDTO.getSalida1());
 					boolean tienenES1 = tieneEntrada1 && tieneSalida1;
@@ -334,14 +313,15 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 						Date fechaFichado = DateUtils.toDate(fichadoDTO.getDia(), "dd/MM/yyyy");
 						String horaFichadoIngreso = fichadoDTO.getEntrada1();
-						
+
 						// Busco el registro repetido.
 						List<ProjectManagementTimeSheetLineGetDTO> collect = timesheet.getLineas().stream()
 								.filter(x -> buscarFechaHoraRepetida(fechaFichado, horaFichadoIngreso, x))
 								.collect(Collectors.toList());
 
 						// Si no hay registros lo agrego
-						// FIXME HAY QUE VALIDAR TAMBIEN LOS HORARIOS PORQUE PUEDEN VENIR 1 DIA EN 2 REGISTROS CON DOS FICHADOS DIFERENTES
+						// FIXME HAY QUE VALIDAR TAMBIEN LOS HORARIOS PORQUE PUEDEN VENIR 1 DIA EN 2
+						// REGISTROS CON DOS FICHADOS DIFERENTES
 						// ESTO ES PORQUE UNA PARTE DEL DIA FUE DE LICENCIA Y EL OTRO NO.
 						if (collect.isEmpty()) {
 
@@ -405,9 +385,8 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 									ProjectManagementTimeSheetLineGetDTO timesheetline = generarTimeSheetLine(
 											aplicaComida, fechaFichado, nofacturable, lineNum, ingreso,
 											fichadoDTO.getSalida1(), fichadoDTO.getNormal(), fichadoDTO.getExtra50(),
-											fichadoDTO.getExtra100(),
-											fichadoDTO.getComentarios(), fichadoDTO.getEntrada1(),
-											fichadoDTO.getTarde(), false);
+											fichadoDTO.getExtra100(), fichadoDTO.getComentarios(),
+											fichadoDTO.getEntrada1(), fichadoDTO.getTarde(), false, pagoHorasProductivas);
 
 									timesheet.getLineas().add(timesheetline);
 
@@ -437,10 +416,10 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 									ProjectManagementTimeSheetLineGetDTO timesheetline2 = generarTimeSheetLine(
 											aplicaComida, fechaFichado, nofacturable2, lineNum + 1,
 											fichadoDTO.getEntrada2(), fichadoDTO.getSalida2(), null, null, null, null,
-											fichadoDTO.getEntrada2(), null, true);
+											fichadoDTO.getEntrada2(), null, true, pagoHorasProductivas);
 
 									timesheet.getLineas().add(timesheetline2);
-									
+
 									// Despues de agregar la linea a la collecion pongo el objeto en el mapa
 									mapaEmpleadoPeriodo.put(entryMapCabecera, timesheet);
 
@@ -462,7 +441,9 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 									Integer totalFichadoSegundos = DateUtils.convertirATotalSegundos(totalFichadoHoras);
 
 									// Obtengo el total de horas por actividades del día y el empleado
-									Integer totalActividadesEnSegundosD = horasPorEmpleadoDTO != null ? horasPorEmpleadoDTO.getDuration() : null;
+									Integer totalActividadesEnSegundosD = horasPorEmpleadoDTO != null
+											? horasPorEmpleadoDTO.getDuration()
+											: null;
 									Integer totalActividadesEnSegundos = 0;
 									if (totalActividadesEnSegundosD != null)
 										totalActividadesEnSegundos = totalActividadesEnSegundosD.intValue();
@@ -474,7 +455,7 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 											aplicaComida, fechaFichado, nofacturableSegundos, lineNum, ingreso,
 											fichadoDTO.getSalida1(), fichadoDTO.getNormal(), fichadoDTO.getExtra50(),
 											fichadoDTO.getExtra100(), fichadoDTO.getComentarios(),
-											fichadoDTO.getEntrada1(), fichadoDTO.getTarde(), false);
+											fichadoDTO.getEntrada1(), fichadoDTO.getTarde(), false, pagoHorasProductivas);
 
 									timesheet.getLineas().add(timesheetline);
 
@@ -507,7 +488,6 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 					error += me.getKey() + ": " + me.getValue() + " ";
 					;
 				}
-				;
 				errores.put("Error al enviar fichaje para usuario sap " + lineGroup.getUserId(), error);
 
 			} catch (Exception e) {
@@ -522,7 +502,8 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 	}
 
-	private boolean buscarFechaHoraRepetida(Date fechaFichado, String horaFichadoIngreso, ProjectManagementTimeSheetLineGetDTO x) {
+	private boolean buscarFechaHoraRepetida(Date fechaFichado, String horaFichadoIngreso,
+			ProjectManagementTimeSheetLineGetDTO x) {
 		boolean coincideFecha = DateUtils.convertirSinTimeZome(x.getDate())
 				.equals(DateUtils.toString(fechaFichado, "dd/MM/yyyy"));
 		boolean coincideHorario = x.getHoraFichado().equals(horaFichadoIngreso);
@@ -531,7 +512,7 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 	private ProjectManagementTimeSheetLineGetDTO generarTimeSheetLine(boolean aplicaComida, Date fechaFichado,
 			Integer nofacturableSegundos, Long lineNum, String entrada1, String salida1, String normal, String extra50,
-			String extra100, String comentarios, String horaFichado, String tarde, boolean segundoRegistro) {
+			String extra100, String comentarios, String horaFichado, String tarde, boolean segundoRegistro, double pagarHorasProductivas) {
 		ProjectManagementTimeSheetLineGetDTO timesheetline = new ProjectManagementTimeSheetLineGetDTO();
 
 		String codigo = "";
@@ -555,6 +536,9 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 
 		timesheetline.setHoraFichado(horaFichado);
 
+		// Nuevo campo horas productivas
+		timesheetline.setPagarHorasProductivas(String.valueOf(pagarHorasProductivas));
+		
 		// Obtengo las claves de ferido e injustificado
 		List<String> feriados = Arrays.asList(licenciasFeriado.split(","));
 		List<String> injustificados = Arrays.asList(licenciasNoJustificada.split(","));
@@ -625,6 +609,30 @@ public class NovedadesFichadoServiceImpl extends AbstractSapService implements N
 	@Resource(name = "activityService")
 	public void setActivityService(ActivityService activityService) {
 		this.activityService = activityService;
+	}
+
+	private static String getCellValue(Cell cell) {
+		if (cell == null)
+			return "";
+		switch (cell.getCellType()) {
+		case STRING:
+			return cell.getStringCellValue();
+		case NUMERIC:
+			if (DateUtil.isCellDateFormatted(cell)) {
+				return new SimpleDateFormat("dd/MM/yyyy").format(cell.getDateCellValue());
+			}
+			return String.valueOf((int) cell.getNumericCellValue());
+		default:
+			return "";
+		}
+	}
+
+	private static boolean isRowEmpty(Row row) {
+		for (Cell cell : row) {
+			if (cell != null && cell.getCellType() != CellType.BLANK)
+				return false;
+		}
+		return true;
 	}
 
 }
