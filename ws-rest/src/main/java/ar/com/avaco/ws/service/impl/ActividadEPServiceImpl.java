@@ -963,7 +963,7 @@ public class ActividadEPServiceImpl extends AbstractSapService implements Activi
 		// Pido el campo value que contiene el array de actividades
 		JsonArray actividadesJsonArray = jsonResponse.getAsJsonArray("value");
 
-		JsonElement jsonElement = jsonResponse.get("odata.nextLink");
+		JsonElement jsonElement = jsonResponse.get("@odata.nextLink");
 		if (jsonElement != null && !jsonElement.isJsonNull()) {
 			String nl = jsonElement.getAsString();
 			String[] split = nl.split("\\$");
