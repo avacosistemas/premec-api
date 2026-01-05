@@ -9,6 +9,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.ibm.icu.util.Calendar;
 
+import ar.com.avaco.arc.sec.service.UsuarioService;
 import ar.com.avaco.utils.DateUtils;
 import ar.com.avaco.ws.dto.actividad.RegistroPreviewEmpleadoMensualDTO;
 import ar.com.avaco.ws.dto.timesheet.ProjectManagementTimeSheetGetDTO;
@@ -36,6 +38,9 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 
 	private Logger logger = Logger.getLogger(CierreMesServiceImpl.class);
 
+	@Autowired
+	private UsuarioService usuarioService;
+
 	@Override
 	public List<RegistroPreviewEmpleadoMensualDTO> getRegistrosCierre(String mes, String anio) {
 
@@ -51,6 +56,25 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 				.obtenerActividadesValoradas(fechaDesde, fechaHasta, exclusionesActividadesCalculoHorasNetas);
 
 		return resumenPreview;
+	}
+
+	@Override
+	public RegistroPreviewEmpleadoMensualDTO getRegistrosCierre(String mes, String anio, String usuario) {
+		
+		String usuarioSap = usuarioService.getUsuarioSAPByUsername(usuario);
+		
+		String fechaDesde = anio + StringUtils.leftPad(mes, 2, "0") + "01";
+		
+		Calendar fecha = Calendar.getInstance();
+		fecha.setTime(DateUtils.toDate(fechaDesde, "yyyyMMdd"));
+		fecha.add(Calendar.MONTH, 1);
+		fecha.add(Calendar.DAY_OF_MONTH, -1);
+		String fechaHasta = DateUtils.toString(fecha.getTime(), "yyyyMMdd");
+		
+		List<RegistroPreviewEmpleadoMensualDTO> resumenPreview = this.activityService
+				.obtenerActividadesValoradas(fechaDesde, fechaHasta, exclusionesActividadesCalculoHorasNetas, usuarioSap, true);
+		
+		return resumenPreview.get(0);
 	}
 
 	@Override
@@ -111,6 +135,22 @@ public class CierreMesServiceImpl extends AbstractSapService implements CierreMe
 			}
 
 		}
+	}
+
+	@Override
+	public RegistroPreviewEmpleadoMensualDTO getRegistrosCierreSinAgrupar(String mes, String anio) {
+		String fechaDesde = anio + StringUtils.leftPad(mes, 2, "0") + "01";
+
+		Calendar fecha = Calendar.getInstance();
+		fecha.setTime(DateUtils.toDate(fechaDesde, "yyyyMMdd"));
+		fecha.add(Calendar.MONTH, 1);
+		fecha.add(Calendar.DAY_OF_MONTH, -1);
+		String fechaHasta = DateUtils.toString(fecha.getTime(), "yyyyMMdd");
+
+		List<RegistroPreviewEmpleadoMensualDTO> resumenPreview = this.activityService
+				.obtenerActividadesValoradasSinAgrupar(fechaDesde, fechaHasta, exclusionesActividadesCalculoHorasNetas);
+
+		return resumenPreview.get(0);
 	}
 
 }

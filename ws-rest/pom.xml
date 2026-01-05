@@ -59,12 +59,6 @@
 			<artifactId>mssql-jdbc</artifactId>
 			<version>12.8.1.jre8</version>
 		</dependency>
-		<dependency>
-			<groupId>ar.com.avaco</groupId>
-			<artifactId>avaco-domain</artifactId>
-			<version>0.3</version>
-			<scope>compile</scope>
-		</dependency>
 		<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
 		<dependency>
 			<groupId>javax.servlet</groupId>
@@ -137,6 +131,12 @@
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
 			<version>2.0.29</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.2.1</version>
 		</dependency>
 
 

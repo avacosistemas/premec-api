@@ -42,16 +42,34 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 	private UsuarioRepository usuarioRepository;
 
 	@Override
-	public List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradas(String fechaDesde, String fechaHasta,
-			String exclusiones) {
+	public List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradasSinAgrupar(String fechaDesde,
+			String fechaHasta, String exclusionesActividadesCalculoHorasNetas) {
+		return obtenerActividadesValoradas(fechaDesde, fechaHasta, exclusionesActividadesCalculoHorasNetas, null, false);
+	}
+	
+	@Override
+	public List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradas(String fechaDesde, String fechaHasta, String exclusiones) {
+		return obtenerActividadesValoradas(fechaDesde, fechaHasta, exclusiones, null, true);
+	}
+	
+	@Override
+	public List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradas(String fechaDesde, String fechaHasta, String exclusiones, 
+			String usuarioSap, boolean agrupadas) {
 
 		List<Usuario> usuarios = usuarioRepository.findAll();
 
 		StringBuilder sql = new StringBuilder();
-		sql.append(" SELECT ")
-			   .append("    cab.UserID AS usuarioSap, ")
-			   .append("    E.firstName + ' ' + E.lastName AS nombre, ")
-			   .append("    SUM(det.BillableHr) AS facturables, ")
+			sql.append(" SELECT ");
+			
+			if (agrupadas) {
+				sql.append("    cab.UserID AS usuarioSap, ")
+				   .append("    E.firstName + ' ' + E.lastName AS nombre, ");
+			} else {
+				sql.append("    0 AS usuarioSap, ")
+				   .append("    '' AS nombre, ");
+			}
+			
+			sql.append("    SUM(det.BillableHr) AS facturables, ")
 			   .append("    dbo.fnFormatHoras(SUM(det.BillableHr)) AS facturablesHora, ")
 			   .append("    SUM(det.NonBillHr) AS ociosas, ")
 			   .append("    dbo.fnFormatHoras(SUM(det.NonBillHr)) AS ociosasHora, ")
@@ -75,8 +93,13 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 			   .append("    E.salaryunit AS unidadSalario ")
 			   .append(" FROM OTSH cab ")
 			   .append(" LEFT JOIN TSH1 det ON cab.AbsEntry = det.AbsEntry ")
-			   .append(" INNER JOIN OHEM E ON cab.UserID = E.empID ")
-			   .append(" LEFT JOIN ( ")
+			   .append(" INNER JOIN OHEM E ON cab.UserID = E.empID ");
+			   
+			if (usuarioSap != null) {
+				sql.append(" and cab.UserID = {usuarioSap} ".replace("{usuarioSap}", usuarioSap));
+			}
+			   
+			sql.append(" LEFT JOIN ( ")
 			   .append("    SELECT ")
 			   .append("        AttendEmpl, ")
 			   .append("        COUNT(*) AS cantidadActividades, ")
@@ -94,6 +117,8 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 				sql.append(" and Details not like '%{exclusion}%' ".replace("{exclusion}", exclusion));
 			}
 		
+			
+			// REVISAR
 		   
 		   sql.append("    GROUP BY AttendEmpl ")
 			   .append(") O ON O.AttendEmpl = E.empID ")
@@ -101,11 +126,13 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 		   
 		   
 		   sql.append(" GROUP BY ")
-			   .append("    cab.DateFrom, ")
-			   .append("    cab.UserID, ")
-			   .append("    E.firstName, ")
-			   .append("    E.lastName, ")
-			   .append("    E.U_Objetivo, ")
+			  .append("    cab.DateFrom, ");
+			   
+		   if (agrupadas) {
+			    sql.append(" cab.UserID, E.firstName, E.lastName, ");
+			}
+			   
+			sql.append("    E.U_Objetivo, ")
 			   .append("    E.salary, ")
 			   .append("    E.salaryunit, ")
 			   .append("    O.cantidadActividades, ")
@@ -113,8 +140,16 @@ public class ActivityServiceImpl extends AbstractSapService implements ActivityS
 			   .append("    O.cantB, ")
 			   .append("    O.cantR, ")
 			   .append("    O.cantM, ")
-			   .append("    O.cantSV ")
-			   .append("ORDER BY E.firstName, E.lastName;");
+			   .append("    O.cantSV ");
+			   
+			sql.append(" ORDER BY ");
+
+			if (agrupadas) {
+			    sql.append("E.firstName, E.lastName");
+			} else {
+			    sql.append("cab.DateFrom");
+			}
+			sql.append(";");
 		   
 		String sqlString = sql.toString().replace("{fechaDesde}", fechaDesde).replace("{fechaHasta}", fechaHasta);
 		

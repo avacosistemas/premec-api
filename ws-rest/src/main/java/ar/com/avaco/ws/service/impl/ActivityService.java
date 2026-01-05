@@ -18,4 +18,10 @@ public interface ActivityService {
 
 	PlantillaData getPreviewNovedadesContador(String anio, String mes);
 
+	List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradas(String fechaDesde, String fechaHasta,
+			String exclusiones, String usuarioSap, boolean agrupadas);
+
+	List<RegistroPreviewEmpleadoMensualDTO> obtenerActividadesValoradasSinAgrupar(String fechaDesde, String fechaHasta,
+			String exclusionesActividadesCalculoHorasNetas);
+
 }

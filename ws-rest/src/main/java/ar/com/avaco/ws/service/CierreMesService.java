@@ -10,4 +10,8 @@ public interface CierreMesService {
 
 	void cerrarMes(List<RegistroPreviewEmpleadoMensualDTO> cierre, String anio, String mes);
 
+	RegistroPreviewEmpleadoMensualDTO getRegistrosCierre(String mes, String anio, String usuario);
+
+	RegistroPreviewEmpleadoMensualDTO getRegistrosCierreSinAgrupar(String mes, String anio);
+
 }
