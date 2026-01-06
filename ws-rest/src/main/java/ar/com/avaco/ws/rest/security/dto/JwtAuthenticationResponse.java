@@ -3,6 +3,8 @@ package ar.com.avaco.ws.rest.security.dto;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 
@@ -23,6 +25,12 @@ public class JwtAuthenticationResponse implements Serializable {
 
 	private String role;
 
+	private String guid;
+
+	private String permisos;
+
+	private String username;
+
 	public JwtAuthenticationResponse(String token) {
 		this.token = token;
 	}
@@ -38,6 +46,34 @@ public class JwtAuthenticationResponse implements Serializable {
 		for (Profile profile : profiles) {
 			this.permissions.addAll(profile.getPermissions());
 		}
+		UUID uuid = UUID.randomUUID();
+		this.guid = uuid.toString();
+		this.permisos = this.permissions.stream().map(Permission::getCode).collect(Collectors.joining(","));
+		this.username = usuario.getUsername();
+	}
+
+	public String getPermisos() {
+		return permisos;
+	}
+
+	public void setPermisos(String permisos) {
+		this.permisos = permisos;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getGuid() {
+		return guid;
+	}
+
+	public void setGuid(String guid) {
+		this.guid = guid;
 	}
 
 	public String getToken() {
