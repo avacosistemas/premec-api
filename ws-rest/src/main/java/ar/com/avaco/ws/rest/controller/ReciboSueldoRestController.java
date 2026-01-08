@@ -73,7 +73,7 @@ public class ReciboSueldoRestController {
 	public ResponseEntity<JSONResponse> descargarRecibo(RegistroReciboPorUsuarioDTO recibo) {
 		JSONResponse response = new JSONResponse();
 		try {
-			byte[] recibopdf = this.reciboService.obtenerReciboPDF(recibo);
+			byte[] recibopdf = this.reciboService.obtenerReciboPDF(recibo.getAbsEntry(), recibo.getAttachmentEntry());
 			String fileName = recibo.getTipo() + "-" + recibo.getYear() + "-" + recibo.getMonthString() +  ".pdf";
 			ArchivoDTO arc = new ArchivoDTO();
 			arc.setFile(recibopdf);

@@ -2,7 +2,11 @@ package ar.com.avaco.ws.dto.timesheet;
 
 public class RegistroReciboPorUsuarioDTO {
 
+	// Id del attachment
 	private Long attachmentEntry;
+
+	// Id de la linea del attachment
+	private Long absEntry;
 
 	private Integer year;
 
@@ -11,6 +15,34 @@ public class RegistroReciboPorUsuarioDTO {
 	private String monthString;
 
 	private String tipo;
+
+	private String descripcion;
+
+	private String filePath;
+
+	public String getFilePath() {
+		return filePath;
+	}
+
+	public void setFilePath(String filePath) {
+		this.filePath = filePath;
+	}
+
+	public Long getAbsEntry() {
+		return absEntry;
+	}
+
+	public void setAbsEntry(Long absEntry) {
+		this.absEntry = absEntry;
+	}
+
+	public String getDescripcion() {
+		return descripcion;
+	}
+
+	public void setDescripcion(String descripcion) {
+		this.descripcion = descripcion;
+	}
 
 	public Long getAttachmentEntry() {
 		return attachmentEntry;

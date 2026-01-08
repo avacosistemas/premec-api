@@ -11,17 +11,38 @@ public class ReciboSueldoDTO {
 	private String tipo;
 	private String observaciones;
 	private Boolean aprobado;
+	private String descripcion;
+	private String timeInMilis;
 
 	public ReciboSueldoDTO() {
 	}
 
-	public ReciboSueldoDTO(int legajo, String nombreCompleto, String periodo, BigDecimal neto, String tipo) {
+	public ReciboSueldoDTO(int legajo, String nombreCompleto, String periodo, BigDecimal neto, String tipo,
+			String descripcion, String timeInMilis) {
 		super();
 		this.legajo = legajo;
 		this.nombreCompleto = nombreCompleto;
 		this.periodo = periodo;
 		this.neto = neto;
 		this.tipo = tipo;
+		this.descripcion = descripcion;
+		this.timeInMilis = timeInMilis;
+	}
+
+	public String getTimeInMilis() {
+		return timeInMilis;
+	}
+
+	public void setTimeInMilis(String timeInMilis) {
+		this.timeInMilis = timeInMilis;
+	}
+
+	public String getDescripcion() {
+		return descripcion;
+	}
+
+	public void setDescripcion(String descripcion) {
+		this.descripcion = descripcion;
 	}
 
 	public int getLegajo() {
