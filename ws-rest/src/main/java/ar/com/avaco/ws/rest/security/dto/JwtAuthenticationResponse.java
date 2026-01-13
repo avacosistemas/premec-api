@@ -48,7 +48,7 @@ public class JwtAuthenticationResponse implements Serializable {
 		}
 		UUID uuid = UUID.randomUUID();
 		this.guid = uuid.toString();
-		this.permisos = this.permissions.stream().map(Permission::getCode).collect(Collectors.joining(","));
+		this.permisos = this.permissions.stream().map(Permission::getCode).collect(Collectors.joining(";"));
 		this.username = usuario.getUsername();
 	}
 

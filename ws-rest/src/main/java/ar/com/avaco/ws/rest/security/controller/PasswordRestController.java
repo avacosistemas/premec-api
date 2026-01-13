@@ -27,9 +27,9 @@ public class PasswordRestController {
 	
 	private UserService userEPservice;
 
-	@RequestMapping(value = "/password/reset/", method = RequestMethod.POST)
+	@RequestMapping(value = "/password/reset", method = RequestMethod.POST)
 	public ResponseEntity<JSONResponse> reset(@RequestBody PassworResetDTO dto) throws BusinessException {
-		usuarioService.sendMissingPassword(dto.getUsername());
+		usuarioService.sendMissingPassword(dto.getEmail());
 		JSONResponse jsonResponse = new JSONResponse();
 		jsonResponse.setData(null);
 		jsonResponse.setStatus(JSONResponse.OK);

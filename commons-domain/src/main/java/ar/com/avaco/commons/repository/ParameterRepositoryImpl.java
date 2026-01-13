@@ -1,14 +1,13 @@
 /**
  * 
  */
-package ar.com.avaco.commons.repository.impl;
+package ar.com.avaco.commons.repository;
 
 import javax.persistence.EntityManager;
 
 import org.springframework.stereotype.Repository;
 
 import ar.com.avaco.commons.domain.Parameter;
-import ar.com.avaco.commons.repository.ParameterRepositoryCustom;
 import ar.com.avaco.arc.core.component.bean.repository.NJBaseRepository;
 
 /**

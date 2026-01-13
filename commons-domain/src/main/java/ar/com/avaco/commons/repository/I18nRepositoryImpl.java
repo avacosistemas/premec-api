@@ -1,7 +1,7 @@
 /**
  * 
  */
-package ar.com.avaco.commons.repository.impl;
+package ar.com.avaco.commons.repository;
 
 import javax.persistence.EntityManager;
 
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import ar.com.avaco.arc.core.component.bean.repository.NJBaseRepository;
 import ar.com.avaco.commons.domain.I18n;
-import ar.com.avaco.commons.repository.I18nRepositoryCustom;
 
 /**
  * 

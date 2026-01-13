@@ -145,6 +145,8 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 				});
 
 				// De esta manera ya tengo los actuales y el nuevo que voy a agregar
+			} else {
+				attachments.add(nuevoRecibo);
 			}
 
 			
@@ -326,7 +328,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 					r.setFilePath(tipo.getTargetPath() + "\\" + tipo.getFileName() + "." + tipo.getFileExtension());
 					int idx = tipo.getFreeText().indexOf('|');
 					String reciboTipo = (idx >= 0) ? tipo.getFreeText().substring(0, idx) : tipo.getFreeText();
-					String descripcion = (idx >= 0) ? tipo.getFreeText().substring(0, idx) : tipo.getFreeText();
+					String descripcion = (idx >= 0) ? tipo.getFreeText().substring(idx + 1, tipo.getFreeText().length()) : "";
 
 					r.setDescripcion(descripcion);
 					r.setTipo(reciboTipo);
@@ -343,12 +345,7 @@ public class ReciboSueldoServiceImpl extends AbstractSapService implements Recib
 
 	@Override
 	public byte[] obtenerReciboPDF(RegistroReciboPorUsuarioDTO recibo) throws IOException {
-		String name = SecurityContextHolder.getContext().getAuthentication().getName();
-		Integer legajo = usuarioService.findByUsername(name).getLegajo();
-		Integer year = recibo.getYear();
-		String month = StringUtils.leftPad(recibo.getMonth().toString(), 2, "0");
-		Path path = Paths
-				.get(reciboPathServeSap + "\\" + legajo + "_" + year + month + "_" + recibo.getTipo() + ".pdf");
+		Path path = Paths.get(recibo.getFilePath().replace("\\", "\\\\"));
 		byte[] contenido = Files.readAllBytes(path);
 		return contenido;
 	}
