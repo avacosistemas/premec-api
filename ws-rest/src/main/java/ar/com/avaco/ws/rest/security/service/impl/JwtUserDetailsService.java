@@ -1,4 +1,5 @@
 package ar.com.avaco.ws.rest.security.service.impl;
+
 import javax.annotation.Resource;
 
 import org.springframework.security.core.userdetails.UserDetails;

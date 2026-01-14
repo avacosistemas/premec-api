@@ -12,15 +12,44 @@
       http://www.springframework.org/schema/context
 	  http://www.springframework.org/schema/context/spring-context.xsd">
 
-	<http entry-point-ref="restAuthenticationEntryPoint">
-		<intercept-url pattern="/auth/reset-password" access="isAuthenticated()" />
-		<intercept-url pattern="/actividades" method="GET" access="isAuthenticated()" />
-		<intercept-url pattern="/formulario" method="POST" access="isAuthenticated()" />
-<!-- 		<intercept-url pattern="/molde/**" access="hasAuthority('PERMISO_MOLDES')" /> -->
-		<intercept-url pattern="/**" access="permitAll" />
-		<csrf disabled="true" />
-		<custom-filter after="BASIC_AUTH_FILTER" ref="tokenFilter" />
-		<logout />
+	<!-- <http entry-point-ref="restAuthenticationEntryPoint"> -->
+	<!-- <intercept-url pattern="/auth/reset-password" access="isAuthenticated()" 
+		/> -->
+	<!-- <intercept-url pattern="/actividades" method="GET" access="isAuthenticated()" 
+		/> -->
+	<!-- <intercept-url pattern="/formulario" method="POST" access="isAuthenticated()" 
+		/> -->
+	<!-- <intercept-url pattern="/molde/**" access="hasAuthority('PERMISO_MOLDES')" 
+		/> -->
+	<!-- <intercept-url pattern="/**" access="permitAll" /> -->
+	<!-- <csrf disabled="true" /> -->
+	<!-- <custom-filter after="BASIC_AUTH_FILTER" ref="tokenFilter" /> -->
+	<!-- <logout /> -->
+	<!-- </http> -->
+
+
+	<http entry-point-ref="restAuthenticationEntryPoint"
+	      use-expressions="true"
+	      create-session="stateless">
+	
+	    <csrf disabled="true"/>
+	
+	    <!-- Públicos -->
+	    <intercept-url pattern="/auth/**" access="permitAll"/>
+	
+	    <!-- Protegidos -->
+	    <intercept-url pattern="/auth/reset-password" access="isAuthenticated()"/>
+	    <intercept-url pattern="/actividades" method="GET" access="isAuthenticated()"/>
+	    <intercept-url pattern="/formulario" method="POST" access="isAuthenticated()"/>
+	
+	    <!-- Default -->
+	    <intercept-url pattern="/**" access="isAuthenticated()"/>
+	
+	    <!-- JWT filter ANTES del auth tradicional -->
+	    <custom-filter ref="tokenFilter"
+               before="FORM_LOGIN_FILTER"/>
+	
+	    <logout/>
 	</http>
 
 	<beans:bean id="tokenFilter"

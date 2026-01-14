@@ -27,6 +27,7 @@ import ar.com.avaco.ws.rest.security.dto.User;
 import ar.com.avaco.ws.rest.security.dto.UserAuthorised;
 import ar.com.avaco.ws.rest.security.exception.AuthenticationException;
 import ar.com.avaco.ws.rest.security.service.UserService;
+import ar.com.avaco.ws.rest.security.service.impl.JwtUserDetailsService;
 import ar.com.avaco.ws.rest.security.util.JwtTokenUtil;
 
 @RestController
@@ -35,12 +36,16 @@ public class AuthenticationRestController {
 	@Value("${jwt.header}")
 	private String tokenHeader;
 
+	@Resource(name = "authenticationManager")
 	private AuthenticationManager authenticationManager;
 
+	@Resource(name = "jwtTokenUtil")
 	private JwtTokenUtil jwtTokenUtil;
 
-	private UserDetailsService userDetailsService;
+	@Resource(name = "jwtUserDetailsService")
+	private JwtUserDetailsService userDetailsService;
 
+	@Resource(name = "userService")
 	private UserService userService;
 
 	@RequestMapping(value = "/auth", method = RequestMethod.POST)
@@ -131,24 +136,24 @@ public class AuthenticationRestController {
 		}
 	}
 
-	@Resource(name = "jwtTokenUtil")
-	public void setJwtTokenUtilManager(JwtTokenUtil jwtTokenUtil) {
-		this.jwtTokenUtil = jwtTokenUtil;
-	}
-
-	@Resource(name = "jwtUserDetailsService")
-	public void setJwtUserDetailsServiceManager(UserDetailsService userDetailsService) {
-		this.userDetailsService = userDetailsService;
-	}
-
-	@Resource(name = "authenticationManager")
-	public void setAuthenticationManager(AuthenticationManager authenticationManager) {
-		this.authenticationManager = authenticationManager;
-	}
-
-	@Resource(name = "userService")
-	public void setUserServiceManager(UserService userService) {
-		this.userService = userService;
-	}
+	
+//	public void setJwtTokenUtilManager(JwtTokenUtil jwtTokenUtil) {
+//		this.jwtTokenUtil = jwtTokenUtil;
+//	}
+//
+//	
+//	public void setJwtUserDetailsServiceManager(UserDetailsService userDetailsService) {
+//		this.userDetailsService = userDetailsService;
+//	}
+//
+//
+//	public void setAuthenticationManager(AuthenticationManager authenticationManager) {
+//		this.authenticationManager = authenticationManager;
+//	}
+//
+//
+//	public void setUserServiceManager(UserService userService) {
+//		this.userService = userService;
+//	}
 
 }
