@@ -16,7 +16,7 @@ public class UpdatePasswordDTO implements Serializable {
 	 */
 	private static final long serialVersionUID = -4721942938138967801L;
 	private String username;
-	private String password;
+	private String currentPassword;
 	private String newPassword;
 
 	public UpdatePasswordDTO() {
@@ -31,12 +31,12 @@ public class UpdatePasswordDTO implements Serializable {
 		this.username = username;
 	}
 
-	public String getPassword() {
-		return password;
+	public String getCurrentPassword() {
+		return currentPassword;
 	}
 
-	public void setPassword(String password) {
-		this.password = password;
+	public void setCurrentPassword(String password) {
+		this.currentPassword = password;
 	}
 
 	public String getNewPassword() {

@@ -105,7 +105,7 @@ public class UserServiceImpl extends AbstractConvertService<User, Long, Usuario>
 	public void updatePassword(UpdatePasswordDTO resetPassword) {
 		String username = resetPassword.getUsername();
 		Usuario loadUserByUsername = (Usuario) getService().loadUserByUsername(username);
-		getService().updatePassword(loadUserByUsername, resetPassword.getPassword(), resetPassword.getNewPassword());
+		getService().updatePassword(loadUserByUsername, resetPassword.getCurrentPassword(), resetPassword.getNewPassword());
 	}
 
 	@Override
